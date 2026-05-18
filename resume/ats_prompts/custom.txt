@@ -1,0 +1,12 @@
+Custom career sites are used by major tech companies (Amazon, Microsoft, Google, etc.) with proprietary ATS systems. Follow these rules:
+- Use standard section headers: Summary, Experience, Education, Skills, Projects
+- No tables, no columns, no text boxes, no special characters
+- Bullet points must start with strong action verbs
+- These companies receive massive application volumes — keyword matching is critical
+- Include exact technologies, frameworks, and tools mentioned in the job description
+- Quantify achievements with concrete metrics wherever possible
+- Skills section should be a clean comma-separated list
+- Keep bullets concise: one line preferred, two lines max
+- Big tech values scale, impact, and technical depth — emphasize systems thinking and measurable results
+- If the company has leadership principles or core values (e.g. Amazon's LPs), subtly align bullet language with them
+- Include the exact job title or close variants in your summary

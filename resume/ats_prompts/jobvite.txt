@@ -1,0 +1,6 @@
+Jobvite is used by mid-to-large companies. Follow these rules:
+- Jobvite's parser is reliable with standard formatting
+- Use exact job title language from the posting in your summary
+- Lead bullets with action verbs and metrics
+- Include keywords from the job description naturally
+- Skills as comma-separated list

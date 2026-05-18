@@ -1,0 +1,20 @@
+[
+  {
+    "company": "Amazon",
+    "slug": "amazon",
+    "method": "GET",
+    "url": "https://amazon.jobs/en/search.json",
+    "params": {"base_query": "intern", "result_limit": 100},
+    "pagination": {"type": "offset", "param": "offset", "step": 100, "total_field": "hits"},
+    "fields": {"jobs_array": "jobs", "id": "id_icims", "title": "title", "location": "normalized_location", "url_template": "https://amazon.jobs/en/jobs/{id}"}
+  },
+  {
+    "company": "Microsoft",
+    "slug": "microsoft",
+    "method": "GET",
+    "url": "https://apply.careers.microsoft.com/api/pcsx/search",
+    "params": {"domain": "microsoft.com", "query": "intern", "location": ""},
+    "pagination": {"type": "offset", "param": "start", "step": 10, "total_field": null},
+    "fields": {"jobs_array": "data.positions", "id": "id", "title": "name", "location": "locations[0]", "url_template": "https://apply.careers.microsoft.com/careers/job/{id}"}
+  }
+]

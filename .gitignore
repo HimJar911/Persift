@@ -1,0 +1,25 @@
+.env
+*.db
+*.pyo
+
+# State files
+persift_jobright_state.json
+jobright_state.json
+simplify_listings.json
+
+# Output artifacts
+outputs/*
+!outputs/.gitkeep
+
+# Resume files (personal — not for repo)
+resume/base_resume.pdf
+resume/base_resume.txt
+resume/base_resume.docx
+resume/.resume_calibrated
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+.venv/

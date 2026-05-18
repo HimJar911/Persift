@@ -1,0 +1,6 @@
+Workable is used by a mix of mid-size companies and startups. Follow these rules:
+- Clean section headers, standard formatting
+- Workable's parser handles plain text well
+- Lead bullets with strong action verbs and quantified outcomes
+- Match keywords from the job description naturally
+- Skills as comma-separated list

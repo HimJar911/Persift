@@ -1,0 +1,10 @@
+Ashby is used primarily by AI companies, deep tech startups, and high-growth Series A to C companies. Follow these rules:
+- These companies move fast and care deeply about what you have actually shipped
+- Lead every bullet with the most impressive outcome first, then explain how
+- Ashby companies are highly technical — do not dumb down technical details, lean into them
+- If the company is an AI company specifically, surface any AI or systems-level work prominently even if it was a side project
+- Match the company's domain — if they are a robotics company surface any hardware-adjacent or real-time systems work
+- Clean section headers: Summary, Experience, Projects, Education, Skills
+- No tables, no columns
+- Skills as comma-separated list grouped by category: Languages, Frameworks, Tools, Cloud
+- Ashby's parser handles formatting well so you can use standard markdown-style plain text

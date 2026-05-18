@@ -1,0 +1,10 @@
+Workday is used by large enterprises and Fortune 500 companies. Follow these rules:
+- Workday's resume parser is strict — use only standard section headers: Summary, Experience, Education, Skills, Projects
+- No tables, no columns, no special characters, no icons
+- Bullet points must start with strong action verbs
+- Quantified metrics are critical — Workday ATS scores heavily on measurable impact
+- Keywords from the job description must appear verbatim — Workday does exact keyword matching
+- Skills section must be a simple comma-separated list
+- Keep bullets to one line — Workday truncates long bullets in its parser
+- Enterprise companies value reliability, scale, and collaboration — emphasize these where genuine
+- Include the exact job title from the posting somewhere in your summary

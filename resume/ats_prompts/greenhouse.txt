@@ -1,0 +1,11 @@
+Greenhouse parses resumes with high accuracy. Follow these rules:
+- Use standard section headers: Summary, Experience, Education, Skills, Projects
+- No tables, no columns, no text boxes
+- Bullet points should start with strong action verbs
+- Include relevant keywords from the job description naturally in bullet points — do not keyword stuff
+- Keep bullets concise: one line preferred, two lines max
+- Quantify achievements wherever possible
+- Skills section should be a clean comma-separated list, not a table
+- Do not use special characters or icons
+- Font and formatting do not matter in plain text — focus on content and keyword match
+- Greenhouse's filter often looks for title matches — if the job title is "Software Engineer Intern" make sure that phrase or close variants appear naturally in the resume

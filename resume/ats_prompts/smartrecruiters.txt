@@ -1,0 +1,11 @@
+SmartRecruiters is used by mid-size to large enterprises across diverse industries. Follow these rules:
+- Use standard section headers: Summary, Experience, Education, Skills, Projects
+- No tables, no columns, no text boxes, no special characters
+- Bullet points must start with strong action verbs
+- SmartRecruiters supports keyword matching — include relevant keywords from the job description verbatim
+- Quantify achievements wherever possible with concrete metrics
+- Skills section should be a clean comma-separated list
+- Keep bullets concise: one line preferred, two lines max
+- SmartRecruiters companies span many industries — tailor language to match the company's domain
+- If the job mentions specific technologies, frameworks, or tools, include them naturally in bullet points
+- Include the exact job title or close variants in your summary

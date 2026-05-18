@@ -1,0 +1,10 @@
+Lever is used heavily by startups and growth-stage companies. Follow these rules:
+- Lever's ATS is less rigid than enterprise systems — slightly more personality is acceptable
+- Still use clean section headers: Summary, Experience, Education, Skills, Projects
+- Startups on Lever often care about: demonstrated ownership, shipping real things, working in ambiguous environments, and learning speed — emphasize these if true
+- Match the energy of the company — a seed-stage startup and a Series D company are different
+- Bullet points should tell a story: what you built, how you built it, what the impact was
+- Keywords still matter — pull specific technologies and tools mentioned in the job description
+- If the company is in a specific domain (fintech, AI, healthcare) try to surface any related experience or projects
+- No tables, no columns
+- Skills section as comma-separated list

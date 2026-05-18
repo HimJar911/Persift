@@ -1,0 +1,10 @@
+openai
+apscheduler
+httpx
+reportlab
+python-dotenv
+beautifulsoup4
+aioboto3
+pymupdf
+python-docx
+aiosqlite
