@@ -26,7 +26,7 @@ import httpx
 
 from config import (
     GREENHOUSE_FALLBACK_SLUGS, LEVER_FALLBACK_SLUGS, ASHBY_FALLBACK_SLUGS,
-    JOBVITE_FALLBACK_SLUGS, SMARTRECRUITERS_FALLBACK_SLUGS,
+    SMARTRECRUITERS_FALLBACK_SLUGS,
 )
 
 logging.basicConfig(
@@ -83,12 +83,6 @@ ATS_PLATFORMS = {
         "output": PROJECT_DIR / "ashby_companies.json",
         "slug_regex": re.compile(r"^https?://jobs\.ashbyhq\.com/([^/?#]+)"),
         "fallback": ASHBY_FALLBACK_SLUGS,
-    },
-    "jobvite": {
-        "domain": "jobs.jobvite.com",
-        "output": PROJECT_DIR / "jobvite_companies.json",
-        "slug_regex": re.compile(r"^https?://jobs\.jobvite\.com/([^/?#]+)"),
-        "fallback": JOBVITE_FALLBACK_SLUGS,
     },
     "smartrecruiters": {
         "domain": "jobs.smartrecruiters.com",
@@ -340,7 +334,6 @@ _ATS_VALIDATION_URLS: dict[str, str] = {
     "greenhouse": "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs",
     "ashby": "https://api.ashbyhq.com/posting-api/job-board/{slug}",
     "lever": "https://api.lever.co/v0/postings/{slug}?mode=json",
-    "jobvite": "https://jobs.jobvite.com/api/company/{slug}/jobs",
     "smartrecruiters": "https://api.smartrecruiters.com/v1/companies/{slug}/postings",
 }
 

@@ -1,6 +1,0 @@
-Recruitee is used primarily by European companies and startups. Follow these rules:
-- International companies on Recruitee often value concise, direct communication
-- Lead with outcomes and impact
-- Avoid overly American corporate language
-- Clean formatting, standard headers
-- Skills as comma-separated list

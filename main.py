@@ -15,7 +15,6 @@ from db import init_db
 from pollers.greenhouse import poll_greenhouse
 from pollers.lever import poll_lever
 from pollers.ashby import poll_ashby
-from pollers.jobvite import poll_jobvite
 from pollers.workday import poll_workday
 from pollers.smartrecruiters import poll_smartrecruiters
 from pollers.custom import poll_custom
@@ -68,7 +67,6 @@ COMPANY_FILES = {
     "greenhouse": PROJECT_DIR / "greenhouse_companies.json",
     "lever": PROJECT_DIR / "lever_companies.json",
     "ashby": PROJECT_DIR / "ashby_companies.json",
-    "jobvite": PROJECT_DIR / "jobvite_companies.json",
     "workday": PROJECT_DIR / "workday_companies.json",
     "smartrecruiters": PROJECT_DIR / "smartrecruiters_companies.json",
     "custom": PROJECT_DIR / "custom_companies.json",
@@ -84,7 +82,6 @@ TAILOR_SEMAPHORE = asyncio.Semaphore(2)
 _greenhouse_slugs: list[str] = []
 _lever_slugs: list[str] = []
 _ashby_slugs: list[str] = []
-_jobvite_slugs: list[str] = []
 _workday_companies: list[dict] = []  # list of dicts with slug, wd_num, board, base_url
 _smartrecruiters_slugs: list[str] = []
 _custom_companies: list[dict] = []  # list of dicts from custom_companies.json
@@ -134,13 +131,12 @@ async def _run_discovery(crawl: str | None = None) -> None:
 
 def load_company_lists() -> None:
     """Load company lists from the JSON files into module-level lists."""
-    global _greenhouse_slugs, _lever_slugs, _ashby_slugs, _jobvite_slugs
+    global _greenhouse_slugs, _lever_slugs, _ashby_slugs
     global _workday_companies, _smartrecruiters_slugs, _custom_companies
 
     _greenhouse_slugs = _load_company_file(COMPANY_FILES["greenhouse"])
     _lever_slugs = _load_company_file(COMPANY_FILES["lever"])
     _ashby_slugs = _load_company_file(COMPANY_FILES["ashby"])
-    _jobvite_slugs = _load_company_file(COMPANY_FILES["jobvite"])
 
     # Workday uses a list of dicts, not plain slugs
     _workday_companies = _load_company_file(COMPANY_FILES["workday"])
@@ -151,7 +147,6 @@ def load_company_lists() -> None:
         "Greenhouse": len(_greenhouse_slugs),
         "Lever": len(_lever_slugs),
         "Ashby": len(_ashby_slugs),
-        "Jobvite": len(_jobvite_slugs),
         "Workday": len(_workday_companies),
         "SmartRecruiters": len(_smartrecruiters_slugs),
         "Custom": len(_custom_companies),
@@ -243,14 +238,13 @@ async def poll_all() -> tuple[list[dict], ...]:
         poll_greenhouse(_greenhouse_slugs),
         poll_lever(_lever_slugs),
         poll_ashby(_ashby_slugs),
-        poll_jobvite(_jobvite_slugs),
         poll_workday(_workday_companies),
         poll_smartrecruiters(_smartrecruiters_slugs),
         poll_custom(_custom_companies),
     )
 
 
-_ATS_NAMES = ["greenhouse", "lever", "ashby", "jobvite", "workday", "smartrecruiters", "custom"]
+_ATS_NAMES = ["greenhouse", "lever", "ashby", "workday", "smartrecruiters", "custom"]
 
 
 async def run_simplify_cycle() -> None:
@@ -368,7 +362,7 @@ async def main(seed: bool = False, discover: bool = False) -> None:
     total = sum(
         len(s) for s in (
             _greenhouse_slugs, _lever_slugs, _ashby_slugs,
-            _jobvite_slugs, _workday_companies, _smartrecruiters_slugs,
+            _workday_companies, _smartrecruiters_slugs,
             _custom_companies,
         )
     )

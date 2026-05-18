@@ -27,7 +27,7 @@ def enrich(job: dict) -> dict:
     elif ats in ("lever", "smartrecruiters"):
         description = job.get("description_plain", "")
     else:
-        # jobvite, simplify, custom — try html first, fall back to plain
+        # simplify, custom — try html first, fall back to plain
         html = job.get("description_html", "")
         description = _html_to_text(html) if html else job.get("description_plain", "")
 
