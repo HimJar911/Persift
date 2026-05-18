@@ -97,10 +97,18 @@ ATS_PLATFORMS = {
 # Step 1: Discover latest crawl index
 # ---------------------------------------------------------------------------
 
-def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tuple[str, str]:
-    """Return (crawl_id, cdx_api_url) for the latest Common Crawl index.
+_PROBE_DOMAIN = "boards.greenhouse.io"
+_PROBE_TIMEOUT = 20   # short — just a liveness check, fail fast
+_MAX_PROBE_ATTEMPTS = 3
 
-    If crawl_override is given, find that specific crawl in the list.
+
+def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tuple[str, str]:
+    """Return (crawl_id, cdx_api_url) for the latest *ready* Common Crawl index.
+
+    If crawl_override is given, find that specific crawl in the list (no fallback).
+    Otherwise, probe crawls newest-first until one answers a page-count query —
+    skipping any that are still being indexed (timeouts / errors).  Tries up to
+    _MAX_PROBE_ATTEMPTS crawls before raising RuntimeError.
     """
     logger.info("Fetching Common Crawl index list from %s", COLLINFO_URL)
     resp = client.get(COLLINFO_URL, timeout=30)
@@ -123,9 +131,25 @@ def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tupl
             f"Latest available: {crawls[0]['id']}"
         )
 
-    latest = crawls[0]
-    logger.info("Latest crawl index: %s", latest["id"])
-    return latest["id"], latest["cdx-api"]
+    # Auto-select: probe up to _MAX_PROBE_ATTEMPTS crawls, newest first.
+    for c in crawls[:_MAX_PROBE_ATTEMPTS]:
+        crawl_id = c["id"]
+        cdx_api = c["cdx-api"]
+        logger.info("Probing crawl %s...", crawl_id)
+        pages = _get_num_pages(
+            client, cdx_api, _PROBE_DOMAIN, "probe",
+            timeout=_PROBE_TIMEOUT, retry_limit=1,
+        )
+        if pages is not None:
+            logger.info("Using crawl %s (%d pages for probe domain)", crawl_id, pages)
+            return crawl_id, cdx_api
+        logger.warning("Crawl %s not ready — trying previous", crawl_id)
+
+    tried = [c["id"] for c in crawls[:_MAX_PROBE_ATTEMPTS]]
+    raise RuntimeError(
+        f"No ready Common Crawl index found after probing {_MAX_PROBE_ATTEMPTS} crawls. "
+        f"Tried: {tried}"
+    )
 
 
 # ---------------------------------------------------------------------------
