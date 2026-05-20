@@ -412,6 +412,29 @@ async def validate_slugs(ats_name: str, slugs: list[str]) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Revalidation — re-check existing slugs against live APIs
+# ---------------------------------------------------------------------------
+
+async def revalidate_existing_slugs(names: list[str]) -> None:
+    """Validate all slugs currently saved in the JSON files. Remove dead ones in-place."""
+    for name in names:
+        cfg = ATS_PLATFORMS[name]
+        existing = _load_existing(cfg["output"])
+        if not existing:
+            logger.info("%s: no existing slugs to revalidate", name.title())
+            continue
+
+        valid = await validate_slugs(name, existing)
+        removed = len(existing) - len(valid)
+        logger.info(
+            "%s: revalidation done — %d removed, %d active",
+            name.title(), removed, len(valid),
+        )
+        if removed:
+            cfg["output"].write_text(json.dumps(sorted(valid), indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
 # Step 5 & 6: Save, fallback, and summary
 # ---------------------------------------------------------------------------
 
@@ -428,7 +451,7 @@ def _load_existing(path: Path) -> list[str]:
     return []
 
 
-def run_discovery(crawl_override: str | None = None) -> None:
+def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -> None:
     """Discover companies for all ATS platforms and save results."""
     client = httpx.Client()
 
@@ -497,6 +520,11 @@ def run_discovery(crawl_override: str | None = None) -> None:
                 json.dumps(slugs, indent=2), encoding="utf-8",
             )
 
+    # Revalidation phase — runs after CDX save, checks all slugs including pre-existing ones
+    if revalidate:
+        logger.info("Starting revalidation — checking all saved slugs against live APIs")
+        asyncio.run(revalidate_existing_slugs(names))
+
     # Summary
     total = sum(len(results[n]) for n in names)
     num_platforms = len(names)
@@ -525,8 +553,14 @@ def main() -> None:
         help="Specific Common Crawl index to query (e.g. CC-MAIN-2026-12). "
              "If omitted, the latest available index is used automatically.",
     )
+    parser.add_argument(
+        "--revalidate",
+        action="store_true",
+        help="After CDX discovery, re-validate all slugs in the saved JSON files "
+             "against their live ATS APIs and remove any that no longer respond with 200/403.",
+    )
     args = parser.parse_args()
-    run_discovery(crawl_override=args.crawl)
+    run_discovery(crawl_override=args.crawl, revalidate=args.revalidate)
 
 
 if __name__ == "__main__":
