@@ -4,7 +4,10 @@ httpx
 reportlab
 python-dotenv
 beautifulsoup4
-aioboto3
 pymupdf
 python-docx
-aiosqlite
+asyncpg
+fastapi
+uvicorn
+pdfplumber
+sentence-transformers
