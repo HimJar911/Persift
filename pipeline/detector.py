@@ -6,18 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 async def detect_new_jobs(jobs: list[dict], ats: str) -> list[dict]:
-    """Return only jobs we haven't seen before and mark them as seen.
-
-    Diffing is done in SQL — we send the candidate IDs to the DB and it
-    returns only the ones that don't exist yet.  Then we batch-insert all
-    new jobs in a single transaction.
-    """
-    candidate_ids = [j["job_id"] for j in jobs]
-    new_ids = await filter_new_ids(candidate_ids, ats)
-
-    new_jobs = [j for j in jobs if j["job_id"] in new_ids]
-
-    # Batch-insert in one transaction
+    """Return only jobs we haven't seen before and mark them as seen."""
+    new_jobs = await filter_new_ids(jobs)
     await mark_seen_batch(new_jobs)
 
     if new_jobs:

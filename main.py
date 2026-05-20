@@ -11,14 +11,13 @@ import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import POLL_INTERVAL_MINUTES, LOG_LEVEL
-from db import init_db
+from db import init_db, close_db, get_pool
 from pollers.greenhouse import poll_greenhouse
 from pollers.lever import poll_lever
 from pollers.ashby import poll_ashby
 from pollers.workday import poll_workday
 from pollers.smartrecruiters import poll_smartrecruiters
 from pollers.custom import poll_custom
-from pollers.simplify import poll_simplify
 from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHORE
 from pollers.filter import is_entry_level, is_intern_role
 from pipeline.detector import detect_new_jobs
@@ -26,6 +25,7 @@ from pipeline.enricher import enrich
 from pipeline.tailor import tailor_resume, _build_plain_text_from_json, _load_base_resume
 from pipeline.pdf_gen import convert_docx_to_pdf, generate_pdf_fallback
 from pipeline.docx_editor import edit_docx
+from pipeline.matcher import run_matching_cycle
 from pipeline.notifier import send_slack_notification
 
 
@@ -39,29 +39,38 @@ logger = logging.getLogger("persift")
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
-_JOBRIGHT_STATE_FILE = PROJECT_DIR / "persift_jobright_state.json"
-
-
-def _load_jobright_timestamp() -> int:
-    """Load the last successful Jobright run timestamp. Returns 0 on first run."""
-    try:
-        data = json.loads(_JOBRIGHT_STATE_FILE.read_text(encoding="utf-8"))
-        return int(data.get("last_run_ms", 0))
-    except (OSError, json.JSONDecodeError, ValueError):
+async def _load_jobright_timestamp() -> int:
+    """Return the last successful Jobright run timestamp from poller_state. Returns 0 on first run."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT cursor FROM poller_state WHERE poller = 'jobright'"
+        )
+    if row is None:
         return 0
+    return int(json.loads(row["cursor"]).get("since_ms", 0))
 
 
-def _save_jobright_timestamp(jobs: list[dict]) -> None:
-    """Save the max postedAt timestamp from this run for next run's filter."""
+async def _save_jobright_timestamp(jobs: list[dict]) -> None:
+    """Persist the max postedAt timestamp to poller_state for the next run's filter."""
     if not jobs:
         return
     max_ts = max(j.get("posted_at", 0) for j in jobs)
-    if max_ts > 0:
-        _JOBRIGHT_STATE_FILE.write_text(
-            json.dumps({"last_run_ms": max_ts}, indent=2),
-            encoding="utf-8",
+    if max_ts <= 0:
+        return
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO poller_state (poller, last_run_at, cursor)
+            VALUES ('jobright', NOW(), $1::jsonb)
+            ON CONFLICT (poller) DO UPDATE
+                SET last_run_at = NOW(),
+                    cursor      = $1::jsonb
+            """,
+            json.dumps({"since_ms": max_ts}),
         )
-        logger.info("Jobright state saved — next run will fetch jobs after %d", max_ts)
+    logger.info("Jobright state saved — next run will fetch jobs after %d", max_ts)
 
 COMPANY_FILES = {
     "greenhouse": PROJECT_DIR / "greenhouse_companies.json",
@@ -247,23 +256,15 @@ async def poll_all() -> tuple[list[dict], ...]:
 _ATS_NAMES = ["greenhouse", "lever", "ashby", "workday", "smartrecruiters", "custom"]
 
 
-async def run_simplify_cycle() -> None:
-    """Run a single Simplify fetch + detect + process cycle."""
-    logger.info("=== Starting Simplify cycle ===")
-    jobs = await poll_simplify()
-    await process_new_jobs(jobs, "simplify")
-    logger.info("=== Simplify cycle complete ===")
-
-
 async def run_jobright_cycle() -> None:
     logger.info("=== Starting Jobright cycle ===")
 
-    since_ts = _load_jobright_timestamp()
+    since_ts = await _load_jobright_timestamp()
     jobs = await poll_jobright(since_timestamp=since_ts)
 
     # Apply seniority filter
     jobs = [j for j in jobs if is_intern_role(j["title"])]
-    _save_jobright_timestamp(jobs)
+    await _save_jobright_timestamp(jobs)
     logger.info("Jobright: %d jobs after seniority filter", len(jobs))
 
     # Dedup against DB
@@ -301,28 +302,19 @@ async def run_seed() -> None:
     """
     logger.info("=== SEED MODE — marking all current jobs as seen ===")
 
-    # Tier 1 ATS pollers + Simplify in parallel
-    tier1_task = asyncio.create_task(poll_all())
-    simplify_task = asyncio.create_task(poll_simplify())
-    all_jobs = await tier1_task
-    simplify_jobs = await simplify_task
+    all_jobs = await poll_all()
 
     counts = {}
     for ats_name, jobs in zip(_ATS_NAMES, all_jobs):
         new = await detect_new_jobs(jobs, ats_name)
         counts[ats_name] = len(new)
 
-    # Simplify
-    new_simplify = await detect_new_jobs(simplify_jobs, "simplify")
-    counts["simplify"] = len(new_simplify)
-
     # Jobright
-    jobright_task = asyncio.create_task(poll_jobright(since_timestamp=0))
-    jobright_jobs = await jobright_task
+    jobright_jobs = await poll_jobright(since_timestamp=0)
     jobright_jobs = [j for j in jobright_jobs if is_intern_role(j["title"])]
     new_jobright = await detect_new_jobs(jobright_jobs, "jobright")
     counts["jobright"] = len(new_jobright)
-    _save_jobright_timestamp(jobright_jobs)
+    await _save_jobright_timestamp(jobright_jobs)
     logger.info("Jobright seed timestamp saved — live runs will only fetch jobs after this point")
 
     total = sum(counts.values())
@@ -349,74 +341,77 @@ async def main(seed: bool = False, discover: bool = False) -> None:
     logger.info("Initializing Persift")
     await init_db()
 
-    # --- Company list loading ---
-    # --discover: always run discovery fresh
-    # Otherwise: auto-run discovery if files are missing or older than 30 days
-    if discover or not _all_company_files_fresh():
-        if not discover:
-            logger.info("Company list files missing or older than 30 days — running discovery")
-        await _run_discovery()
-
-    load_company_lists()
-
-    total = sum(
-        len(s) for s in (
-            _greenhouse_slugs, _lever_slugs, _ashby_slugs,
-            _workday_companies, _smartrecruiters_slugs,
-            _custom_companies,
-        )
-    )
-    if total == 0:
-        logger.error(
-            "No companies loaded. Run 'python discover_companies.py' first "
-            "to build company lists from Common Crawl."
-        )
-        return
-
-    # --- Seed mode ---
-    if seed:
-        await run_seed()
-        return
-
-    # --- Normal operation ---
-    await run_pipeline()
-    await run_simplify_cycle()
-    await run_jobright_cycle()
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        run_pipeline,
-        "interval",
-        minutes=POLL_INTERVAL_MINUTES,
-        id="poll_cycle",
-        max_instances=1,
-    )
-    scheduler.add_job(
-        run_simplify_cycle,
-        "interval",
-        hours=1,
-        id="simplify_cycle",
-        max_instances=1,
-    )
-    scheduler.add_job(
-        run_jobright_cycle,
-        "interval",
-        hours=1,
-        id="jobright_cycle",
-        max_instances=1,
-    )
-    scheduler.start()
-    logger.info(
-        "Scheduler started — Tier 1 every %d min, Simplify every 60 min",
-        POLL_INTERVAL_MINUTES,
-    )
-
     try:
-        while True:
-            await asyncio.sleep(3600)
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Shutting down")
-        scheduler.shutdown()
+        # --- Company list loading ---
+        # --discover: always run discovery fresh
+        # Otherwise: auto-run discovery if files are missing or older than 30 days
+        if discover or not _all_company_files_fresh():
+            if not discover:
+                logger.info("Company list files missing or older than 30 days — running discovery")
+            await _run_discovery()
+
+        load_company_lists()
+
+        total = sum(
+            len(s) for s in (
+                _greenhouse_slugs, _lever_slugs, _ashby_slugs,
+                _workday_companies, _smartrecruiters_slugs,
+                _custom_companies,
+            )
+        )
+        if total == 0:
+            logger.error(
+                "No companies loaded. Run 'python discover_companies.py' first "
+                "to build company lists from Common Crawl."
+            )
+            return
+
+        # --- Seed mode ---
+        if seed:
+            await run_seed()
+            return
+
+        # --- Normal operation ---
+        await run_pipeline()
+        await run_jobright_cycle()
+        await run_matching_cycle()
+
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(
+            run_pipeline,
+            "interval",
+            minutes=POLL_INTERVAL_MINUTES,
+            id="poll_cycle",
+            max_instances=1,
+        )
+        scheduler.add_job(
+            run_jobright_cycle,
+            "interval",
+            hours=1,
+            id="jobright_cycle",
+            max_instances=1,
+        )
+        scheduler.add_job(
+            run_matching_cycle,
+            "interval",
+            minutes=6,
+            id="matching_cycle",
+            max_instances=1,
+        )
+        scheduler.start()
+        logger.info(
+            "Scheduler started — Tier 1 every %d min, Jobright every 60 min, matching every 6 min",
+            POLL_INTERVAL_MINUTES,
+        )
+
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Shutting down")
+            scheduler.shutdown()
+    finally:
+        await close_db()
 
 
 if __name__ == "__main__":
