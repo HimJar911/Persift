@@ -26,6 +26,7 @@ from pipeline.tailor import tailor_resume, _build_plain_text_from_json, _load_ba
 from pipeline.pdf_gen import convert_docx_to_pdf, generate_pdf_fallback
 from pipeline.docx_editor import edit_docx
 from pipeline.matcher import run_matching_cycle
+from pipeline.tailor_worker import run_tailor_cycle
 from pipeline.notifier import send_slack_notification
 
 
@@ -375,6 +376,7 @@ async def main(seed: bool = False, discover: bool = False) -> None:
         await run_pipeline()
         await run_jobright_cycle()
         await run_matching_cycle()
+        await run_tailor_cycle()
 
         scheduler = AsyncIOScheduler()
         scheduler.add_job(
@@ -398,9 +400,17 @@ async def main(seed: bool = False, discover: bool = False) -> None:
             id="matching_cycle",
             max_instances=1,
         )
+        scheduler.add_job(
+            run_tailor_cycle,
+            "interval",
+            minutes=10,
+            id="tailor_cycle",
+            max_instances=1,
+        )
         scheduler.start()
         logger.info(
-            "Scheduler started — Tier 1 every %d min, Jobright every 60 min, matching every 6 min",
+            "Scheduler started — Tier 1 every %d min, Jobright every 60 min, "
+            "matching every 6 min, tailor every 10 min",
             POLL_INTERVAL_MINUTES,
         )
 
