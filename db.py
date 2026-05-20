@@ -1,194 +1,118 @@
-"""Seen-jobs database layer.
+"""Postgres database layer using asyncpg.
 
-Supports two backends controlled by config.DB_BACKEND:
-  - "sqlite"   — local SQLite file, no external dependencies (default for local dev)
-  - "dynamodb" — AWS DynamoDB, serverless and durable (for production on AWS)
+Public API:
+    init_db()             — create pool, call once at startup
+    get_pool()            — return pool, raise if not initialized
+    close_db()            — close pool cleanly at shutdown
+    filter_new_ids(jobs)  — return subset of jobs not yet in the DB
+    mark_seen_batch(jobs) — insert new jobs, ON CONFLICT DO NOTHING
 """
 
 import logging
 from datetime import datetime, timezone
-from pathlib import Path
 
-from config import DB_BACKEND
+import asyncpg
+
+from config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
+_pool: asyncpg.Pool | None = None
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SQLite backend
-# ──────────────────────────────────────────────────────────────────────────────
-
-async def _sqlite_init() -> None:
-    import aiosqlite
-    from config import DB_PATH
-    async with aiosqlite.connect(Path(__file__).parent / DB_PATH) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS seen_jobs (
-                id          TEXT NOT NULL,
-                ats         TEXT NOT NULL,
-                company_slug TEXT NOT NULL,
-                title       TEXT NOT NULL,
-                url         TEXT NOT NULL,
-                first_seen_at DATETIME NOT NULL,
-                PRIMARY KEY (id, ats)
-            )
-        """)
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_seen_jobs_ats ON seen_jobs (ats)"
-        )
-        await db.commit()
-    logger.info("SQLite database ready (%s)", DB_PATH)
-
-
-async def _sqlite_filter_new_ids(candidate_ids: list[str], ats: str) -> set[str]:
-    import aiosqlite
-    from config import DB_PATH
-    if not candidate_ids:
-        return set()
-    existing: set[str] = set()
-    async with aiosqlite.connect(Path(__file__).parent / DB_PATH) as db:
-        for i in range(0, len(candidate_ids), 500):
-            batch = candidate_ids[i : i + 500]
-            placeholders = ",".join("?" for _ in batch)
-            cursor = await db.execute(
-                f"SELECT id FROM seen_jobs WHERE ats = ? AND id IN ({placeholders})",
-                [ats, *batch],
-            )
-            rows = await cursor.fetchall()
-            existing.update(row[0] for row in rows)
-    return set(candidate_ids) - existing
-
-
-async def _sqlite_mark_seen_batch(jobs: list[dict]) -> None:
-    import aiosqlite
-    from config import DB_PATH
-    if not jobs:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    async with aiosqlite.connect(Path(__file__).parent / DB_PATH) as db:
-        await db.executemany(
-            """INSERT OR IGNORE INTO seen_jobs (id, ats, company_slug, title, url, first_seen_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            [(j["job_id"], j["ats"], j["company_slug"], j["title"], j["apply_url"], now) for j in jobs],
-        )
-        await db.commit()
-    logger.info("Marked %d jobs as seen", len(jobs))
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# DynamoDB backend
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _dynamo_client_kwargs() -> dict:
-    from config import AWS_REGION, DYNAMODB_ENDPOINT
-    kwargs: dict = {"region_name": AWS_REGION}
-    if DYNAMODB_ENDPOINT:
-        kwargs["endpoint_url"] = DYNAMODB_ENDPOINT
-    return kwargs
-
-
-def _pk(ats: str, job_id: str) -> str:
-    return f"{ats}#{job_id}"
-
-
-async def _dynamo_init() -> None:
-    import aioboto3
-    from botocore.exceptions import ClientError
-    from config import DYNAMODB_TABLE
-    session = aioboto3.Session()
-    async with session.client("dynamodb", **_dynamo_client_kwargs()) as client:
-        try:
-            await client.describe_table(TableName=DYNAMODB_TABLE)
-            logger.info("DynamoDB table '%s' exists", DYNAMODB_TABLE)
-        except ClientError as exc:
-            if exc.response["Error"]["Code"] == "ResourceNotFoundException":
-                await client.create_table(
-                    TableName=DYNAMODB_TABLE,
-                    KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
-                    AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
-                    BillingMode="PAY_PER_REQUEST",
-                )
-                waiter = client.get_waiter("table_exists")
-                await waiter.wait(TableName=DYNAMODB_TABLE)
-                logger.info("Created DynamoDB table '%s'", DYNAMODB_TABLE)
-            else:
-                raise
-
-
-async def _dynamo_filter_new_ids(candidate_ids: list[str], ats: str) -> set[str]:
-    import aioboto3
-    from config import DYNAMODB_TABLE
-    if not candidate_ids:
-        return set()
-    existing: set[str] = set()
-    session = aioboto3.Session()
-    async with session.client("dynamodb", **_dynamo_client_kwargs()) as client:
-        for i in range(0, len(candidate_ids), 100):
-            batch = candidate_ids[i : i + 100]
-            keys = [{"pk": {"S": _pk(ats, jid)}} for jid in batch]
-            resp = await client.batch_get_item(
-                RequestItems={DYNAMODB_TABLE: {"Keys": keys, "ProjectionExpression": "pk"}}
-            )
-            for item in resp.get("Responses", {}).get(DYNAMODB_TABLE, []):
-                existing.add(item["pk"]["S"].split("#", 1)[1])
-            unprocessed = resp.get("UnprocessedKeys", {})
-            while unprocessed.get(DYNAMODB_TABLE):
-                resp = await client.batch_get_item(RequestItems=unprocessed)
-                for item in resp.get("Responses", {}).get(DYNAMODB_TABLE, []):
-                    existing.add(item["pk"]["S"].split("#", 1)[1])
-                unprocessed = resp.get("UnprocessedKeys", {})
-    return set(candidate_ids) - existing
-
-
-async def _dynamo_mark_seen_batch(jobs: list[dict]) -> None:
-    import aioboto3
-    from config import DYNAMODB_TABLE
-    if not jobs:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    session = aioboto3.Session()
-    async with session.client("dynamodb", **_dynamo_client_kwargs()) as client:
-        for i in range(0, len(jobs), 25):
-            batch = jobs[i : i + 25]
-            items = [
-                {"PutRequest": {"Item": {
-                    "pk": {"S": _pk(j["ats"], j["job_id"])},
-                    "ats": {"S": j["ats"]},
-                    "job_id": {"S": j["job_id"]},
-                    "company_slug": {"S": j["company_slug"]},
-                    "title": {"S": j["title"]},
-                    "url": {"S": j["apply_url"]},
-                    "first_seen_at": {"S": now},
-                }}}
-                for j in batch
-            ]
-            resp = await client.batch_write_item(RequestItems={DYNAMODB_TABLE: items})
-            unprocessed = resp.get("UnprocessedItems", {})
-            while unprocessed.get(DYNAMODB_TABLE):
-                resp = await client.batch_write_item(RequestItems=unprocessed)
-                unprocessed = resp.get("UnprocessedItems", {})
-    logger.info("Marked %d jobs as seen", len(jobs))
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Public API — delegates to the configured backend
-# ──────────────────────────────────────────────────────────────────────────────
 
 async def init_db() -> None:
-    if DB_BACKEND == "dynamodb":
-        await _dynamo_init()
-    else:
-        await _sqlite_init()
+    global _pool
+    _pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+    logger.info("Postgres pool ready (min=2, max=10)")
 
 
-async def filter_new_ids(candidate_ids: list[str], ats: str) -> set[str]:
-    if DB_BACKEND == "dynamodb":
-        return await _dynamo_filter_new_ids(candidate_ids, ats)
-    return await _sqlite_filter_new_ids(candidate_ids, ats)
+def get_pool() -> asyncpg.Pool:
+    if _pool is None:
+        raise RuntimeError("DB pool not initialized — call init_db() first")
+    return _pool
+
+
+async def close_db() -> None:
+    global _pool
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
+        logger.info("Postgres pool closed")
+
+
+async def filter_new_ids(jobs: list[dict]) -> list[dict]:
+    """Return the subset of jobs not already in the jobs table.
+
+    Checks by (job_id, ats) composite key using parallel unnest arrays
+    so the whole batch is checked in a single round-trip.
+    """
+    if not jobs:
+        return []
+    pool = get_pool()
+    job_ids = [j["job_id"] for j in jobs]
+    ats_list = [j["ats"] for j in jobs]
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT j.job_id, j.ats
+            FROM jobs j
+            JOIN (
+                SELECT unnest($1::text[]) AS job_id,
+                       unnest($2::text[]) AS ats
+            ) AS c ON j.job_id = c.job_id AND j.ats = c.ats
+            """,
+            job_ids,
+            ats_list,
+        )
+    existing = {(r["job_id"], r["ats"]) for r in rows}
+    return [j for j in jobs if (j["job_id"], j["ats"]) not in existing]
 
 
 async def mark_seen_batch(jobs: list[dict]) -> None:
-    if DB_BACKEND == "dynamodb":
-        await _dynamo_mark_seen_batch(jobs)
-    else:
-        await _sqlite_mark_seen_batch(jobs)
+    """Insert jobs into the jobs table. Silently skips duplicates."""
+    if not jobs:
+        return
+    pool = get_pool()
+    now = datetime.now(timezone.utc)
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO jobs (
+                job_id, ats, company_slug, company_name, title,
+                location, apply_url, description, categories,
+                experience_level, work_model, h1b_sponsored,
+                posted_at, first_seen_at
+            )
+            SELECT
+                unnest($1::text[]),
+                unnest($2::text[]),
+                unnest($3::text[]),
+                unnest($4::text[]),
+                unnest($5::text[]),
+                unnest($6::text[]),
+                unnest($7::text[]),
+                unnest($8::text[]),
+                unnest($9::text[][]),
+                unnest($10::text[]),
+                unnest($11::text[]),
+                unnest($12::text[]),
+                unnest($13::bigint[]),
+                unnest($14::timestamptz[])
+            ON CONFLICT (job_id, ats) DO NOTHING
+            """,
+            [j["job_id"] for j in jobs],
+            [j["ats"] for j in jobs],
+            [j["company_slug"] for j in jobs],
+            [j.get("company_name", "") for j in jobs],
+            [j["title"] for j in jobs],
+            [j.get("location", "Unknown") for j in jobs],
+            [j.get("apply_url", "") for j in jobs],
+            [j.get("description_plain_text", "") for j in jobs],
+            [j.get("categories", []) for j in jobs],
+            [j.get("experience_level", "") for j in jobs],
+            [j.get("work_model", "Unknown") for j in jobs],
+            [j.get("h1b_sponsored", "Not Sure") for j in jobs],
+            [j.get("posted_at", 0) for j in jobs],
+            [now] * len(jobs),
+        )
+    logger.info("Marked %d jobs as seen", len(jobs))

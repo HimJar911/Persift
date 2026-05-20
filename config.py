@@ -9,13 +9,7 @@ POLL_INTERVAL_MINUTES = int(os.getenv("POLL_INTERVAL_MINUTES", "10"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Database
-DB_BACKEND = os.getenv("DB_BACKEND", "sqlite")  # "sqlite" or "dynamodb"
-DB_PATH = "persift.db"  # only used when DB_BACKEND=sqlite
-
-# AWS (only used when DB_BACKEND=dynamodb)
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-DYNAMODB_TABLE = os.getenv("DYNAMODB_TABLE", "persift_seen_jobs")
-DYNAMODB_ENDPOINT = os.getenv("DYNAMODB_ENDPOINT", "") or None  # None = real AWS
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # ---------------------------------------------------------------------------
 # Search profile — single place to configure what jobs to look for.
@@ -160,9 +154,4 @@ SMARTRECRUITERS_FALLBACK_SLUGS = [
 OPENAI_MODEL = "gpt-4o"
 OPENAI_MAX_TOKENS = 4096
 LIBREOFFICE_TIMEOUT = 60
-SIMPLIFY_LISTINGS_URL = (
-    "https://raw.githubusercontent.com/"
-    "SimplifyJobs/Summer2026-Internships/dev/"
-    ".github/scripts/listings.json"
-)
 WORKDAY_SEARCH_TEXT = "intern"
