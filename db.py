@@ -68,6 +68,20 @@ async def filter_new_ids(jobs: list[dict]) -> list[dict]:
     return [j for j in jobs if (j["job_id"], j["ats"]) not in existing]
 
 
+def _to_pg_array(items: list[str]) -> str:
+    """Encode a Python list of strings as a PostgreSQL array literal.
+
+    Needed because unnest(text[][]) flattens all dimensions — PostgreSQL has
+    no single-dimension unnest for 2D arrays. Instead we pass each categories
+    list as a text literal (e.g. '{"swe","ml_ai"}') inside a text[], then cast
+    each element back to text[] inside the query with ::text[].
+    """
+    if not items:
+        return "{}"
+    escaped = ['"' + item.replace("\\", "\\\\").replace('"', '\\"') + '"' for item in items]
+    return "{" + ",".join(escaped) + "}"
+
+
 async def mark_seen_batch(jobs: list[dict]) -> None:
     """Insert jobs into the jobs table. Silently skips duplicates."""
     if not jobs:
@@ -92,7 +106,7 @@ async def mark_seen_batch(jobs: list[dict]) -> None:
                 unnest($6::text[]),
                 unnest($7::text[]),
                 unnest($8::text[]),
-                unnest($9::text[][]),
+                unnest($9::text[])::text[],
                 unnest($10::text[]),
                 unnest($11::text[]),
                 unnest($12::text[]),
@@ -108,7 +122,7 @@ async def mark_seen_batch(jobs: list[dict]) -> None:
             [j.get("location", "Unknown") for j in jobs],
             [j.get("apply_url", "") for j in jobs],
             [j.get("description_plain_text", "") for j in jobs],
-            [j.get("categories", []) for j in jobs],
+            [_to_pg_array(j.get("categories", [])) for j in jobs],
             [j.get("experience_level", "") for j in jobs],
             [j.get("work_model", "Unknown") for j in jobs],
             [j.get("h1b_sponsored", "Not Sure") for j in jobs],

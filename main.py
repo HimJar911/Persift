@@ -338,15 +338,16 @@ async def run_pipeline() -> None:
     logger.info("=== Pipeline run complete ===")
 
 
-async def main(seed: bool = False, discover: bool = False) -> None:
+async def main(seed: bool = False, discover: bool = False, no_discover: bool = False) -> None:
     logger.info("Initializing Persift")
     await init_db()
 
     try:
         # --- Company list loading ---
         # --discover: always run discovery fresh
+        # --no-discover: skip freshness check, use existing files regardless of age
         # Otherwise: auto-run discovery if files are missing or older than 30 days
-        if discover or not _all_company_files_fresh():
+        if not no_discover and (discover or not _all_company_files_fresh()):
             if not discover:
                 logger.info("Company list files missing or older than 30 days — running discovery")
             await _run_discovery()
@@ -439,5 +440,13 @@ if __name__ == "__main__":
         help="Force a fresh company discovery run via Common Crawl before "
              "starting, regardless of whether company files already exist.",
     )
+    parser.add_argument(
+        "--no-discover",
+        action="store_true",
+        dest="no_discover",
+        help="Skip the company file freshness check and use existing files "
+             "as-is, regardless of age. Useful when files are stale but "
+             "discovery is not needed.",
+    )
     args = parser.parse_args()
-    asyncio.run(main(seed=args.seed, discover=args.discover))
+    asyncio.run(main(seed=args.seed, discover=args.discover, no_discover=args.no_discover))
