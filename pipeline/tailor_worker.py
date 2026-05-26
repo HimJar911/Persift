@@ -5,14 +5,20 @@ Layer 4 (rewrite_resume):  OpenAI call, pro tier only, gated by Semaphore(5).
 
 Single public function: run_tailor_cycle()
 Intended cadence: every N minutes via APScheduler.
+
+# pip install weasyprint
 """
 
 import asyncio
+import html as _html
 import json
 import logging
 from pathlib import Path
 
+from weasyprint import HTML as _WeasyHTML
+
 from db import get_pool
+from pipeline.formatter import check_ats_format
 from pipeline.injector import inject_keywords
 from pipeline.rewriter import rewrite_resume
 
@@ -20,6 +26,23 @@ logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 RESUMES_DIR = PROJECT_DIR / "outputs" / "resumes"
+
+
+def _to_html(resume_text: str) -> str:
+    return (
+        "<!DOCTYPE html><html><head><style>"
+        "@page { size: letter; margin: 0.75in; }"
+        "body { font-family: Georgia, serif; font-size: 11pt; }"
+        "pre { font-family: inherit; font-size: inherit; white-space: pre-wrap; margin: 0; }"
+        "</style></head><body>"
+        f"<pre>{_html.escape(resume_text)}</pre>"
+        "</body></html>"
+    )
+
+
+def _write_pdf(resume_text: str, pdf_path: Path) -> None:
+    _WeasyHTML(string=_to_html(resume_text)).write_pdf(str(pdf_path))
+
 
 _BATCH_SIZE = 50
 
@@ -74,12 +97,22 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
         else:
             final = injected
 
-        # Save tailored resume to disk
+        # Layer 5 — ATS format check (non-blocking; issues logged but never block)
+        fmt = check_ats_format(final)
+        if not fmt["passed"]:
+            logger.warning(
+                "ATS format issues — user_jobs.id=%s: %s",
+                row_id, "; ".join(fmt["issues"]),
+            )
+
+        # Save tailored resume to disk (.txt for auditing, .pdf for the extension)
         out_dir = RESUMES_DIR / user_id
         out_dir.mkdir(parents=True, exist_ok=True)
-        safe_id = job_id.replace("/", "_")
-        path    = out_dir / f"{safe_id}_{job_ats}_tailored.txt"
-        path.write_text(final, encoding="utf-8")
+        safe_id  = job_id.replace("/", "_")
+        txt_path = out_dir / f"{safe_id}_{job_ats}_tailored.txt"
+        pdf_path = out_dir / f"{safe_id}_{job_ats}_tailored.pdf"
+        txt_path.write_text(final, encoding="utf-8")
+        await asyncio.to_thread(_write_pdf, final, pdf_path)
 
         async with pool.acquire() as conn:
             await conn.execute(
@@ -90,8 +123,19 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
                 SET status = 'applying', tailored_resume_path = $1, updated_at = NOW()
                 WHERE id = $2
                 """,
-                str(path), row_id,
+                str(pdf_path), row_id,
             )
+
+        if fmt["issues"]:
+            try:
+                async with pool.acquire() as conn:
+                    await conn.execute(
+                        "UPDATE user_jobs SET ats_format_issues = $1::jsonb WHERE id = $2",
+                        json.dumps(fmt["issues"]), row_id,
+                    )
+            except Exception:
+                pass  # column not yet migrated; issues already logged above
+
         return True
 
     except Exception as exc:
