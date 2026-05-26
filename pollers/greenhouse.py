@@ -3,6 +3,7 @@ import logging
 
 import httpx
 
+from db import increment_consecutive_failures, reset_consecutive_failures
 from pollers.filter import is_intern_role, assign_categories
 
 logger = logging.getLogger(__name__)
@@ -30,9 +31,11 @@ async def _poll_company(
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             logger.debug("Greenhouse HTTP %s for %s", exc.response.status_code, slug)
+            await increment_consecutive_failures(slug, "greenhouse")
             return []
         except httpx.RequestError as exc:
             logger.debug("Greenhouse request error for %s: %s", slug, exc)
+            await increment_consecutive_failures(slug, "greenhouse")
             return []
 
         data = resp.json()
@@ -55,6 +58,7 @@ async def _poll_company(
                     "categories": assign_categories(title, job.get("content", "")),
                 }
             )
+        await reset_consecutive_failures(slug, "greenhouse")
         return results
 
 

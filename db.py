@@ -1,11 +1,13 @@
 """Postgres database layer using asyncpg.
 
 Public API:
-    init_db()             — create pool, call once at startup
-    get_pool()            — return pool, raise if not initialized
-    close_db()            — close pool cleanly at shutdown
-    filter_new_ids(jobs)  — return subset of jobs not yet in the DB
-    mark_seen_batch(jobs) — insert new jobs, ON CONFLICT DO NOTHING
+    init_db()                              — create pool, call once at startup
+    get_pool()                             — return pool, raise if not initialized
+    close_db()                             — close pool cleanly at shutdown
+    filter_new_ids(jobs)                   — return subset of jobs not yet in the DB
+    mark_seen_batch(jobs)                  — insert new jobs, ON CONFLICT DO NOTHING
+    increment_consecutive_failures(s, a)   — bump failure counter; deactivate at 5
+    reset_consecutive_failures(s, a)       — reset counter to 0 on successful poll
 """
 
 import logging
@@ -130,3 +132,28 @@ async def mark_seen_batch(jobs: list[dict]) -> None:
             [now] * len(jobs),
         )
     logger.info("Marked %d jobs as seen", len(jobs))
+
+
+async def increment_consecutive_failures(slug: str, ats: str) -> None:
+    """Increment failure counter for a company; flip is_active=false at 5 failures."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE companies
+            SET consecutive_failures = consecutive_failures + 1,
+                is_active = CASE WHEN consecutive_failures + 1 >= 5 THEN FALSE ELSE is_active END
+            WHERE ats = $1 AND slug = $2
+            """,
+            ats, slug,
+        )
+
+
+async def reset_consecutive_failures(slug: str, ats: str) -> None:
+    """Reset failure counter to 0 after a successful poll."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE companies SET consecutive_failures = 0 WHERE ats = $1 AND slug = $2",
+            ats, slug,
+        )

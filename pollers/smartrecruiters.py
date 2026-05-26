@@ -11,6 +11,7 @@ import random
 
 import httpx
 
+from db import increment_consecutive_failures, reset_consecutive_failures
 from pollers.filter import is_intern_role, assign_categories
 
 logger = logging.getLogger(__name__)
@@ -61,21 +62,25 @@ async def _poll_company(
 
             except httpx.HTTPStatusError as exc:
                 logger.debug("SmartRecruiters HTTP %s for %s", exc.response.status_code, slug)
+                await increment_consecutive_failures(slug, "smartrecruiters")
                 return all_results
             except httpx.RequestError as exc:
                 logger.debug("SmartRecruiters request error for %s: %s", slug, exc)
+                await increment_consecutive_failures(slug, "smartrecruiters")
                 return all_results
 
             try:
                 data = resp.json()
             except Exception:
                 logger.debug("SmartRecruiters bad JSON for %s", slug)
+                await increment_consecutive_failures(slug, "smartrecruiters")
                 return all_results
 
             content = data.get("content")
             total = data.get("totalFound", 0)
             if content is None:
                 logger.debug("SmartRecruiters unexpected response for %s", slug)
+                await increment_consecutive_failures(slug, "smartrecruiters")
                 return all_results
 
             if not content:
@@ -115,6 +120,7 @@ async def _poll_company(
 
             await asyncio.sleep(random.uniform(0.1, 0.3))
 
+    await reset_consecutive_failures(slug, "smartrecruiters")
     return all_results
 
 

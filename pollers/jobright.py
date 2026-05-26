@@ -94,6 +94,32 @@ class _AnchorParser(HTMLParser):
             self.href = self._pending_href
 
 
+class _TextExtractor(HTMLParser):
+    """Extracts visible text from HTML, skipping script/style blocks."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._chunks: list[str] = []
+        self._skip: bool = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self._skip = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style"):
+            self._skip = False
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            stripped = data.strip()
+            if stripped:
+                self._chunks.append(stripped)
+
+    def get_text(self) -> str:
+        return re.sub(r"\s+", " ", " ".join(self._chunks)).strip()
+
+
 # ---------------------------------------------------------------------------
 # Per-category page fetching
 # ---------------------------------------------------------------------------
@@ -172,8 +198,26 @@ async def _poll_category(
 
 
 # ---------------------------------------------------------------------------
-# Apply-URL resolution (called from main.py post-dedup)
+# Apply-URL resolution and JD fetching (called externally post-dedup)
 # ---------------------------------------------------------------------------
+
+async def fetch_jd(job_id: str, client: httpx.AsyncClient) -> str:
+    """Fetch the Jobright job-info page and return plain-text job description.
+
+    *job_id* is the raw Jobright id (without the ``jobright_`` prefix).
+    Returns an empty string on any failure.
+    """
+    url = _INFO_URL.format(job_id=job_id)
+    try:
+        resp = await client.get(url, timeout=20)
+        resp.raise_for_status()
+        extractor = _TextExtractor()
+        extractor.feed(resp.text)
+        return extractor.get_text()
+    except Exception as exc:
+        logger.debug("fetch_jd failed for %s: %s", job_id, exc)
+        return ""
+
 
 async def resolve_apply_url(job_id: str, client: httpx.AsyncClient) -> str:
     """Fetch the Jobright job-info page and extract the 'Original Job Post' URL.
