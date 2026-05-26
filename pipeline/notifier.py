@@ -89,6 +89,74 @@ def _build_blocks(job: dict, changes: str, pdf_path: Path) -> list[dict]:
     ]
 
 
+async def notify_excluded_company(job: dict, user_id: str, reason: str) -> None:
+    """Send a yellow-accented Slack alert for an excluded-company match.
+
+    The job was matched and scored but the user has opted out of auto-apply
+    for this company.  They are nudged to apply manually if interested.
+    """
+    if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "your_webhook_here":
+        logger.warning("Slack webhook not configured — skipping excluded-company notification")
+        return
+
+    reason_text = reason if reason else "not specified"
+    apply_url   = job.get("apply_url", "")
+    apply_link  = f"<{apply_url}|Open Application>" if apply_url else "_apply URL unavailable_"
+
+    payload = {
+        "attachments": [
+            {
+                "color": "#FFA500",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "⚠️ Excluded Company Match — Manual Apply Needed",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "fields": [
+                            {"type": "mrkdwn", "text": f"*Company:* {job.get('company_name', job.get('company_slug', '?'))}"},
+                            {"type": "mrkdwn", "text": f"*Role:* {job.get('title', '?')}"},
+                            {"type": "mrkdwn", "text": f"*Location:* {job.get('location', 'Unknown')}"},
+                            {"type": "mrkdwn", "text": f"*Work Model:* {job.get('work_model', 'Unknown')}"},
+                        ],
+                    },
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": f"*Apply here:* {apply_link}"},
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": (
+                                    f"⚠️ You excluded this company from auto-apply "
+                                    f"(reason: {reason_text}) — apply manually if interested."
+                                ),
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+    }
+
+    client = _get_client()
+    try:
+        resp = await client.post(SLACK_WEBHOOK_URL, json=payload)
+        resp.raise_for_status()
+        logger.info(
+            "Excluded-company notification sent — %s at %s",
+            job.get("title"), job.get("company_name"),
+        )
+    except httpx.HTTPError as exc:
+        logger.error("Failed to send excluded-company notification: %s", exc)
+
+
 async def send_slack_notification(job: dict, changes: str, pdf_path: Path) -> None:
     if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "your_webhook_here":
         logger.warning("Slack webhook not configured — skipping notification")
