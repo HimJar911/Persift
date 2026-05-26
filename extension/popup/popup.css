@@ -1,0 +1,271 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 320px;
+  background: #1a1816;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #faf8f5;
+  overflow: hidden;
+}
+
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+.card {
+  background: #1a1816;
+  border: 0.5px solid #2d2a26;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.card--amber { border-color: #5a4520; }
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 0.5px solid #2d2a26;
+}
+
+.header__logo {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #faf8f5;
+  letter-spacing: -0.02em;
+}
+
+.header__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot--green  { background: #97C459; }
+.status-dot--muted  { background: #8a857d; }
+.status-dot--amber  { background: #EF9F27; }
+
+.status-label {
+  font-size: 11px;
+}
+.status-label--green { color: #97C459; }
+.status-label--muted { color: #8a857d; }
+.status-label--amber { color: #EF9F27; }
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+.body {
+  padding: 18px 16px 6px;
+}
+
+.section-label {
+  font-size: 11px;
+  color: #8a857d;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+/* Company row */
+.company-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.company-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.company-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #faf8f5;
+}
+
+.job-title {
+  font-size: 13px;
+  color: #d4cfc4;
+  margin-left: 32px;
+  margin-bottom: 14px;
+}
+
+/* Status chip inside body (State 1) */
+.fill-status {
+  margin-left: 32px;
+  padding: 8px 10px;
+  background: #221f1c;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #a8a39a;
+  margin-bottom: 16px;
+}
+.fill-status__dot { color: #97C459; }
+
+/* Countdown / helper text */
+.helper-text {
+  margin-left: 32px;
+  font-size: 12px;
+  color: #8a857d;
+  margin-bottom: 16px;
+}
+
+/* Amber alert card (State 5) */
+.amber-card {
+  margin-left: 32px;
+  padding: 10px 12px;
+  background: #2a1f0e;
+  border-left: 2px solid #EF9F27;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 16px;
+}
+.amber-card__title {
+  font-size: 12px;
+  color: #FAC775;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: 2px;
+}
+.amber-card__body {
+  font-size: 11px;
+  color: #c9a96a;
+  line-height: 1.5;
+}
+
+/* Prose text (States 3, 4) */
+.prose-primary {
+  font-size: 13px;
+  color: #d4cfc4;
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+.prose-secondary {
+  font-size: 12px;
+  color: #8a857d;
+  margin-bottom: 16px;
+}
+
+/* ── Button area ──────────────────────────────────────────────────────────── */
+.btn-area {
+  padding: 0 16px 14px;
+}
+
+.btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1;
+}
+.btn--outline {
+  background: transparent;
+  color: #faf8f5;
+  border: 0.5px solid #3d3934;
+}
+.btn--solid {
+  background: #faf8f5;
+  color: #1a1816;
+  border: none;
+  font-weight: 500;
+}
+.btn:hover { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+.footer {
+  padding: 10px 16px;
+  border-top: 0.5px solid #2d2a26;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #161412;
+}
+
+.footer__queue {
+  font-size: 11px;
+  color: #8a857d;
+}
+
+.footer__toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-label {
+  font-size: 11px;
+  color: #8a857d;
+}
+
+.toggle {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle--on  { background: #97C459; }
+.toggle--off { background: #3d3934; }
+
+.toggle__thumb {
+  width: 10px;
+  height: 10px;
+  background: #1a1816;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  transition: left 0.15s;
+}
+.toggle--on  .toggle__thumb { left: auto; right: 2px; }
+.toggle--off .toggle__thumb { left: 2px; }
+
+/* ── User ID input (bottom of every state) ────────────────────────────────── */
+.userid-section {
+  padding: 8px 16px 12px;
+  background: #1a1816;
+}
+
+.userid-label {
+  font-size: 10px;
+  color: #5a5550;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.userid-input {
+  width: 100%;
+  background: #221f1c;
+  border: 0.5px solid #2d2a26;
+  border-radius: 3px;
+  color: #8a857d;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  padding: 5px 7px;
+  outline: none;
+}
+.userid-input:focus {
+  border-color: #5a5550;
+  color: #d4cfc4;
+}
+.userid-input::placeholder { color: #3d3934; }

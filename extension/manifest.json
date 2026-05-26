@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Persift",
+  "version": "0.1.0",
+  "description": "Autonomous internship auto-apply extension",
+  "permissions": ["storage", "alarms", "tabs", "webNavigation", "activeTab"],
+  "host_permissions": [
+    "http://localhost:8000/*",
+    "https://*.greenhouse.io/*",
+    "https://boards.greenhouse.io/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.greenhouse.io/application*",
+        "https://boards.greenhouse.io/*/jobs/*"
+      ],
+      "js": ["api.js", "content/greenhouse.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+}
