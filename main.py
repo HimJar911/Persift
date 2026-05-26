@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from config import POLL_INTERVAL_MINUTES, LOG_LEVEL
 from db import init_db, close_db, get_pool
@@ -294,6 +295,55 @@ async def run_jobright_cycle() -> None:
     logger.info("=== Jobright cycle complete ===")
 
 
+async def run_cleanup_job() -> None:
+    """Nightly cleanup — removes old terminal-state rows from user_jobs."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        tag = await conn.execute(
+            """
+            DELETE FROM user_jobs
+            WHERE status IN ('dismissed', 'applied', 'failed')
+              AND updated_at < NOW() - INTERVAL '90 days'
+            """
+        )
+        deleted = int(tag.split()[-1])
+        logger.info("Cleanup: deleted %d stale user_jobs (90-day rule)", deleted)
+
+        tag = await conn.execute(
+            """
+            DELETE FROM user_jobs
+            WHERE status = 'failed'
+              AND retry_count >= 3
+              AND updated_at < NOW() - INTERVAL '7 days'
+            """
+        )
+        deleted = int(tag.split()[-1])
+        logger.info("Cleanup: deleted %d exhausted-retry user_jobs (7-day rule)", deleted)
+
+        # Expire applying jobs — 48-hour check first so long-stuck jobs get 'expired'
+        # rather than 'failed_stale'. Requires migration to add these statuses to the
+        # user_jobs_status_check constraint (see CLAUDE.md).
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs SET status = 'expired', updated_at = NOW()
+            WHERE status = 'applying'
+              AND updated_at < NOW() - INTERVAL '48 hours'
+            """
+        )
+        updated = int(tag.split()[-1])
+        logger.info("Cleanup: marked %d applying user_jobs as expired (48-hour rule)", updated)
+
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs SET status = 'failed_stale', updated_at = NOW()
+            WHERE status = 'applying'
+              AND updated_at < NOW() - INTERVAL '1 hour'
+            """
+        )
+        updated = int(tag.split()[-1])
+        logger.info("Cleanup: marked %d applying user_jobs as failed_stale (1-hour rule)", updated)
+
+
 async def run_seed() -> None:
     """Seed mode: poll everything, mark all current jobs as seen, then exit.
 
@@ -408,10 +458,16 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
             id="tailor_cycle",
             max_instances=1,
         )
+        scheduler.add_job(
+            run_cleanup_job,
+            CronTrigger(hour=3, minute=0),
+            id="cleanup_job",
+            max_instances=1,
+        )
         scheduler.start()
         logger.info(
             "Scheduler started — Tier 1 every %d min, Jobright every 60 min, "
-            "matching every 6 min, tailor every 10 min",
+            "matching every 6 min, tailor every 10 min, cleanup daily at 03:00",
             POLL_INTERVAL_MINUTES,
         )
 
