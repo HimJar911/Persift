@@ -13,6 +13,7 @@ import asyncio
 import html as _html
 import json
 import logging
+from datetime import timezone
 from pathlib import Path
 
 from weasyprint import HTML as _WeasyHTML
@@ -68,6 +69,52 @@ LIMIT $1
 """
 
 
+async def _ensure_resume_snapshot(conn, user_id: str, resume_text: str) -> int:
+    """Find or create a resume_snapshots row for this user's current resume text.
+
+    Uses resume_text as the dedup key — if the user's resume hasn't changed
+    since last time, reuse the existing snapshot row rather than creating a duplicate.
+    Returns the snapshot id.
+    """
+    existing = await conn.fetchrow(
+        """
+        SELECT id FROM resume_snapshots
+        WHERE user_id = $1
+        AND resume_text = $2
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        user_id, resume_text,
+    )
+    if existing:
+        return existing["id"]
+
+    version = await conn.fetchval(
+        """
+        SELECT COALESCE(MAX(version_number), 0) + 1
+        FROM resume_snapshots
+        WHERE user_id = $1
+        """,
+        user_id,
+    )
+
+    await conn.execute(
+        "UPDATE resume_snapshots SET is_active = FALSE WHERE user_id = $1",
+        user_id,
+    )
+
+    snapshot_id = await conn.fetchval(
+        """
+        INSERT INTO resume_snapshots (
+            user_id, version_number, resume_text, is_active, created_at
+        ) VALUES ($1, $2, $3, TRUE, NOW())
+        RETURNING id
+        """,
+        user_id, version, resume_text,
+    )
+    return snapshot_id
+
+
 async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
     """Run Layers 3 + 4 for one queued user_job.
 
@@ -87,6 +134,22 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
         resume  = row["resume_text"]
         jd_text = row["jd_text"] or ""
 
+        # Snapshot base resume and wire FK — before any tailoring layer runs
+        snapshot_id = None
+        try:
+            async with pool.acquire() as conn:
+                snapshot_id = await _ensure_resume_snapshot(conn, user_id, resume)
+                await conn.execute(
+                    """
+                    UPDATE user_jobs
+                    SET resume_text_snapshot = $1, resume_snapshot_id = $2
+                    WHERE id = $3
+                    """,
+                    resume, snapshot_id, row_id,
+                )
+        except Exception as e:
+            logger.warning("Failed to snapshot resume for user_job %s: %s", row_id, e)
+
         # Layer 3 — keyword injection (pure Python, no semaphore needed)
         injected = inject_keywords(resume, missing)
 
@@ -96,6 +159,22 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
                 final = await asyncio.to_thread(rewrite_resume, injected, jd_text, kmd)
         else:
             final = injected
+
+        # Capture tailored resume text for ML — after L4, before PDF generation
+        try:
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE user_jobs SET tailored_resume_text = $1 WHERE id = $2",
+                    final, row_id,
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to save tailored resume text for user_job %s: %s", row_id, e
+            )
+
+        logger.debug(
+            "Resume snapshots saved: user_job=%s snapshot_id=%s", row_id, snapshot_id
+        )
 
         # Layer 5 — ATS format check (non-blocking; issues logged but never block)
         fmt = check_ats_format(final)
