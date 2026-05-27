@@ -4,6 +4,7 @@ import io
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import timezone
 from pathlib import Path
 
 import pdfplumber
@@ -122,6 +123,7 @@ class _FailedReq(BaseModel):
     user_id: str
     job_ats: str
     reason: str = ""
+    failure_stage: str | None = None
 
 
 @app.get("/jobs/queue")
@@ -178,13 +180,63 @@ async def mark_applied(job_id: str, body: _AppliedReq):
         )
     if int(tag.split()[-1]) == 0:
         raise HTTPException(status_code=404, detail="user_job not found")
+
+    async with pool.acquire() as conn:
+        user_job_id = await conn.fetchval(
+            "SELECT id FROM user_jobs WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3",
+            body.user_id, job_id, body.job_ats,
+        )
+
+        try:
+            await conn.execute(
+                """
+                INSERT INTO application_outcomes (
+                    user_job_id, outcome_type, outcome_date, outcome_source,
+                    confidence, previous_outcome_type, created_at
+                )
+                SELECT $1, 'applied_confirmed', NOW(), 'extension_detected',
+                       1.0, current_stage, NOW()
+                FROM user_jobs
+                WHERE id = $1
+                """,
+                user_job_id,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to insert applied_confirmed outcome for user_job %s: %s",
+                user_job_id, e,
+            )
+
+        try:
+            await conn.execute(
+                """
+                UPDATE model_predictions
+                SET actual_outcome_type = 'applied_confirmed',
+                    actual_outcome_date = NOW(),
+                    evaluated_at = NOW()
+                WHERE id = (
+                    SELECT id FROM model_predictions
+                    WHERE user_job_id = $1 AND actual_outcome_type IS NULL
+                    ORDER BY predicted_at DESC
+                    LIMIT 1
+                )
+                """,
+                user_job_id,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to update model_predictions for user_job %s: %s",
+                user_job_id, e,
+            )
+
+    logger.debug(
+        "Application confirmed: user_job=%s outcome=applied_confirmed", user_job_id
+    )
     return {"ok": True}
 
 
 @app.post("/jobs/{job_id}/failed")
 async def mark_failed(job_id: str, body: _FailedReq):
-    # Note: user_jobs has no failure_reason column yet.
-    # Migration to add it: ALTER TABLE user_jobs ADD COLUMN IF NOT EXISTS failure_reason TEXT;
     pool = get_pool()
     async with pool.acquire() as conn:
         tag = await conn.execute(
@@ -196,6 +248,64 @@ async def mark_failed(job_id: str, body: _FailedReq):
         )
     if int(tag.split()[-1]) == 0:
         raise HTTPException(status_code=404, detail="user_job not found")
+
+    failure_reason = body.reason
+    failure_stage  = body.failure_stage
+
+    async with pool.acquire() as conn:
+        user_job_id = await conn.fetchval(
+            "SELECT id FROM user_jobs WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3",
+            body.user_id, job_id, body.job_ats,
+        )
+
+        try:
+            retry_count = await conn.fetchval(
+                "SELECT retry_count FROM user_jobs WHERE id = $1",
+                user_job_id,
+            )
+            await conn.execute(
+                """
+                INSERT INTO application_attempts (
+                    user_job_id, attempt_number, started_at, ended_at,
+                    success, failure_stage, error_details, created_at
+                ) VALUES ($1, $2, NOW(), NOW(), FALSE, $3, $4::jsonb, NOW())
+                """,
+                user_job_id,
+                (retry_count or 0) + 1,
+                failure_stage,
+                json.dumps({"reason": failure_reason}),
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to insert application_attempt for user_job %s: %s",
+                user_job_id, e,
+            )
+
+        try:
+            await conn.execute(
+                """
+                INSERT INTO application_outcomes (
+                    user_job_id, outcome_type, outcome_date, outcome_source,
+                    confidence, previous_outcome_type, outcome_metadata, created_at
+                )
+                SELECT $1, 'rejected', NOW(), 'extension_detected',
+                       1.0, current_stage, $2::jsonb, NOW()
+                FROM user_jobs
+                WHERE id = $1
+                """,
+                user_job_id,
+                json.dumps({"failure_reason": failure_reason, "failure_stage": failure_stage}),
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to insert failed outcome for user_job %s: %s",
+                user_job_id, e,
+            )
+
+    logger.debug(
+        "Application failed: user_job=%s stage=%s reason=%s",
+        user_job_id, failure_stage, failure_reason,
+    )
     return {"ok": True}
 
 
