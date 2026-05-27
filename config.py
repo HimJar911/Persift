@@ -155,3 +155,10 @@ OPENAI_MODEL = "gpt-4o"
 OPENAI_MAX_TOKENS = 4096
 LIBREOFFICE_TIMEOUT = 60
 WORKDAY_SEARCH_TEXT = "intern"
+
+# ML Model versions — format: "{model_name}-v{iteration}"
+# Increment iteration when swapping models (e.g. Claude API, new sentence transformer).
+# All new model_predictions rows are tagged with these at prediction time.
+SCORER_MODEL_VERSION = "all-MiniLM-L6-v2-v1"
+REWRITER_MODEL_VERSION = "gpt-4o-v1"
+PIPELINE_VERSION = "1.0.0"
