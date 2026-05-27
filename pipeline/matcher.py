@@ -10,9 +10,11 @@ Intended cadence: every 6 minutes via APScheduler.
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone
 
 import httpx
 
+from config import PIPELINE_VERSION, SCORER_MODEL_VERSION
 from db import get_pool
 from pipeline.notifier import notify_excluded_company
 from pipeline.scorer import score_resume
@@ -29,7 +31,7 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
         """
         SELECT job_id, ats, company_slug, company_name, title,
                description, categories, work_model, h1b_sponsored,
-               experience_level, location, apply_url
+               experience_level, location, apply_url, posted_at
         FROM jobs
         WHERE first_seen_at > NOW() - INTERVAL '6 minutes'
         """
@@ -39,16 +41,26 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
 
 async def _fetch_active_users(conn) -> list[dict]:
     rows = await conn.fetch(
-        "SELECT id, preferences, resume_text, work_auth, application_settings FROM users WHERE resume_text != ''"
+        """
+        SELECT id, tier, preferences, resume_text, work_auth, application_settings,
+               requires_sponsorship, work_auth_type, university, graduation_date, major
+        FROM users WHERE resume_text != ''
+        """
     )
     result = []
     for r in rows:
         result.append({
             "id":                   r["id"],
+            "tier":                 r["tier"],
             "preferences":          json.loads(r["preferences"]),
             "resume_text":          r["resume_text"],
             "work_auth":            json.loads(r["work_auth"]),
             "application_settings": json.loads(r["application_settings"]),
+            "requires_sponsorship": r["requires_sponsorship"],
+            "work_auth_type":       r["work_auth_type"],
+            "university":           r["university"],
+            "graduation_date":      r["graduation_date"],
+            "major":                r["major"],
         })
     return result
 
@@ -101,25 +113,143 @@ async def _fetch_jobright_jd(job: dict, client: httpx.AsyncClient, sem: asyncio.
 
 
 async def _bulk_insert_matches(conn, matches: list[dict], status: str = "queued") -> None:
+    """Bulk unnest insert — used for notify_only matches where RETURNING id is not needed."""
     await conn.execute(
         """
         INSERT INTO user_jobs
-            (user_id, job_id, job_ats, status, relevance_score, keyword_match_data)
+            (user_id, job_id, job_ats, status, relevance_score, keyword_match_data,
+             jd_text_snapshot, user_profile_snapshot, days_since_posting,
+             hour_submitted, day_of_week, submission_mode)
         SELECT
             unnest($1::uuid[]),
             unnest($2::text[]),
             unnest($3::text[]),
             $6,
             unnest($4::smallint[]),
-            unnest($5::text[])::jsonb
+            unnest($5::text[])::jsonb,
+            unnest($7::text[]),
+            unnest($8::text[])::jsonb,
+            unnest($9::int[]),
+            unnest($10::smallint[]),
+            unnest($11::smallint[]),
+            unnest($12::text[])
         ON CONFLICT (user_id, job_id, job_ats) DO NOTHING
         """,
-        [m["user_id"]            for m in matches],
-        [m["job_id"]             for m in matches],
-        [m["job_ats"]            for m in matches],
-        [m["relevance_score"]    for m in matches],
-        [m["keyword_match_data"] for m in matches],
+        [m["user_id"]                                          for m in matches],
+        [m["job_id"]                                           for m in matches],
+        [m["job_ats"]                                          for m in matches],
+        [m["relevance_score"]                                  for m in matches],
+        [m["keyword_match_data"]                               for m in matches],
         status,
+        [m.get("jd_text_snapshot")                             for m in matches],
+        [json.dumps(m.get("user_profile_snapshot") or {})      for m in matches],
+        [m.get("days_since_posting")                           for m in matches],
+        [m.get("hour_submitted")                               for m in matches],
+        [m.get("day_of_week")                                  for m in matches],
+        [m.get("submission_mode")                              for m in matches],
+    )
+
+
+def _build_user_profile_snapshot(user: dict) -> dict:
+    """Snapshot of user profile state at match time for ML training."""
+    return {
+        "tier":                  user.get("tier"),
+        "requires_sponsorship":  user.get("requires_sponsorship"),
+        "work_auth_type":        user.get("work_auth_type"),
+        "university":            user.get("university"),
+        "graduation_date":       str(user.get("graduation_date")) if user.get("graduation_date") else None,
+        "major":                 user.get("major"),
+        "categories":            user.get("preferences", {}).get("categories", []),
+        "work_models":           user.get("preferences", {}).get("work_models", []),
+        "resume_length_chars":   len(user.get("resume_text") or ""),
+        "snapshot_at":           datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _calculate_days_since_posting(posted_at_ms: int) -> int | None:
+    """Calculate days between job posting and now."""
+    if not posted_at_ms or posted_at_ms == 0:
+        return None
+    posted = datetime.fromtimestamp(posted_at_ms / 1000, tz=timezone.utc)
+    delta = datetime.now(timezone.utc) - posted
+    return max(0, delta.days)
+
+
+async def _insert_queued_match_with_prediction(conn, match: dict) -> None:
+    """Insert one queued user_jobs row (RETURNING id) then log to model_predictions.
+
+    model_predictions insert is wrapped in try/except — failure logs a WARNING
+    but never blocks the match.
+    """
+    row = await conn.fetchrow(
+        """
+        INSERT INTO user_jobs
+            (user_id, job_id, job_ats, status, relevance_score, keyword_match_data,
+             jd_text_snapshot, user_profile_snapshot, days_since_posting,
+             hour_submitted, day_of_week, submission_mode)
+        VALUES ($1, $2, $3, 'queued', $4, $5::jsonb, $6, $7::jsonb, $8, $9, $10, $11)
+        ON CONFLICT (user_id, job_id, job_ats) DO NOTHING
+        RETURNING id
+        """,
+        match["user_id"],
+        match["job_id"],
+        match["job_ats"],
+        match["relevance_score"],
+        match["keyword_match_data"],
+        match.get("jd_text_snapshot"),
+        json.dumps(match.get("user_profile_snapshot") or {}),
+        match.get("days_since_posting"),
+        match.get("hour_submitted"),
+        match.get("day_of_week"),
+        match.get("submission_mode"),
+    )
+
+    if row is None:
+        # ON CONFLICT — duplicate, skip prediction
+        return
+
+    user_job_id = row["id"]
+    score       = match["relevance_score"]
+
+    feature_snapshot = {
+        "relevance_score":    score,
+        "keyword_match":      json.loads(match["keyword_match_data"]),
+        "job_categories":     match.get("job_categories", []),
+        "job_work_model":     match.get("job_work_model"),
+        "job_experience_level": match.get("job_experience_level"),
+        "days_since_posting": match.get("days_since_posting"),
+        "hour_submitted":     match.get("hour_submitted"),
+        "day_of_week":        match.get("day_of_week"),
+        "user_tier":          match.get("user_tier"),
+        "requires_sponsorship": match.get("requires_sponsorship"),
+        "tailoring_eligible": score >= 80,
+        "pipeline_version":   PIPELINE_VERSION,
+    }
+
+    prediction_id = None
+    try:
+        pred_row = await conn.fetchrow(
+            """
+            INSERT INTO model_predictions
+                (user_job_id, predicted_at, model_version,
+                 callback_probability, predicted_stage, feature_snapshot)
+            VALUES ($1, NOW(), $2, $3, 'callback', $4::jsonb)
+            RETURNING id
+            """,
+            user_job_id,
+            SCORER_MODEL_VERSION,
+            round(score / 100.0, 4),
+            json.dumps(feature_snapshot),
+        )
+        prediction_id = pred_row["id"] if pred_row else None
+    except Exception as exc:
+        logger.warning(
+            "model_predictions insert failed for user_job_id=%s: %s", user_job_id, exc
+        )
+
+    logger.debug(
+        "Match logged: user=%s job=%s score=%s prediction_id=%s",
+        match["user_id"], match["job_id"], score, prediction_id,
     )
 
 
@@ -182,6 +312,10 @@ async def run_matching_cycle() -> None:
             app = user["application_settings"]
             excluded = {e["slug"]: e.get("reason", "") for e in app.get("excluded_companies", [])}
 
+            now_utc            = datetime.now(timezone.utc)
+            days_since_posting = _calculate_days_since_posting(job.get("posted_at", 0))
+            auto_submit        = app.get("auto_submit", False)
+
             match = {
                 "user_id":            user["id"],
                 "job_id":             job["job_id"],
@@ -191,6 +325,19 @@ async def run_matching_cycle() -> None:
                     "present": result["present_keywords"],
                     "missing": result["missing_keywords"],
                 }),
+                # ML snapshot fields
+                "jd_text_snapshot":      job.get("description") or "",
+                "user_profile_snapshot": _build_user_profile_snapshot(user),
+                "days_since_posting":    days_since_posting,
+                "hour_submitted":        now_utc.hour,
+                "day_of_week":           now_utc.weekday(),
+                "submission_mode":       "autonomous" if auto_submit else "review_before_submit",
+                # Feature fields for model_predictions (queued path only)
+                "job_categories":        list(job.get("categories") or []),
+                "job_work_model":        job.get("work_model"),
+                "job_experience_level":  job.get("experience_level"),
+                "user_tier":             user.get("tier"),
+                "requires_sponsorship":  user.get("requires_sponsorship"),
             }
 
             if job["company_slug"] in excluded:
@@ -204,8 +351,8 @@ async def run_matching_cycle() -> None:
                 queued_matches.append(match)
 
     async with pool.acquire() as conn:
-        if queued_matches:
-            await _bulk_insert_matches(conn, queued_matches, "queued")
+        for m in queued_matches:
+            await _insert_queued_match_with_prediction(conn, m)
         if notify_matches:
             await _bulk_insert_matches(conn, notify_matches, "notify_only")
 
