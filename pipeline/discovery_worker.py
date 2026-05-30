@@ -42,6 +42,31 @@ ATS_HTML_FINGERPRINTS = {
 
 _HREF_SRC_RE = re.compile(r'(?:href|src)=["\']([^"\'>\s]+)["\']', re.IGNORECASE)
 
+# Strips common legal suffixes before generating slug candidates.
+_SUFFIX_RE = re.compile(
+    r'[\s,]+(?:inc\.?|incorporated|llc|ltd\.?|limited|corp\.?|corporation|'
+    r'co\.?|plc|gmbh|ag|sa|technologies|technology|tech|solutions|'
+    r'group|holdings|services|international|systems|global)\s*$',
+    re.IGNORECASE,
+)
+
+
+def _slug_candidates(company_name: str) -> list[str]:
+    """Generate slug variants from a company name to match against companies.slug.
+
+    Produces hyphenated and concatenated forms, with and without common
+    business suffixes, so 'Stripe, Inc.' matches slug 'stripe'.
+    """
+    base = company_name.lower().strip()
+    stripped = _SUFFIX_RE.sub("", base).strip()
+    candidates: set[str] = set()
+    for name in (base, stripped):
+        if not name:
+            continue
+        candidates.add(re.sub(r"[^a-z0-9]+", "-", name).strip("-"))
+        candidates.add(re.sub(r"[^a-z0-9]+", "", name))
+    return [c for c in candidates if c]
+
 
 async def _ensure_manual_review_table() -> None:
     pool = get_pool()
@@ -177,26 +202,21 @@ async def _queue_manual_review(
     await _mark_staging_row(row_id, "queued_manual", None, conn)
 
 
-async def _process_row(
-    row,
-    session: httpx.AsyncClient,
-    sem: asyncio.Semaphore,
-    pool,
-    counters: dict,
-) -> None:
+async def _process_row(row, pool, counters: dict) -> None:
+    # Stages 1+2 (URL pattern + HTML fingerprint) are suspended — Jobright bulk
+    # API does not expose apply URLs and unauthenticated jobs/info pages omit them.
+    # Re-enable when a reliable apply_url source is available.
     row_id = row["id"]
-    apply_url = row["apply_url"]
     company_name = row["company_name"]
 
     try:
-        # Stage 1 — URL pattern match (no network)
-        stage1 = _detect_stage1(apply_url)
-        if stage1:
-            ats, slug = stage1
-            async with pool.acquire() as conn:
+        async with pool.acquire() as conn:
+            if company_name:
+                # Step 1 — exact company_name match (case-insensitive)
                 existing = await conn.fetchrow(
-                    "SELECT canonical_company_id FROM companies WHERE slug = $1 AND ats = $2",
-                    slug, ats,
+                    "SELECT canonical_company_id FROM companies "
+                    "WHERE LOWER(company_name) = LOWER($1) LIMIT 1",
+                    company_name,
                 )
                 if existing:
                     await _mark_staging_row(
@@ -204,44 +224,23 @@ async def _process_row(
                     )
                     counters["already_known"] += 1
                     return
-                canonical_id = await _upsert_company(ats, slug, conn)
-                await _mark_staging_row(row_id, "added", canonical_id, conn)
-                counters["added"] += 1
-                return
 
-        # Stage 2 — HTML fingerprinting (network; no DB connection held during fetch)
-        stage2 = await _detect_stage2(apply_url or "", session, sem) if apply_url else None
-
-        if stage2:
-            ats, slug = stage2
-            async with pool.acquire() as conn:
-                if slug:
-                    existing = await conn.fetchrow(
-                        "SELECT canonical_company_id FROM companies WHERE slug = $1 AND ats = $2",
-                        slug, ats,
+                # Step 2 — slug candidates derived from company name, any ATS
+                candidates = _slug_candidates(company_name)
+                existing = await conn.fetchrow(
+                    "SELECT canonical_company_id FROM companies "
+                    "WHERE slug = ANY($1::text[]) LIMIT 1",
+                    candidates,
+                )
+                if existing:
+                    await _mark_staging_row(
+                        row_id, "already_known", str(existing["canonical_company_id"]), conn
                     )
-                    if existing:
-                        await _mark_staging_row(
-                            row_id, "already_known", str(existing["canonical_company_id"]), conn
-                        )
-                        counters["already_known"] += 1
-                        return
-                    canonical_id = await _upsert_company(ats, slug, conn)
-                    await _mark_staging_row(row_id, "added", canonical_id, conn)
-                    counters["added"] += 1
-                    return
-                else:
-                    await _queue_manual_review(
-                        row_id, apply_url, company_name, "known_ats_unclear_slug", conn
-                    )
-                    counters["queued_manual"] += 1
+                    counters["already_known"] += 1
                     return
 
-        # Stage 3 — unknown ATS, queue for manual review
-        async with pool.acquire() as conn:
-            await _queue_manual_review(
-                row_id, apply_url, company_name, "unknown_ats", conn
-            )
+            # Step 3 — no match, queue for manual review
+            await _queue_manual_review(row_id, None, company_name, "unknown_ats", conn)
             counters["queued_manual"] += 1
 
     except Exception as exc:
@@ -284,17 +283,12 @@ async def run_discovery_cycle() -> None:
         return
 
     logger.info("Discovery: processing %d staged rows", len(rows))
-    # DEBUG — remove after confirming field values
-    for r in rows[:5]:
-        logger.info("DEBUG row id=%s company=%r apply_url=%r", r["id"], r["company_name"], r["apply_url"])
     counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
 
-    sem = asyncio.Semaphore(10)
-    async with httpx.AsyncClient() as session:
-        await asyncio.gather(
-            *[_process_row(row, session, sem, pool, counters) for row in rows],
-            return_exceptions=True,
-        )
+    await asyncio.gather(
+        *[_process_row(row, pool, counters) for row in rows],
+        return_exceptions=True,
+    )
 
     logger.info(
         "=== Discovery cycle complete — %d rows: %d added, %d already_known, "
