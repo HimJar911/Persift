@@ -125,6 +125,10 @@ async def run_jobright_cycle() -> None:
 
         await asyncio.gather(*[resolve_one(j) for j in new_jobs], return_exceptions=True)
 
+    # DEBUG — remove after confirming apply_url values
+    for j in new_jobs[:3]:
+        logger.info("DEBUG company=%r apply_url=%r", j.get("company_name"), j.get("apply_url"))
+
     await _stage_for_discovery(new_jobs)
     logger.info("=== Jobright cycle complete — %d new jobs staged ===", len(new_jobs))
 
