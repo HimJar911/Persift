@@ -1,0 +1,21 @@
+services:
+  - type: worker
+    name: persift-discovery
+    runtime: docker
+    dockerfilePath: ./Dockerfile.discovery
+    startCommand: python discovery_runner.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: persift-db
+          property: connectionString
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+      - key: LOG_LEVEL
+        sync: false
+
+databases:
+  - name: persift-db
+    plan: starter
+    databaseName: persift
+    user: persift
