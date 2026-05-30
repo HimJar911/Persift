@@ -28,6 +28,7 @@ from pipeline.pdf_gen import convert_docx_to_pdf, generate_pdf_fallback
 from pipeline.docx_editor import edit_docx
 from pipeline.matcher import run_matching_cycle
 from pipeline.tailor_worker import run_tailor_cycle
+from pipeline.discovery_worker import run_discovery_cycle
 from pipeline.notifier import send_slack_notification
 
 
@@ -84,6 +85,7 @@ COMPANY_FILES = {
 }
 
 COMPANY_FILE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60  # 30 days
+_SLUG_REFRESH_INTERVAL_SECONDS = 30 * 60  # re-query DB every 30 minutes
 
 # Limits concurrent OpenAI API calls so we don't blow through rate limits.
 # Keep at 2 to stay within the 30K TPM limit on gpt-4o.
@@ -96,6 +98,7 @@ _ashby_slugs: list[str] = []
 _workday_companies: list[dict] = []  # list of dicts with slug, wd_num, board, base_url
 _smartrecruiters_slugs: list[str] = []
 _custom_companies: list[dict] = []  # list of dicts from custom_companies.json
+_last_loaded_at: float = 0.0  # monotonic timestamp of last DB load
 
 
 def _file_is_fresh(path: Path) -> bool:
@@ -140,19 +143,44 @@ async def _run_discovery(crawl: str | None = None) -> None:
         logger.error("Discovery script exited with code %d", proc.returncode)
 
 
-def load_company_lists() -> None:
-    """Load company lists from the JSON files into module-level lists."""
+async def _query_slugs_from_db(ats_name: str) -> list[str]:
+    """Fetch active slugs for one ATS from the companies table."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT slug FROM companies WHERE ats = $1 AND is_active = TRUE",
+            ats_name,
+        )
+    return [r["slug"] for r in rows]
+
+
+async def load_company_lists() -> None:
+    """Load company lists from the DB (with JSON fallback) into module-level lists."""
     global _greenhouse_slugs, _lever_slugs, _ashby_slugs
     global _workday_companies, _smartrecruiters_slugs, _custom_companies
+    global _last_loaded_at
 
-    _greenhouse_slugs = _load_company_file(COMPANY_FILES["greenhouse"])
-    _lever_slugs = _load_company_file(COMPANY_FILES["lever"])
-    _ashby_slugs = _load_company_file(COMPANY_FILES["ashby"])
+    # DB-backed ATS platforms — fall back to JSON if DB returns nothing
+    for ats_name, target_var, json_key in [
+        ("greenhouse", "_greenhouse_slugs", "greenhouse"),
+        ("lever",      "_lever_slugs",      "lever"),
+        ("ashby",      "_ashby_slugs",       "ashby"),
+        ("smartrecruiters", "_smartrecruiters_slugs", "smartrecruiters"),
+    ]:
+        slugs = await _query_slugs_from_db(ats_name)
+        if not slugs:
+            logger.warning(
+                "%s: DB returned 0 rows — falling back to JSON file",
+                ats_name.title(),
+            )
+            slugs = _load_company_file(COMPANY_FILES[json_key])
+        globals()[target_var] = slugs
 
-    # Workday uses a list of dicts, not plain slugs
+    # Workday (being phased out) and custom still read from JSON
     _workday_companies = _load_company_file(COMPANY_FILES["workday"])
-    _smartrecruiters_slugs = _load_company_file(COMPANY_FILES["smartrecruiters"])
     _custom_companies = _load_company_file(COMPANY_FILES["custom"])
+
+    _last_loaded_at = time.monotonic()
 
     counts = {
         "Greenhouse": len(_greenhouse_slugs),
@@ -166,6 +194,17 @@ def load_company_lists() -> None:
         logger.info("%s: %d companies loaded", name, count)
     total = sum(counts.values())
     logger.info("Total: %d companies across %d ATS platforms", total, len(counts))
+
+
+async def _maybe_refresh_slugs() -> None:
+    """Reload company slugs from DB if 30 minutes have elapsed since last load."""
+    if time.monotonic() - _last_loaded_at < _SLUG_REFRESH_INTERVAL_SECONDS:
+        return
+    logger.info("Company slug cache expired — refreshing from DB")
+    try:
+        await load_company_lists()
+    except Exception as exc:
+        logger.warning("Slug refresh failed — keeping previous data (%s)", exc)
 
 
 async def process_single_job(raw_job: dict) -> None:
@@ -376,6 +415,7 @@ async def run_seed() -> None:
 
 async def run_pipeline() -> None:
     """Run a single cycle of the full polling + processing pipeline."""
+    await _maybe_refresh_slugs()
     logger.info("=== Starting pipeline run ===")
 
     all_jobs = await poll_all()
@@ -402,7 +442,7 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
                 logger.info("Company list files missing or older than 30 days — running discovery")
             await _run_discovery()
 
-        load_company_lists()
+        await load_company_lists()
 
         total = sum(
             len(s) for s in (
@@ -459,6 +499,13 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
             max_instances=1,
         )
         scheduler.add_job(
+            run_discovery_cycle,
+            "interval",
+            minutes=90,
+            id="discovery_cycle",
+            max_instances=1,
+        )
+        scheduler.add_job(
             run_cleanup_job,
             CronTrigger(hour=3, minute=0),
             id="cleanup_job",
@@ -467,7 +514,8 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
         scheduler.start()
         logger.info(
             "Scheduler started — Tier 1 every %d min, Jobright every 60 min, "
-            "matching every 6 min, tailor every 10 min, cleanup daily at 03:00",
+            "matching every 6 min, tailor every 10 min, "
+            "discovery every 90 min, cleanup daily at 03:00",
             POLL_INTERVAL_MINUTES,
         )
 

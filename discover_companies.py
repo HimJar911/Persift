@@ -23,10 +23,12 @@ import time
 from pathlib import Path
 
 import httpx
+import psycopg2
 
 from config import (
     GREENHOUSE_FALLBACK_SLUGS, LEVER_FALLBACK_SLUGS, ASHBY_FALLBACK_SLUGS,
     SMARTRECRUITERS_FALLBACK_SLUGS,
+    DATABASE_URL,
 )
 
 logging.basicConfig(
@@ -432,11 +434,38 @@ async def revalidate_existing_slugs(names: list[str]) -> None:
         )
         if removed:
             cfg["output"].write_text(json.dumps(sorted(valid), indent=2), encoding="utf-8")
+            _upsert_companies_to_db(name, sorted(valid))
 
 
 # ---------------------------------------------------------------------------
 # Step 5 & 6: Save, fallback, and summary
 # ---------------------------------------------------------------------------
+
+def _upsert_companies_to_db(ats_name: str, slugs: list[str]) -> None:
+    """Insert new slugs into the companies table. Skips rows that already exist."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        try:
+            with conn.cursor() as cur:
+                cur.executemany(
+                    """
+                    INSERT INTO companies
+                        (slug, ats, canonical_company_id, is_active,
+                         discovered_via, discovered_at, match_method, match_confidence)
+                    VALUES
+                        (%s, %s, gen_random_uuid(), TRUE,
+                         'direct_seed', NOW(), 'new', 'unverified')
+                    ON CONFLICT (slug, ats) DO NOTHING
+                    """,
+                    [(slug, ats_name) for slug in slugs],
+                )
+            conn.commit()
+            logger.info("%s: upserted %d slugs into companies table", ats_name.title(), len(slugs))
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.warning("%s: DB upsert failed — %s", ats_name.title(), exc)
+
 
 def _load_existing(path: Path) -> list[str]:
     """Load an existing JSON company list, or return empty list."""
@@ -519,6 +548,7 @@ def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -
             cfg["output"].write_text(
                 json.dumps(slugs, indent=2), encoding="utf-8",
             )
+            _upsert_companies_to_db(name, slugs)
 
     # Revalidation phase — runs after CDX save, checks all slugs including pre-existing ones
     if revalidate:
