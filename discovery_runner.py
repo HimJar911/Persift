@@ -104,30 +104,29 @@ async def run_jobright_cycle() -> None:
     logger.info("=== Starting Jobright cycle ===")
 
     since_ts = await _load_jobright_timestamp()
-    jobs = await poll_jobright(since_timestamp=since_ts)
-    jobs = [j for j in jobs if is_intern_role(j["title"])]
+    logger.info("Jobright: fetching with since_ms=%d", since_ts)
+
+    raw_jobs = await poll_jobright(since_timestamp=since_ts)
+    logger.info("Jobright: %d raw jobs from API", len(raw_jobs))
+
+    if raw_jobs:
+        timestamps = [j.get("posted_at", 0) for j in raw_jobs if j.get("posted_at")]
+        if timestamps:
+            logger.info(
+                "Jobright: postedAt range %d – %d",
+                min(timestamps), max(timestamps),
+            )
+
+    jobs = [j for j in raw_jobs if is_intern_role(j["title"])]
+    logger.info("Jobright: %d jobs after is_intern_role filter", len(jobs))
+
     await _save_jobright_timestamp(jobs)
-    logger.info("Jobright: %d jobs after seniority filter", len(jobs))
 
     new_jobs = await detect_new_jobs(jobs, "jobright")
+    logger.info("Jobright: %d genuinely new (not yet in jobs table)", len(new_jobs))
     if not new_jobs:
         logger.info("=== Jobright cycle complete — no new jobs ===")
         return
-
-    # Lazy apply-URL resolution — only for new jobs
-    logger.info("Resolving apply URLs for %d new Jobright jobs", len(new_jobs))
-    sem = asyncio.Semaphore(_RESOLVE_SEMAPHORE)
-    async with httpx.AsyncClient() as client:
-        async def resolve_one(job: dict) -> None:
-            async with sem:
-                raw_id = job["job_id"].removeprefix("jobright_")
-                job["apply_url"] = await resolve_apply_url(raw_id, client)
-
-        await asyncio.gather(*[resolve_one(j) for j in new_jobs], return_exceptions=True)
-
-    # DEBUG — remove after confirming apply_url values
-    for j in new_jobs[:3]:
-        logger.info("DEBUG company=%r apply_url=%r", j.get("company_name"), j.get("apply_url"))
 
     await _stage_for_discovery(new_jobs)
     logger.info("=== Jobright cycle complete — %d new jobs staged ===", len(new_jobs))
