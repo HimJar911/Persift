@@ -309,13 +309,10 @@ async def run_discovery_cycle() -> None:
         logger.info("=== Discovery cycle complete — no unprocessed rows ===")
         return
 
+    total_rows = sum(totals.values())
+    newly_identified = totals["already_known"] + totals["queued_manual"]
     logger.info(
-        "=== Discovery cycle complete — %d batches, %d total rows: "
-        "%d added, %d already_known, %d queued_manual, %d failed ===",
-        batch_num,
-        sum(totals.values()),
-        totals["added"],
-        totals["already_known"],
-        totals["queued_manual"],
-        totals["failed"],
+        "Discovery cycle complete — %s companies analyzed | %s newly identified",
+        f"{total_rows:,}",
+        f"{newly_identified:,}",
     )
