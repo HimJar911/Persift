@@ -284,6 +284,9 @@ async def run_discovery_cycle() -> None:
         return
 
     logger.info("Discovery: processing %d staged rows", len(rows))
+    # DEBUG — remove after confirming field values
+    for r in rows[:5]:
+        logger.info("DEBUG row id=%s company=%r apply_url=%r", r["id"], r["company_name"], r["apply_url"])
     counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
 
     sem = asyncio.Semaphore(10)
