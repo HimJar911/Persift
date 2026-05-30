@@ -266,6 +266,19 @@ async def run_discovery_cycle() -> None:
     await _ensure_manual_review_table()
 
     pool = get_pool()
+
+    # Count unprocessed rows upfront so batch totals are known before the loop.
+    async with pool.acquire() as conn:
+        unprocessed = await conn.fetchval(
+            "SELECT COUNT(*) FROM discovery_staging WHERE processed = FALSE"
+        )
+
+    if not unprocessed:
+        logger.info("=== Discovery cycle complete — no unprocessed rows ===")
+        return
+
+    import math
+    total_batches = math.ceil(unprocessed / _BATCH_SIZE)
     totals = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
     batch_num = 0
 
@@ -296,23 +309,18 @@ async def run_discovery_cycle() -> None:
         for k in totals:
             totals[k] += counters[k]
 
-        logger.info(
-            "Batch %d complete — added: %d | already_known: %d | queued_manual: %d | failed: %d",
-            batch_num,
-            counters["added"],
-            counters["already_known"],
-            counters["queued_manual"],
-            counters["failed"],
+        print(
+            f"[Batch {batch_num:2d}/{total_batches}]"
+            f"  already_tracked: {counters['already_known']:4d}"
+            f"  |  newly_identified: {counters['queued_manual']:4d}",
+            flush=True,
         )
 
-    if batch_num == 0:
-        logger.info("=== Discovery cycle complete — no unprocessed rows ===")
-        return
-
+    _HR = "━" * 62
     total_rows = sum(totals.values())
-    logger.info(
-        "Discovery cycle complete — %s companies analyzed | %s already tracked | %s newly identified",
-        f"{total_rows:,}",
-        f"{totals['already_known']:,}",
-        f"{totals['queued_manual']:,}",
-    )
+    print(_HR)
+    print(f"  DISCOVERY COMPLETE")
+    print(f"  {total_rows:,} companies analyzed")
+    print(f"  {totals['already_known']:,} already tracked")
+    print(f"  {totals['queued_manual']:,} newly identified")
+    print(_HR, flush=True)
