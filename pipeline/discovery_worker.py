@@ -266,36 +266,56 @@ async def run_discovery_cycle() -> None:
     await _ensure_manual_review_table()
 
     pool = get_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT id, job_id, job_ats, company_name, apply_url
-            FROM discovery_staging
-            WHERE processed = FALSE
-            ORDER BY staged_at ASC
-            LIMIT $1
-            """,
-            _BATCH_SIZE,
+    totals = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
+    batch_num = 0
+
+    while True:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, job_id, job_ats, company_name, apply_url
+                FROM discovery_staging
+                WHERE processed = FALSE
+                ORDER BY staged_at ASC
+                LIMIT $1
+                """,
+                _BATCH_SIZE,
+            )
+
+        if not rows:
+            break
+
+        batch_num += 1
+        counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
+
+        await asyncio.gather(
+            *[_process_row(row, pool, counters) for row in rows],
+            return_exceptions=True,
         )
 
-    if not rows:
+        for k in totals:
+            totals[k] += counters[k]
+
+        logger.info(
+            "Batch %d complete — added: %d | already_known: %d | queued_manual: %d | failed: %d",
+            batch_num,
+            counters["added"],
+            counters["already_known"],
+            counters["queued_manual"],
+            counters["failed"],
+        )
+
+    if batch_num == 0:
         logger.info("=== Discovery cycle complete — no unprocessed rows ===")
         return
 
-    logger.info("Discovery: processing %d staged rows", len(rows))
-    counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
-
-    await asyncio.gather(
-        *[_process_row(row, pool, counters) for row in rows],
-        return_exceptions=True,
-    )
-
     logger.info(
-        "=== Discovery cycle complete — %d rows: %d added, %d already_known, "
-        "%d queued_manual, %d failed ===",
-        len(rows),
-        counters["added"],
-        counters["already_known"],
-        counters["queued_manual"],
-        counters["failed"],
+        "=== Discovery cycle complete — %d batches, %d total rows: "
+        "%d added, %d already_known, %d queued_manual, %d failed ===",
+        batch_num,
+        sum(totals.values()),
+        totals["added"],
+        totals["already_known"],
+        totals["queued_manual"],
+        totals["failed"],
     )
