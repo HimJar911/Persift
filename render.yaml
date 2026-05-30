@@ -16,6 +16,6 @@ services:
 
 databases:
   - name: persift-db
-    plan: starter
+    plan: free
     databaseName: persift
     user: persift
