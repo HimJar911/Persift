@@ -310,9 +310,9 @@ async def run_discovery_cycle() -> None:
         return
 
     total_rows = sum(totals.values())
-    newly_identified = totals["already_known"] + totals["queued_manual"]
     logger.info(
-        "Discovery cycle complete — %s companies analyzed | %s newly identified",
+        "Discovery cycle complete — %s companies analyzed | %s already tracked | %s newly identified",
         f"{total_rows:,}",
-        f"{newly_identified:,}",
+        f"{totals['already_known']:,}",
+        f"{totals['queued_manual']:,}",
     )
