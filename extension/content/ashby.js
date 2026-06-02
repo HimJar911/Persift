@@ -1,4 +1,4 @@
-// Greenhouse application form filler.
+// Ashby application form filler.
 // api.js is injected before this script — getUserId, getResumePdf, etc. are globals.
 
 (async function () {
@@ -20,18 +20,23 @@
     );
   }
 
+  // Ashby is React — use native setter so React's synthetic event system fires.
+  const _nativeSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype, 'value'
+  ).set;
+
   async function humanType(element, text) {
     for (let i = 0; i < text.length; i++) {
       if (Math.random() < 0.03) {
         const wrong = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-        element.value += wrong;
+        _nativeSetter.call(element, element.value + wrong);
         element.dispatchEvent(new Event('input', { bubbles: true }));
         await humanDelay(50, 180);
-        element.value = element.value.slice(0, -1);
+        _nativeSetter.call(element, element.value.slice(0, -1));
         element.dispatchEvent(new Event('input', { bubbles: true }));
         await humanDelay(50, 180);
       }
-      element.value += text[i];
+      _nativeSetter.call(element, element.value + text[i]);
       element.dispatchEvent(new Event('input', { bubbles: true }));
       await humanDelay(50, 180);
       const chunkSize = 8 + Math.floor(Math.random() * 8);
@@ -106,7 +111,8 @@
   }
 
   // ── Handshake with background ──────────────────────────────────────────────
-  await humanDelay(2000, 2000);
+  // Ashby is a React SPA — wait longer than Greenhouse for initial render.
+  await humanDelay(3000, 5000);
 
   let context;
   try {
@@ -131,14 +137,23 @@
     chrome.runtime.sendMessage(msg);
   }
 
-  // ── Form detection ─────────────────────────────────────────────────────────
-  const form =
-    document.querySelector('#application_form') ||
-    document.querySelector('form[action*="greenhouse"]') ||
-    document.querySelector('form[id*="application"]');
+  // ── Wait for React to render the form ─────────────────────────────────────
+  const form = await new Promise(resolve => {
+    const deadline = Date.now() + 10000;
+    const poll = setInterval(() => {
+      const f =
+        document.querySelector('form') ||
+        document.querySelector('[data-testid="application-form"]') ||
+        document.querySelector('[class*="ApplicationForm"]');
+      if (f || Date.now() > deadline) {
+        clearInterval(poll);
+        resolve(f || null);
+      }
+    }, 300);
+  });
 
   if (!form) {
-    send({ type: 'needs_review', reason: 'not_a_standard_greenhouse_form' });
+    send({ type: 'needs_review', reason: 'not_a_standard_ashby_form' });
     return exit();
   }
 
@@ -153,7 +168,7 @@
 
   // First name
   const firstNameEl = findField(
-    '#first_name', 'input[name="job_application[first_name]"]',
+    'input[name="firstName"]', 'input[name="first_name"]',
     'input[autocomplete="given-name"]'
   ) || findFieldByLabelText('first name');
   if (firstNameEl && first_name) {
@@ -163,7 +178,7 @@
 
   // Last name
   const lastNameEl = findField(
-    '#last_name', 'input[name="job_application[last_name]"]',
+    'input[name="lastName"]', 'input[name="last_name"]',
     'input[autocomplete="family-name"]'
   ) || findFieldByLabelText('last name');
   if (lastNameEl && last_name) {
@@ -171,10 +186,19 @@
     await humanType(lastNameEl, last_name);
   }
 
+  // Some Ashby forms use a single "Full Name" field instead of first/last
+  if (!firstNameEl && !lastNameEl && first_name && last_name) {
+    const fullNameEl = findFieldByLabelText('full name') || findFieldByLabelText('your name');
+    if (fullNameEl) {
+      await focusField(fullNameEl);
+      await humanType(fullNameEl, `${first_name} ${last_name}`);
+    }
+  }
+
   // Email
   const emailEl = findField(
-    '#email', 'input[name="job_application[email]"]',
-    'input[type="email"]', 'input[autocomplete="email"]'
+    'input[name="email"]', 'input[type="email"]',
+    'input[autocomplete="email"]'
   ) || findFieldByLabelText('email');
   if (emailEl && email) {
     await focusField(emailEl);
@@ -183,8 +207,8 @@
 
   // Phone
   const phoneEl = findField(
-    '#phone', 'input[name="job_application[phone]"]',
-    'input[type="tel"]', 'input[autocomplete="tel"]'
+    'input[name="phone"]', 'input[type="tel"]',
+    'input[autocomplete="tel"]'
   ) || findFieldByLabelText('phone');
   if (phoneEl && phone) {
     await focusField(phoneEl);
@@ -200,7 +224,7 @@
 
   // Location / city
   const locationEl = findField(
-    '#job_application_location', 'input[name="job_application[location]"]'
+    'input[name="location"]', 'input[name="city"]'
   ) || findFieldByLabelText('location') || findFieldByLabelText('city');
   if (locationEl && location_city) {
     await focusField(locationEl);
@@ -242,7 +266,11 @@
   }
 
   // ── Work authorization ─────────────────────────────────────────────────────
-  const authSelect = findField('select[name*="authorization" i]');
+  const authSelect = findField(
+    'select[name*="authorization" i]',
+    'select[name*="workAuth" i]',
+    'select[name*="work_auth" i]'
+  );
   if (authSelect) {
     const affirmative = Array.from(authSelect.options).find(o =>
       /yes|authorized|eligible/i.test(o.text)
@@ -283,7 +311,7 @@
     if (option) await clickElement(option);
   }
 
-  // ── Submit or hand off ────────────────────────────────────────────────────
+  // ── Submit or hand off ─────────────────────────────────────────────────────
   await humanDelay(1000, 2000);
 
   if (!auto_submit) {
@@ -294,7 +322,9 @@
   const submitBtn =
     form.querySelector('button[type="submit"]') ||
     form.querySelector('input[type="submit"]') ||
-    document.querySelector('#submit_app');
+    Array.from(form.querySelectorAll('button')).find(b =>
+      /submit/i.test(b.textContent)
+    );
 
   if (!submitBtn) {
     send({ type: 'failed', reason: 'submit_button_not_found' });
@@ -303,18 +333,17 @@
 
   await clickElement(submitBtn);
 
-  // Wait for confirmation — URL change or success text in DOM
+  // Ashby is a SPA — no URL change on success, watch for success text only.
   const confirmed = await new Promise(resolve => {
     const deadline = Date.now() + 10000;
-    const check = setInterval(() => {
-      const successText = /thank you|application received|successfully submitted/i;
-      const urlChanged = !location.href.includes('/application');
-      if (successText.test(document.body.textContent) || urlChanged) {
-        clearInterval(check);
+    const poll = setInterval(() => {
+      const successText = /thank you|application received|successfully submitted|application submitted/i;
+      if (successText.test(document.body.textContent)) {
+        clearInterval(poll);
         return resolve(true);
       }
       if (Date.now() > deadline) {
-        clearInterval(check);
+        clearInterval(poll);
         resolve(false);
       }
     }, 500);
