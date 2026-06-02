@@ -366,3 +366,76 @@ async def run_matching_cycle() -> None:
         "Matching cycle done — %d queued, %d notify_only, %d below threshold (%d jobs, %d users)",
         len(queued_matches), len(notify_matches), below_threshold, len(jobs), len(users),
     )
+
+
+if __name__ == "__main__":
+    import argparse
+    from db import init_db, close_db
+
+    ap = argparse.ArgumentParser(description="Run one matcher cycle and report user_jobs created.")
+    ap.add_argument(
+        "--window",
+        default="24 hours",
+        metavar="INTERVAL",
+        help="SQL interval for job lookback (default: '24 hours'). Normal cadence is '6 minutes'.",
+    )
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        dest="match_all",
+        help="Match against ALL jobs in the DB — no first_seen_at filter. Local testing only.",
+    )
+    _cli = ap.parse_args()
+
+    # Patch _fetch_recent_jobs at module scope so run_matching_cycle() picks it up.
+    # Assigned here (not inside the async fn) so it lands in the module's global dict.
+    if _cli.match_all:
+        async def _fetch_recent_jobs(conn):  # noqa: F811
+            rows = await conn.fetch(
+                """
+                SELECT job_id, ats, company_slug, company_name, title,
+                       description, categories, work_model, h1b_sponsored,
+                       experience_level, location, apply_url, posted_at
+                FROM jobs
+                """
+            )
+            return [dict(r) for r in rows]
+    else:
+        _cli_window = _cli.window
+
+        async def _windowed_fetch(conn):
+            rows = await conn.fetch(
+                f"""
+                SELECT job_id, ats, company_slug, company_name, title,
+                       description, categories, work_model, h1b_sponsored,
+                       experience_level, location, apply_url, posted_at
+                FROM jobs
+                WHERE first_seen_at > NOW() - INTERVAL '{_cli_window}'
+                """
+            )
+            return [dict(r) for r in rows]
+
+        _fetch_recent_jobs = _windowed_fetch  # replaces the module global
+
+    async def _run():
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        await init_db()
+        try:
+            pool = get_pool()
+            async with pool.acquire() as conn:
+                before = await conn.fetchval("SELECT COUNT(*) FROM user_jobs")
+
+            await run_matching_cycle()
+
+            async with pool.acquire() as conn:
+                after = await conn.fetchval("SELECT COUNT(*) FROM user_jobs")
+
+            print(f"\nuser_jobs created: {after - before}  (before={before}, after={after})")
+        finally:
+            await close_db()
+
+    asyncio.run(_run())

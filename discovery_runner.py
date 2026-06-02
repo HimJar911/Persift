@@ -179,23 +179,25 @@ async def run_jobright_cycle() -> None:
 # ---------------------------------------------------------------------------
 
 async def _jobright_loop() -> None:
-    """Polls Jobright every 60 minutes. Initial run is done before this starts."""
+    """Polls Jobright every 60 minutes. Fires immediately on first iteration."""
     while True:
-        await asyncio.sleep(60 * 60)
+        logger.info("Jobright loop: iteration starting")
         try:
             await run_jobright_cycle()
         except Exception:
             logger.exception("Jobright cycle failed — will retry in 60 min")
+        await asyncio.sleep(60 * 60)
 
 
 async def _discovery_loop() -> None:
-    """Runs Worker A every 90 minutes. Initial run is done before this starts."""
+    """Runs Worker A every 90 minutes. Fires immediately on first iteration."""
     while True:
-        await asyncio.sleep(90 * 60)
+        logger.info("Discovery loop: iteration starting")
         try:
             await run_discovery_cycle()
         except Exception:
             logger.exception("Discovery cycle failed — will retry in 90 min")
+        await asyncio.sleep(90 * 60)
 
 
 # ---------------------------------------------------------------------------
@@ -207,9 +209,14 @@ async def main() -> None:
     await init_db()
 
     try:
-        # Run both cycles immediately so there's no wait on first deploy
-        await run_jobright_cycle()
-        await run_discovery_cycle()
+        try:
+            await run_jobright_cycle()
+        except Exception:
+            logger.exception("Jobright startup cycle failed — continuing to loops")
+        try:
+            await run_discovery_cycle()
+        except Exception:
+            logger.exception("Discovery startup cycle failed — continuing to loops")
 
         logger.info("Loops started — Jobright every 60 min, discovery every 90 min")
         await asyncio.gather(_jobright_loop(), _discovery_loop())
