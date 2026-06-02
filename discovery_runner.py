@@ -10,6 +10,8 @@ import asyncio
 import json
 import logging
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -28,6 +30,34 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger("persift.discovery")
+
+
+# ---------------------------------------------------------------------------
+# Health server (keeps Render web service alive)
+# ---------------------------------------------------------------------------
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path in ("/", "/health"):
+            body = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, *args):  # silence access logs
+        pass
+
+
+def _start_health_server(port: int = 10000) -> None:
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Health server listening on port %d", port)
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +168,7 @@ async def run_jobright_cycle() -> None:
 
 async def main() -> None:
     logger.info("Initializing Persift discovery runner")
+    _start_health_server()
     await init_db()
 
     try:
