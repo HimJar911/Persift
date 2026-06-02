@@ -126,6 +126,27 @@ class _FailedReq(BaseModel):
     failure_stage: str | None = None
 
 
+@app.get("/users/{user_id}")
+async def get_user_profile(user_id: str):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT email,
+                   COALESCE(application_settings->>'first_name',   '') AS first_name,
+                   COALESCE(application_settings->>'last_name',    '') AS last_name,
+                   COALESCE(application_settings->>'phone',        '') AS phone,
+                   COALESCE(application_settings->>'linkedin_url', '') AS linkedin_url,
+                   COALESCE(application_settings->>'location_city','') AS location_city
+            FROM users WHERE id = $1::uuid
+            """,
+            user_id,
+        )
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return dict(row)
+
+
 @app.get("/jobs/queue")
 async def get_job_queue(
     user_id: str = Query(...),

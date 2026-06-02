@@ -1,7 +1,7 @@
 // Shared API module — injected into content scripts and imported by background.js
 // via importScripts('api.js'). All functions are globals; no ES module syntax.
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://persift-discovery.example.com';
 
 async function getUserId() {
   const { user_id } = await chrome.storage.local.get('user_id');
@@ -55,6 +55,14 @@ async function getResumePdf(jobId, jobAts) {
     );
     if (!resp.ok) return null;
     return await resp.blob();
+  } catch { return null; }
+}
+
+async function getProfile(userId) {
+  try {
+    const resp = await fetch(`${BASE_URL}/users/${encodeURIComponent(userId)}`);
+    if (!resp.ok) return null;
+    return await resp.json();
   } catch { return null; }
 }
 

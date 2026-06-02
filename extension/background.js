@@ -144,11 +144,13 @@ async function handleMessage(message, sendResponse) {
     case 'ready': {
       await chrome.storage.local.set({ phase: 'filling' });
       const userId = await getUserId();
+      const profile = userId ? await getProfile(userId) : null;
       sendResponse({
         job: state.current_job,
         auto_submit: state.auto_submit,
         needs_sponsorship: state.needs_sponsorship,
         user_id: userId,
+        ...(profile || {}),
       });
       break;
     }
