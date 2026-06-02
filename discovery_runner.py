@@ -9,6 +9,7 @@ Runs two jobs on the APScheduler loop:
 import asyncio
 import json
 import logging
+import os
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -53,11 +54,12 @@ class _HealthHandler(BaseHTTPRequestHandler):
         pass
 
 
-def _start_health_server(port: int = 10000) -> None:
+def _start_health_server() -> None:
+    port = int(os.environ.get("PORT", "10000"))
     server = HTTPServer(("0.0.0.0", port), _HealthHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    logger.info("Health server listening on port %d", port)
+    print(f"Health server started on port {port}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +170,6 @@ async def run_jobright_cycle() -> None:
 
 async def main() -> None:
     logger.info("Initializing Persift discovery runner")
-    _start_health_server()
     await init_db()
 
     try:
@@ -205,4 +206,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    _start_health_server()
     asyncio.run(main())
