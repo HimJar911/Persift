@@ -8,7 +8,6 @@ RUN pip install --no-cache-dir \
     asyncpg \
     httpx \
     psycopg2-binary \
-    "apscheduler>=3.10,<4" \
     python-dotenv
 
 CMD ["python", "discovery_runner.py"]

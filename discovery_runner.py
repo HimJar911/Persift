@@ -1,7 +1,7 @@
 """Slim Render scheduler: Jobright poller + discovery pipeline only.
 
 No Tier-1 ATSes, no matcher, no tailor worker, no API.
-Runs two jobs on the APScheduler loop:
+Runs two concurrent asyncio loops:
   - run_jobright_cycle()  every 60 minutes
   - run_discovery_cycle() every 90 minutes
 """
@@ -15,7 +15,6 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import httpx
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import LOG_LEVEL
 from db import init_db, close_db, get_pool
@@ -176,6 +175,30 @@ async def run_jobright_cycle() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Recurring loops (replace APScheduler — no event-loop integration issues)
+# ---------------------------------------------------------------------------
+
+async def _jobright_loop() -> None:
+    """Polls Jobright every 60 minutes. Initial run is done before this starts."""
+    while True:
+        await asyncio.sleep(60 * 60)
+        try:
+            await run_jobright_cycle()
+        except Exception:
+            logger.exception("Jobright cycle failed — will retry in 60 min")
+
+
+async def _discovery_loop() -> None:
+    """Runs Worker A every 90 minutes. Initial run is done before this starts."""
+    while True:
+        await asyncio.sleep(90 * 60)
+        try:
+            await run_discovery_cycle()
+        except Exception:
+            logger.exception("Discovery cycle failed — will retry in 90 min")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -188,30 +211,8 @@ async def main() -> None:
         await run_jobright_cycle()
         await run_discovery_cycle()
 
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(
-            run_jobright_cycle,
-            "interval",
-            hours=1,
-            id="jobright_cycle",
-            max_instances=1,
-        )
-        scheduler.add_job(
-            run_discovery_cycle,
-            "interval",
-            minutes=90,
-            id="discovery_cycle",
-            max_instances=1,
-        )
-        scheduler.start()
-        logger.info("Scheduler started — Jobright every 60 min, discovery every 90 min")
-
-        try:
-            while True:
-                await asyncio.sleep(3600)
-        except (KeyboardInterrupt, SystemExit):
-            logger.info("Shutting down")
-            scheduler.shutdown()
+        logger.info("Loops started — Jobright every 60 min, discovery every 90 min")
+        await asyncio.gather(_jobright_loop(), _discovery_loop())
     finally:
         await close_db()
 

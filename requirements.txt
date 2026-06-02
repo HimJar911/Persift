@@ -1,5 +1,4 @@
 openai
-apscheduler
 httpx
 reportlab
 python-dotenv

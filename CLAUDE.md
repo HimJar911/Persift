@@ -14,7 +14,7 @@ The product surface the user sees: install Chrome extension, build profile, syst
 | `config.py` | All config and constants. Reads from `.env`. Single source of truth. Includes SCORER_MODEL_VERSION, REWRITER_MODEL_VERSION, PIPELINE_VERSION |
 | `db.py` | DB abstraction — asyncpg connection pool. Public functions: init_db, filter_new_ids, mark_seen_batch, increment_consecutive_failures, reset_consecutive_failures |
 | `discover_companies.py` | CLI tool. Monthly CDX crawl to expand ATS slug lists. Writes to both JSON files AND companies table (Fix 2 complete). _upsert_companies_to_db() added. |
-| `discovery_runner.py` | Slim Render scheduler. Runs Jobright poller (60 min) + Worker A (90 min) only. No matcher, tailor, or API. Entry point for Render deployment. |
+| `discovery_runner.py` | Slim Render scheduler. Runs Jobright poller (60 min) + Worker A (90 min) only. No matcher, tailor, or API. Entry point for Render deployment. Health server on $PORT (stdlib only) keeps free tier alive via uptime-monitor. |
 | `api/server.py` | FastAPI user ingestion API. POST /users, GET /health, GET /jobs/{job_id}/resume, GET /jobs/queue, GET /jobs/queue/count, POST /jobs/{job_id}/applied, POST /jobs/{job_id}/failed |
 | `pollers/greenhouse.py` | Polls Greenhouse boards API. 2,127 companies. consecutive_failures wired. |
 | `pollers/ashby.py` | Polls Ashby posting API. 2,767 companies. consecutive_failures wired. |
@@ -40,7 +40,7 @@ The product surface the user sees: install Chrome extension, build profile, syst
 | `render.yaml` | Render blueprint. type: web (free tier), plan: free Postgres. Wires DATABASE_URL automatically. |
 | `extension/manifest.json` | Chrome extension manifest V3. |
 | `extension/background.js` | Event-driven state machine service worker. |
-| `extension/api.js` | Shared backend API module. |
+| `extension/api.js` | Shared backend API module. BASE_URL hardcoded to localhost — must update to production before any real user. |
 | `extension/content/greenhouse.js` | Greenhouse form filler. |
 | `extension/popup/popup.html` | Extension popup HTML. 6 states. |
 | `extension/popup/popup.js` | Popup state renderer. |
@@ -68,7 +68,8 @@ One-sentence pitch: "Persift is building the outcome dataset for early-career hi
 ## Current Pipeline State
 
 ```
-[discovery_runner.py — Render entry point]
+[discovery_runner.py — LIVE on Render as of June 1, 2026]
+[https://persift-discovery.example.com — uptime-monitor ping every 5 min]
 poll_jobright() → dedup → INSERT discovery_staging (company_name, no apply_url)
                                           ↓
                     [every 90 min] run_discovery_cycle() — Worker A v1.1.0
@@ -101,8 +102,6 @@ poll_all() → detect_new_jobs() → enrich() → notify_slack()
 ```
 
 **DB snapshot (June 1, 2026):** 1 pro user | 18,147 jobs (greenhouse: 744, ashby: 514, lever: 119, smartrecruiters: 614, jobright: 8,642, workday: 7,245, custom: 269) | 0 user_jobs | 6,082 companies seeded
-
-**IMPORTANT: Do not run the full pipeline (main.py) until the discovery pipeline is live on Render.**
 
 **LOCAL WINDOWS NOTE:** `main.py` crashes on import — `weasyprint` requires GTK/Cairo on Windows. Works on Render Linux. To fix locally: `pip install weasyprint --break-system-packages` (may still need GTK). Render Dockerfile.discovery excludes weasyprint by design.
 
@@ -165,7 +164,7 @@ Stores `cursor JSONB` per poller name. Used by discovery_runner.py to track Jobr
 |---|---|---|
 | DATABASE_URL | `postgresql://persift:persift@localhost:5432/persift` | Swap for Render internal URL in prod |
 | POLL_INTERVAL_MINUTES | 10 | Tier 1 polling frequency |
-| OPENAI_MODEL | `gpt-4o` | Migrating to claude-sonnet-4-20250514 when credits available |
+| OPENAI_MODEL | `gpt-4o` | Migrating to claude-sonnet-4-6 when credits available |
 | SCORER_MODEL_VERSION | `all-MiniLM-L6-v2-v1` | Tagged on all model_predictions rows |
 | PIPELINE_VERSION | `1.0.0` | Tagged in feature_snapshot JSONB |
 
@@ -213,12 +212,14 @@ Worker A v1.1.0 detection cascade:
 ```
 No `apply_url`, no `domain`, no `website`. `industry` and `companySize` are new fields we weren't capturing — now stored in bulk result.
 
-**Jobright jobs/info/{jobId} __NEXT_DATA__ structure** (confirmed on BillGO, jobId: `69ba46703b74eb1e2c8835f3`):
-- Correct path: `props.pageProps.dataSource.companyResult.companyURL` → `"https://www.billgo.com"`
+**Jobright jobs/info/{jobId} __NEXT_DATA__ structure** (confirmed on multiple jobs):
+- Correct path: `props.pageProps.dataSource.companyResult.companyURL` → e.g. `"https://www.joinhomebase.com"`
 - Wrong path previously assumed: `props.pageProps.jobResult.companyResult` → empty dict `{}`
+- `source` field: value `1` maps to Ashby, Oracle, AND Workday — not a reliable ATS enum, abandoned
 - `dataSource` also contains: companyName, companySize, companyDesc, companyCategories, companyTwitterURL, companyLinkedinURL, companyCrunchbaseURL, companyFoundYear, companyLocation, fundraisingCurrentStage, fundraisingTotalFunding, leadership, pressReferences, h1bAnnualJobCount, isAgency
 
 **Worker A fingerprinting test (5 rows from manual_review_queue, June 1):**
+
 | Company | Domain | Career Page | ATS | Result |
 |---|---|---|---|---|
 | Kwest Group | kwestgroup.com | Not found (all 5 paths 404) | — | skipped |
@@ -231,8 +232,7 @@ Key finding: static HTML fingerprinter catches companies with server-rendered AT
 **CommonCrawl investigation:**
 - CDX API (`index.commoncrawl.org`): consistently 504s for CC-MAIN-2026-21 (too new, under load). Older crawls also 504. Not viable for real-time single-company lookups.
 - Columnar index parquet on S3: correct architecture for bulk queries. `s3://commoncrawl/cc-index/table/cc-main/warc/crawl=CC-MAIN-2026-21/subset=warc/*.parquet`. DuckDB anonymous S3 access fails with 403 — requires AWS credentials even for public bucket.
-- S3 directory listing: blocked (403 on both path-style and bucket-style endpoints).
-- AWS account ID 496006843764 is currently suspended. Support case submitted June 1, 2026.
+- AWS account ID 496006843764 suspended (free credits exhausted). Support case submitted June 1, 2026. Account can be reopened before July 25, 2026.
 - CommonCrawl is the right Tier 2 solution once credentials are restored.
 
 **Pipeline status audit (June 1):**
@@ -250,8 +250,8 @@ Key finding: static HTML fingerprinter catches companies with server-rendered AT
 | Priority | Task | Status |
 |---|---|---|
 | 1 | Check Jobright API for company website/domain field | **DONE** — bulk API has no domain; jobs/info/{jobId} __NEXT_DATA__ dataSource.companyResult.companyURL works unauthenticated |
-| 2 | Build company domain fingerprinting in Worker A | **DONE** — Worker A v1.1.0 built and tested. Static HTML fingerprinter live. |
-| 3 | Deploy to Render — run migrations 001-013 against Render Postgres | Pending |
+| 2 | Build company domain fingerprinting in Worker A | **DONE** — Worker A v1.1.0 built and tested. Static HTML fingerprinter live on Render. |
+| 3 | Deploy to Render — run migrations 001-013 against Render Postgres | **DONE** — Live at https://persift-discovery.example.com. uptime-monitor keeping alive. |
 | 4 | Internal dashboard for manual_review_queue | Pending |
 | 5 | Cybersecurity deep dive with Opus (before beta users) | Pending — HIGH, required before any real user |
 | 6 | Gmail scanner design (after cybersecurity) | Pending |
@@ -261,7 +261,7 @@ Key finding: static HTML fingerprinter catches companies with server-rendered AT
 | 10 | Build Lever and SmartRecruiters content scripts | Pending (after Ashby) |
 | 11 | Update BASE_URL in extension/api.js to production URL before any real user | Pending |
 | 12 | Await AWS support response — unblocks CommonCrawl Tier 2 batch worker | Pending — account suspended, case submitted June 1 |
-| 13 | README rewrite — describes old SQLite/DynamoDB architecture, no Chrome extension, no data flywheel | Pending — required before beta outreach |
+| 13 | README rewrite | **DONE** — rewritten June 1, committed |
 
 ---
 
@@ -269,25 +269,23 @@ Key finding: static HTML fingerprinter catches companies with server-rendered AT
 
 | Issue | Severity | Notes |
 |---|---|---|
-| apply_url always NULL in discovery_staging | HIGH | Jobright auth-gates it. Fingerprinting pipeline uses domain instead — this is by design now |
+| apply_url always NULL in discovery_staging | by design | Jobright auth-gates it. Fingerprinting pipeline uses domain instead. |
 | Worker A added count: 0 on first run | RESOLVED | Was blocked by NULL company_name. Fixed: 6,082 rows backfilled June 1. Fingerprinter now active. |
-| Render not deployed yet | HIGH | Blueprint ready. Run migrations 001-013 against Render Postgres first |
 | main.py crashes on import — Windows only | HIGH | weasyprint not installed. `from weasyprint import HTML` at module level in tailor_worker.py. Works on Render Linux. |
 | OPENAI_API_KEY not set | Medium | Layer 4 (LLM rewrite) silently no-ops — pro users get L3 injection only |
-| AWS account suspended | HIGH | Blocks CommonCrawl Tier 2. Support case submitted June 1. Account ID: 496006843764. |
+| AWS account suspended | HIGH | Blocks CommonCrawl Tier 2. Support case submitted June 1. Account ID: 496006843764. Must reopen before July 25, 2026. |
 | BASE_URL hardcoded to localhost in extension/api.js | HIGH | Must point to production URL before any real user can install extension |
 | Content scripts only cover Greenhouse | HIGH | Ashby, Lever, SmartRecruiters content scripts don't exist — 3 of 4 polled ATSes can't be auto-applied |
 | host_permissions only covers localhost + greenhouse.io | HIGH | Chrome blocks extension requests to any other ATS domain |
 | Extension queue always empty | HIGH | weasyprint crash prevents tailor from advancing user_jobs status to 'applying' — extension has nothing to process |
 | Matcher never run | HIGH | 0 rows in user_jobs. 1 pro user, 18,147 jobs in DB. Needs main.py running with a fresh poll cycle. |
 | SPA career pages missed by fingerprinter | Medium | ATS widget loads after JS render — static HTML fetch finds no signature. Tier 2 (CommonCrawl) and Tier 3 (BuiltWith) solve this. |
-| httpx logging at INFO level | Low | Floods terminal — set to WARNING |
+| httpx logging at INFO level | Low | Floods Render logs — set to WARNING before next real run |
 | Behavioral simulation basic | Medium | Mouse trajectories not fully implemented — Phase 2 |
 | Layer 4 essay generation not built | Medium | Extension skips essay questions — Phase 2 |
 | OpenAI → Claude API swap pending | Low | Waiting on Anthropic credits. 3-line change in rewriter.py. |
 | Cybersecurity review not done | HIGH | Required before any beta users |
 | Gmail scanner not built | — | After cybersecurity review |
-| README.md is completely stale | HIGH | Describes old SQLite/DynamoDB single-user architecture, no Chrome extension, no data flywheel. Must be rewritten before any beta outreach. |
 
 ---
 
@@ -367,8 +365,9 @@ pip install asyncpg fastapi uvicorn httpx sentence-transformers openai anthropic
 | Post 3 (interview empathy post) | Done |
 | Post 4 (Microsoft pipeline post) | Done |
 | Post 5 (referral filled headcount) | Done |
-| May 30 — 5am idea, 7,793 companies identified | READY TO POST |
-| May 31 — Empty apartment moving out | Planned |
-| June 1 — Seattle landing | Today |
+| May 30 — 5am idea, 7,793 companies identified | Done |
+| May 31 — Empty apartment moving out | Done |
+| June 1 — Landed in Seattle. Brother's couch. All in. | Done |
+| June 2-6 — Daily grind posts | Planned |
 | June 7-10 — Introduce Persift by name | Planned |
 | June 21+ — Beta waitlist | Planned |
