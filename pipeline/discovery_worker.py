@@ -1,8 +1,11 @@
 """Worker A: reads discovery_staging rows, runs ATS detection cascade, writes to companies."""
 
 import asyncio
+import json
 import logging
+import math
 import re
+from urllib.parse import urlparse
 
 import httpx
 
@@ -10,7 +13,7 @@ from db import get_pool
 
 logger = logging.getLogger(__name__)
 
-WORKER_VERSION = "1.0.0"
+WORKER_VERSION = "1.1.0"
 _BATCH_SIZE = 500
 _HTTP_TIMEOUT = 10
 _USER_AGENT = (
@@ -38,11 +41,20 @@ ATS_HTML_FINGERPRINTS = {
     "workday":         ["myworkdayjobs.com", "workday.com/en-US/pages"],
     "icims":           [".icims.com/jobs/"],
     "jobvite":         ["jobs.jobvite.com"],
+    "bamboohr":        ["bamboohr.com/jobs/", "app.bamboohr.com"],
 }
 
-_HREF_SRC_RE = re.compile(r'(?:href|src)=["\']([^"\'>\s]+)["\']', re.IGNORECASE)
+# ATSes with active pollers — fingerprinted companies go into companies table as result='added'.
+_POLLED_ATS = {"ashby", "greenhouse", "lever", "smartrecruiters"}
 
-# Strips common legal suffixes before generating slug candidates.
+_HREF_SRC_RE = re.compile(r'(?:href|src)=["\']([^"\'>\s]+)["\']', re.IGNORECASE)
+_NEXT_DATA_RE = re.compile(
+    r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', re.DOTALL
+)
+
+_CAREER_PATHS = ["/careers", "/jobs", "/career", "/join", "/work-with-us"]
+_JOBRIGHT_INFO_URL = "https://jobright.ai/jobs/info/{job_id}"
+
 _SUFFIX_RE = re.compile(
     r'[\s,]+(?:inc\.?|incorporated|llc|ltd\.?|limited|corp\.?|corporation|'
     r'co\.?|plc|gmbh|ag|sa|technologies|technology|tech|solutions|'
@@ -51,12 +63,12 @@ _SUFFIX_RE = re.compile(
 )
 
 
-def _slug_candidates(company_name: str) -> list[str]:
-    """Generate slug variants from a company name to match against companies.slug.
+# ---------------------------------------------------------------------------
+# Slug helpers
+# ---------------------------------------------------------------------------
 
-    Produces hyphenated and concatenated forms, with and without common
-    business suffixes, so 'Stripe, Inc.' matches slug 'stripe'.
-    """
+def _slug_candidates(company_name: str) -> list[str]:
+    """Generate slug variants from a company name to match against companies.slug."""
     base = company_name.lower().strip()
     stripped = _SUFFIX_RE.sub("", base).strip()
     candidates: set[str] = set()
@@ -67,6 +79,116 @@ def _slug_candidates(company_name: str) -> list[str]:
         candidates.add(re.sub(r"[^a-z0-9]+", "", name))
     return [c for c in candidates if c]
 
+
+def _normalize_domain(raw_url: str) -> str | None:
+    """Return bare domain from a URL string (strips scheme and www), or None."""
+    raw_url = raw_url.strip()
+    if not raw_url:
+        return None
+    if not raw_url.startswith("http"):
+        raw_url = "https://" + raw_url
+    try:
+        netloc = urlparse(raw_url).netloc
+        if not netloc:
+            return None
+        return netloc.removeprefix("www.").lower() or None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# HTTP helpers — all consume the shared semaphore
+# ---------------------------------------------------------------------------
+
+async def _fetch_company_domain(
+    job_id: str,
+    session: httpx.AsyncClient,
+    sem: asyncio.Semaphore,
+) -> str | None:
+    """Fetch Jobright job-info page, parse __NEXT_DATA__, return bare company domain."""
+    raw_id = job_id.removeprefix("jobright_")
+    url = _JOBRIGHT_INFO_URL.format(job_id=raw_id)
+    async with sem:
+        try:
+            resp = await session.get(url, timeout=_HTTP_TIMEOUT, headers={"User-Agent": _USER_AGENT})
+            resp.raise_for_status()
+            html = resp.text
+        except Exception:
+            return None
+
+    m = _NEXT_DATA_RE.search(html)
+    if not m:
+        return None
+    try:
+        data = json.loads(m.group(1))
+        company_url = data["props"]["pageProps"]["dataSource"]["companyResult"]["companyURL"]
+        return _normalize_domain(company_url) if company_url else None
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return None
+
+
+async def _find_career_page(
+    domain: str,
+    session: httpx.AsyncClient,
+    sem: asyncio.Semaphore,
+) -> tuple[str, str] | None:
+    """Try common career page paths on a domain. Returns (url, html) at first 200."""
+    for path in _CAREER_PATHS:
+        url = f"https://{domain}{path}"
+        async with sem:
+            try:
+                resp = await session.get(
+                    url, timeout=_HTTP_TIMEOUT,
+                    follow_redirects=True,
+                    headers={"User-Agent": _USER_AGENT},
+                )
+            except Exception:
+                continue
+        if resp.status_code == 200:
+            return url, resp.text
+    return None
+
+
+# ---------------------------------------------------------------------------
+# ATS fingerprinting
+# ---------------------------------------------------------------------------
+
+def _detect_stage1(apply_url: str | None) -> tuple[str, str] | None:
+    """URL pattern match against known ATS URL shapes. Zero network cost."""
+    if not apply_url:
+        return None
+    for ats_name, pattern in ATS_URL_PATTERNS.items():
+        m = pattern.search(apply_url)
+        if m:
+            slug = m.group(1).lower().strip().rstrip("/")
+            if slug:
+                canonical_ats = "greenhouse" if ats_name == "greenhouse_embed" else ats_name
+                return canonical_ats, slug
+    return None
+
+
+def _fingerprint_html(html: str) -> tuple[str, str | None] | None:
+    """Scan HTML for ATS fingerprints and try to extract the slug from embedded URLs.
+
+    Returns (ats, slug), (ats, None) if ATS found but slug unclear, or None.
+    """
+    detected_ats: str | None = None
+    for ats_name, fingerprints in ATS_HTML_FINGERPRINTS.items():
+        if any(fp in html for fp in fingerprints):
+            detected_ats = ats_name
+            break
+    if detected_ats is None:
+        return None
+    for fragment in _HREF_SRC_RE.findall(html):
+        result = _detect_stage1(fragment)
+        if result and result[0] == detected_ats:
+            return detected_ats, result[1]
+    return detected_ats, None
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
 
 async def _ensure_manual_review_table() -> None:
     pool = get_pool()
@@ -84,76 +206,20 @@ async def _ensure_manual_review_table() -> None:
         """)
 
 
-def _detect_stage1(apply_url: str | None) -> tuple[str, str] | None:
-    """URL pattern match. Returns (ats, slug) or None. Zero network cost."""
-    if not apply_url:
-        return None
-    for ats_name, pattern in ATS_URL_PATTERNS.items():
-        m = pattern.search(apply_url)
-        if m:
-            slug = m.group(1).lower().strip().rstrip("/")
-            if slug:
-                canonical_ats = "greenhouse" if ats_name == "greenhouse_embed" else ats_name
-                return canonical_ats, slug
-    return None
-
-
-async def _detect_stage2(
-    apply_url: str,
-    session: httpx.AsyncClient,
-    sem: asyncio.Semaphore,
-) -> tuple[str, str | None] | None:
-    """Fetch the page, find ATS fingerprints, try to extract a slug from embedded URLs.
-
-    Returns (ats, slug), (ats, None) if ATS found but slug unclear, or None.
-    No DB connection is held during the fetch.
-    """
-    async with sem:
-        try:
-            resp = await session.get(
-                apply_url,
-                timeout=_HTTP_TIMEOUT,
-                follow_redirects=True,
-                headers={"User-Agent": _USER_AGENT},
-            )
-            html = resp.text
-        except Exception:
-            return None
-
-    detected_ats: str | None = None
-    for ats_name, fingerprints in ATS_HTML_FINGERPRINTS.items():
-        if any(fp in html for fp in fingerprints):
-            detected_ats = ats_name
-            break
-
-    if detected_ats is None:
-        return None
-
-    # Extract slug from href/src URLs in the page
-    for fragment in _HREF_SRC_RE.findall(html):
-        result = _detect_stage1(fragment)
-        if result is not None:
-            found_ats, slug = result
-            if found_ats == detected_ats:
-                return detected_ats, slug
-
-    return detected_ats, None
-
-
-async def _upsert_company(ats: str, slug: str, conn) -> str:
+async def _upsert_company(ats: str, slug: str, company_name: str, conn) -> str:
     """Insert company if new; return canonical_company_id in all cases."""
     row = await conn.fetchrow(
         """
         INSERT INTO companies
-            (slug, ats, canonical_company_id, is_active,
+            (slug, ats, canonical_company_id, is_active, company_name,
              discovered_via, discovered_at, match_method, match_confidence)
         VALUES
-            ($1, $2, gen_random_uuid(), TRUE,
-             'jobright_seeded', NOW(), 'new', 'unverified')
+            ($1, $2, gen_random_uuid(), TRUE, $3,
+             'fingerprint', NOW(), 'career_page_fingerprint', 'high')
         ON CONFLICT (slug, ats) DO NOTHING
         RETURNING canonical_company_id
         """,
-        slug, ats,
+        slug, ats, company_name,
     )
     if row:
         return str(row["canonical_company_id"])
@@ -165,18 +231,13 @@ async def _upsert_company(ats: str, slug: str, conn) -> str:
 
 
 async def _mark_staging_row(
-    row_id: int,
-    result: str,
-    canonical_id: str | None,
-    conn,
+    row_id: int, result: str, canonical_id: str | None, conn,
 ) -> None:
     await conn.execute(
         """
         UPDATE discovery_staging
-        SET processed = TRUE,
-            processed_at = NOW(),
-            result = $2,
-            result_canonical_company_id = $3::uuid,
+        SET processed = TRUE, processed_at = NOW(),
+            result = $2, result_canonical_company_id = $3::uuid,
             worker_version = $4
         WHERE id = $1
         """,
@@ -185,11 +246,8 @@ async def _mark_staging_row(
 
 
 async def _queue_manual_review(
-    row_id: int,
-    apply_url: str | None,
-    company_name: str | None,
-    bucket: str,
-    conn,
+    row_id: int, apply_url: str | None, company_name: str | None,
+    bucket: str, conn,
 ) -> None:
     await conn.execute(
         """
@@ -202,16 +260,25 @@ async def _queue_manual_review(
     await _mark_staging_row(row_id, "queued_manual", None, conn)
 
 
-async def _process_row(row, pool, counters: dict) -> None:
-    # Stages 1+2 (URL pattern + HTML fingerprint) are suspended — Jobright bulk
-    # API does not expose apply URLs and unauthenticated jobs/info pages omit them.
-    # Re-enable when a reliable apply_url source is available.
+# ---------------------------------------------------------------------------
+# Row processor
+# ---------------------------------------------------------------------------
+
+async def _process_row(
+    row,
+    pool,
+    session: httpx.AsyncClient,
+    sem: asyncio.Semaphore,
+    counters: dict,
+) -> None:
     row_id = row["id"]
     company_name = row["company_name"]
+    job_id = row["job_id"]
 
     try:
-        async with pool.acquire() as conn:
-            if company_name:
+        # ── Slug matching (no network I/O, connection released before fingerprinting) ──
+        if company_name:
+            async with pool.acquire() as conn:
                 # Step 1 — exact company_name match (case-insensitive)
                 existing = await conn.fetchrow(
                     "SELECT canonical_company_id FROM companies "
@@ -239,9 +306,84 @@ async def _process_row(row, pool, counters: dict) -> None:
                     counters["already_known"] += 1
                     return
 
-            # Step 3 — no match, queue for manual review
-            await _queue_manual_review(row_id, None, company_name, "unknown_ats", conn)
+        # ── Fingerprinting cascade (I/O-heavy; no DB connection held) ───────────────
+
+        # Stage 1 — fetch company domain from Jobright __NEXT_DATA__
+        domain = await _fetch_company_domain(job_id, session, sem)
+
+        if not domain:
+            async with pool.acquire() as conn:
+                await _queue_manual_review(row_id, None, company_name, "unknown_ats", conn)
             counters["queued_manual"] += 1
+            return
+
+        # Stage 2 — find career page
+        career_result = await _find_career_page(domain, session, sem)
+
+        if not career_result:
+            print(
+                f"[FINGERPRINT] {company_name} → {domain} → no career page found → skipped",
+                flush=True,
+            )
+            async with pool.acquire() as conn:
+                await _queue_manual_review(row_id, None, company_name, "unknown_ats", conn)
+            counters["queued_manual"] += 1
+            return
+
+        career_url, html = career_result
+
+        # Stage 3 — grep HTML for ATS signatures
+        fp = _fingerprint_html(html)
+
+        if not fp:
+            print(
+                f"[FINGERPRINT] {company_name} → {domain} → no ATS signature → parked",
+                flush=True,
+            )
+            async with pool.acquire() as conn:
+                await _queue_manual_review(row_id, career_url, company_name, "unknown_ats", conn)
+            counters["queued_manual"] += 1
+            return
+
+        detected_ats, extracted_slug = fp
+
+        # Stage 5 — ATS identified but not one we poll (workday, bamboohr, icims, etc.)
+        if detected_ats not in _POLLED_ATS:
+            print(
+                f"[FINGERPRINT] {company_name} → {domain} → unknown ATS: {detected_ats} → parked",
+                flush=True,
+            )
+            async with pool.acquire() as conn:
+                await _queue_manual_review(
+                    row_id, career_url, company_name, "known_ats_unclear_slug", conn
+                )
+            counters["queued_manual"] += 1
+            return
+
+        # Stage 4 — polled ATS: derive slug and add to companies
+        slug_list = _slug_candidates(company_name) if company_name else []
+        slug = extracted_slug or (slug_list[0] if slug_list else None)
+
+        if not slug:
+            print(
+                f"[FINGERPRINT] {company_name} → {domain} → {detected_ats} → no slug, parked",
+                flush=True,
+            )
+            async with pool.acquire() as conn:
+                await _queue_manual_review(
+                    row_id, career_url, company_name, "known_ats_unclear_slug", conn
+                )
+            counters["queued_manual"] += 1
+            return
+
+        async with pool.acquire() as conn:
+            cid = await _upsert_company(detected_ats, slug, company_name or "", conn)
+            await _mark_staging_row(row_id, "added", cid, conn)
+        counters["added"] += 1
+        print(
+            f"[FINGERPRINT] {company_name} → {domain} → {detected_ats}/{slug} → added",
+            flush=True,
+        )
 
     except Exception as exc:
         logger.warning("Discovery: row %d failed — %s", row_id, exc)
@@ -261,13 +403,16 @@ async def _process_row(row, pool, counters: dict) -> None:
             pass
 
 
+# ---------------------------------------------------------------------------
+# Cycle entry point
+# ---------------------------------------------------------------------------
+
 async def run_discovery_cycle() -> None:
     logger.info("=== Starting discovery cycle ===")
     await _ensure_manual_review_table()
 
     pool = get_pool()
 
-    # Count unprocessed rows upfront so batch totals are known before the loop.
     async with pool.acquire() as conn:
         unprocessed = await conn.fetchval(
             "SELECT COUNT(*) FROM discovery_staging WHERE processed = FALSE"
@@ -277,44 +422,47 @@ async def run_discovery_cycle() -> None:
         logger.info("=== Discovery cycle complete — no unprocessed rows ===")
         return
 
-    import math
     total_batches = math.ceil(unprocessed / _BATCH_SIZE)
     totals = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
     batch_num = 0
 
-    while True:
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT id, job_id, job_ats, company_name, apply_url
-                FROM discovery_staging
-                WHERE processed = FALSE
-                ORDER BY staged_at ASC
-                LIMIT $1
-                """,
-                _BATCH_SIZE,
+    sem = asyncio.Semaphore(10)
+
+    async with httpx.AsyncClient() as session:
+        while True:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, job_id, job_ats, company_name, apply_url
+                    FROM discovery_staging
+                    WHERE processed = FALSE
+                    ORDER BY staged_at ASC
+                    LIMIT $1
+                    """,
+                    _BATCH_SIZE,
+                )
+
+            if not rows:
+                break
+
+            batch_num += 1
+            counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
+
+            await asyncio.gather(
+                *[_process_row(row, pool, session, sem, counters) for row in rows],
+                return_exceptions=True,
             )
 
-        if not rows:
-            break
+            for k in totals:
+                totals[k] += counters[k]
 
-        batch_num += 1
-        counters = {"added": 0, "already_known": 0, "queued_manual": 0, "failed": 0}
-
-        await asyncio.gather(
-            *[_process_row(row, pool, counters) for row in rows],
-            return_exceptions=True,
-        )
-
-        for k in totals:
-            totals[k] += counters[k]
-
-        print(
-            f"[Batch {batch_num:2d}/{total_batches}]"
-            f"  already_tracked: {counters['already_known']:4d}"
-            f"  |  newly_identified: {counters['queued_manual']:4d}",
-            flush=True,
-        )
+            print(
+                f"[Batch {batch_num:2d}/{total_batches}]"
+                f"  already_tracked: {counters['already_known']:4d}"
+                f"  |  added: {counters['added']:4d}"
+                f"  |  queued: {counters['queued_manual']:4d}",
+                flush=True,
+            )
 
     _HR = "━" * 62
     total_rows = sum(totals.values())
@@ -322,5 +470,6 @@ async def run_discovery_cycle() -> None:
     print(f"  DISCOVERY COMPLETE")
     print(f"  {total_rows:,} companies analyzed")
     print(f"  {totals['already_known']:,} already tracked")
-    print(f"  {totals['queued_manual']:,} newly identified")
+    print(f"  {totals['added']:,} newly added")
+    print(f"  {totals['queued_manual']:,} queued for manual review")
     print(_HR, flush=True)
