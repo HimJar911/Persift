@@ -14,7 +14,7 @@ from db import get_pool
 logger = logging.getLogger(__name__)
 
 WORKER_VERSION = "1.1.0"
-_BATCH_SIZE = 500
+_BATCH_SIZE = 50
 _HTTP_TIMEOUT = 10
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
