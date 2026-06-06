@@ -102,6 +102,7 @@ def _normalize_domain(raw_url: str) -> str | None:
 
 async def _fetch_company_domain(
     job_id: str,
+    company_name: str,
     session: httpx.AsyncClient,
     sem: asyncio.Semaphore,
 ) -> str | None:
@@ -113,22 +114,37 @@ async def _fetch_company_domain(
             resp = await session.get(url, timeout=_HTTP_TIMEOUT, headers={"User-Agent": _USER_AGENT})
             resp.raise_for_status()
             html = resp.text
-        except Exception:
+        except Exception as exc:
+            logger.warning("[Worker A] %s — stage=domain_fetch http_error: %s: %s", company_name, type(exc).__name__, exc)
             return None
 
     m = _NEXT_DATA_RE.search(html)
     if not m:
+        logger.warning("[Worker A] %s — stage=domain_fetch __NEXT_DATA__ not found in page", company_name)
         return None
+
     try:
         data = json.loads(m.group(1))
-        company_url = data["props"]["pageProps"]["dataSource"]["companyResult"]["companyURL"]
-        return _normalize_domain(company_url) if company_url else None
-    except (KeyError, TypeError, json.JSONDecodeError):
+    except json.JSONDecodeError as exc:
+        logger.warning("[Worker A] %s — stage=domain_fetch __NEXT_DATA__ json parse error: %s", company_name, exc)
         return None
+
+    try:
+        company_url = data["props"]["pageProps"]["dataSource"]["companyResult"]["companyURL"]
+    except (KeyError, TypeError) as exc:
+        logger.warning("[Worker A] %s — stage=domain_fetch companyURL key missing: %s", company_name, exc)
+        return None
+
+    if not company_url:
+        logger.warning("[Worker A] %s — stage=domain_fetch companyURL is empty/null", company_name)
+        return None
+
+    return _normalize_domain(company_url)
 
 
 async def _find_career_page(
     domain: str,
+    company_name: str,
     session: httpx.AsyncClient,
     sem: asyncio.Semaphore,
 ) -> tuple[str, str] | None:
@@ -142,10 +158,13 @@ async def _find_career_page(
                     follow_redirects=True,
                     headers={"User-Agent": _USER_AGENT},
                 )
-            except Exception:
+            except Exception as exc:
+                logger.debug("[Worker A] %s — stage=career_page path=%s error: %s: %s", company_name, path, type(exc).__name__, exc)
                 continue
         if resp.status_code == 200:
             return url, resp.text
+        logger.debug("[Worker A] %s — stage=career_page path=%s status=%d", company_name, path, resp.status_code)
+    logger.warning("[Worker A] %s — stage=career_page domain=%s no path returned 200", company_name, domain)
     return None
 
 
@@ -309,7 +328,7 @@ async def _process_row(
         # ── Fingerprinting cascade (I/O-heavy; no DB connection held) ───────────────
 
         # Stage 1 — fetch company domain from Jobright __NEXT_DATA__
-        domain = await _fetch_company_domain(job_id, session, sem)
+        domain = await _fetch_company_domain(job_id, company_name, session, sem)
 
         if not domain:
             async with pool.acquire() as conn:
@@ -318,13 +337,9 @@ async def _process_row(
             return
 
         # Stage 2 — find career page
-        career_result = await _find_career_page(domain, session, sem)
+        career_result = await _find_career_page(domain, company_name, session, sem)
 
         if not career_result:
-            print(
-                f"[FINGERPRINT] {company_name} → {domain} → no career page found → skipped",
-                flush=True,
-            )
             async with pool.acquire() as conn:
                 await _queue_manual_review(row_id, None, company_name, "unknown_ats", conn)
             counters["queued_manual"] += 1
@@ -336,10 +351,7 @@ async def _process_row(
         fp = _fingerprint_html(html)
 
         if not fp:
-            print(
-                f"[FINGERPRINT] {company_name} → {domain} → no ATS signature → parked",
-                flush=True,
-            )
+            logger.warning("[Worker A] %s — stage=ats_detect domain=%s no ATS signature in career page HTML", company_name, domain)
             async with pool.acquire() as conn:
                 await _queue_manual_review(row_id, career_url, company_name, "unknown_ats", conn)
             counters["queued_manual"] += 1
@@ -349,10 +361,7 @@ async def _process_row(
 
         # Stage 5 — ATS identified but not one we poll (workday, bamboohr, icims, etc.)
         if detected_ats not in _POLLED_ATS:
-            print(
-                f"[FINGERPRINT] {company_name} → {domain} → unknown ATS: {detected_ats} → parked",
-                flush=True,
-            )
+            logger.warning("[Worker A] %s — stage=ats_detect domain=%s ats=%s not in polled set", company_name, domain, detected_ats)
             async with pool.acquire() as conn:
                 await _queue_manual_review(
                     row_id, career_url, company_name, "known_ats_unclear_slug", conn
@@ -365,10 +374,7 @@ async def _process_row(
         slug = extracted_slug or (slug_list[0] if slug_list else None)
 
         if not slug:
-            print(
-                f"[FINGERPRINT] {company_name} → {domain} → {detected_ats} → no slug, parked",
-                flush=True,
-            )
+            logger.warning("[Worker A] %s — stage=slug_extract domain=%s ats=%s could not derive slug", company_name, domain, detected_ats)
             async with pool.acquire() as conn:
                 await _queue_manual_review(
                     row_id, career_url, company_name, "known_ats_unclear_slug", conn
@@ -380,10 +386,7 @@ async def _process_row(
             cid = await _upsert_company(detected_ats, slug, company_name or "", conn)
             await _mark_staging_row(row_id, "added", cid, conn)
         counters["added"] += 1
-        print(
-            f"[FINGERPRINT] {company_name} → {domain} → {detected_ats}/{slug} → added",
-            flush=True,
-        )
+        logger.info("[Worker A] %s — added %s/%s", company_name, detected_ats, slug)
 
     except Exception as exc:
         logger.warning("Discovery: row %d failed — %s", row_id, exc)
