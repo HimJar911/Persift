@@ -1,0 +1,60 @@
+:root {
+  /* warm, nocturnal palette */
+  --bg: #0c0a08;
+  --bg-soft: #15110d;
+  --surface: #1c1712;
+  --surface-2: #241d16;
+  --line: #2e261d;
+  --ink: #f3ece1;
+  --ink-soft: #cdc3b4;
+  --ink-mute: #8a8071;
+  --ink-faint: #5f574b;
+  --amber: #f0a341;
+  --amber-soft: #f6c178;
+  --amber-deep: #c97a1f;
+  --green: #5fd07f;
+
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--amber);
+  color: #000;
+}
+
+input,
+button {
+  font-family: inherit;
+}
+
+/* thin custom scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #2a221a;
+  border-radius: 999px;
+}
