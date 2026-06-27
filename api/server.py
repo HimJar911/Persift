@@ -11,6 +11,7 @@ import pdfplumber
 from asyncpg import UniqueViolationError
 from docx import Document
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -30,6 +31,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Persift API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _extract_docx_text(content: bytes) -> str:
@@ -126,6 +134,12 @@ class _FailedReq(BaseModel):
     failure_stage: str | None = None
 
 
+class _NeedsReviewReq(BaseModel):
+    user_id: str
+    job_ats: str
+    reason: str = ""
+
+
 @app.get("/users/{user_id}")
 async def get_user_profile(user_id: str):
     pool = get_pool()
@@ -133,18 +147,42 @@ async def get_user_profile(user_id: str):
         row = await conn.fetchrow(
             """
             SELECT email,
-                   COALESCE(application_settings->>'first_name',   '') AS first_name,
-                   COALESCE(application_settings->>'last_name',    '') AS last_name,
-                   COALESCE(application_settings->>'phone',        '') AS phone,
-                   COALESCE(application_settings->>'linkedin_url', '') AS linkedin_url,
-                   COALESCE(application_settings->>'location_city','') AS location_city
+                   COALESCE(application_settings->>'first_name',      '') AS first_name,
+                   COALESCE(application_settings->>'last_name',       '') AS last_name,
+                   COALESCE(application_settings->>'phone',           '') AS phone,
+                   COALESCE(application_settings->>'linkedin_url',    '') AS linkedin_url,
+                   COALESCE(application_settings->>'location_city',   '') AS location_city,
+                   COALESCE(application_settings->>'location_state',  '') AS location_state,
+                   COALESCE(application_settings->>'location_country','') AS location_country,
+                   COALESCE(application_settings->>'github_url',      '') AS github_url,
+                   COALESCE(application_settings->>'preferred_name',  '') AS preferred_name,
+                   COALESCE(application_settings->>'school',          '') AS school,
+                   COALESCE(application_settings->>'degree',          '') AS degree,
+                   COALESCE(application_settings->>'major',           '') AS major,
+                   COALESCE(application_settings->>'gpa',             '') AS gpa,
+                   COALESCE(application_settings->>'graduation_date', '') AS graduation_date,
+                   COALESCE(application_settings->>'eeo_gender',      '') AS eeo_gender,
+                   COALESCE(application_settings->>'eeo_race',        '') AS eeo_race,
+                   COALESCE((application_settings->>'eeo_hispanic')::boolean::text, 'false') AS eeo_hispanic,
+                   COALESCE(application_settings->>'eeo_veteran',     '') AS eeo_veteran,
+                   COALESCE(application_settings->>'eeo_disability',  '') AS eeo_disability,
+                   COALESCE((application_settings->>'work_authorized')::boolean::text, 'true') AS work_authorized,
+                   COALESCE((work_auth->>'needs_sponsorship')::boolean::text, 'false') AS needs_sponsorship,
+                   COALESCE((application_settings->>'desired_hourly_min')::int, 0) AS desired_hourly_min,
+                   COALESCE((application_settings->>'desired_hourly_max')::int, 0) AS desired_hourly_max,
+                   COALESCE(application_settings->'custom_answers', '[]'::jsonb)::text AS custom_answers,
+                   COALESCE(application_settings->'previous_employers', '[]'::jsonb)::text AS previous_employers
             FROM users WHERE id = $1::uuid
             """,
             user_id,
         )
     if row is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return dict(row)
+    result = dict(row)
+    import json
+    result['custom_answers'] = json.loads(result['custom_answers'])
+    result['previous_employers'] = json.loads(result['previous_employers'])
+    return result
 
 
 @app.get("/jobs/queue")
@@ -256,6 +294,23 @@ async def mark_applied(job_id: str, body: _AppliedReq):
     return {"ok": True}
 
 
+@app.post("/jobs/{job_id}/needs_review")
+async def mark_needs_review(job_id: str, body: _NeedsReviewReq):
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs SET status = 'needs_review', updated_at = NOW()
+            WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+            """,
+            body.user_id, job_id, body.job_ats,
+        )
+    if int(tag.split()[-1]) == 0:
+        raise HTTPException(status_code=404, detail="user_job not found")
+    logger.debug("needs_review: job=%s reason=%s", job_id, body.reason)
+    return {"ok": True}
+
+
 @app.post("/jobs/{job_id}/failed")
 async def mark_failed(job_id: str, body: _FailedReq):
     pool = get_pool()
@@ -352,6 +407,10 @@ async def get_tailored_resume(
     safe_id  = job_id.replace("/", "_")
     pdf_path = RESUMES_DIR / user_id / f"{safe_id}_{job_ats}_tailored.pdf"
     if not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="PDF file not found")
+        base_pdf = RESUMES_DIR / user_id / "base_resume.pdf"
+        if base_pdf.exists():
+            pdf_path = base_pdf
+        else:
+            raise HTTPException(status_code=404, detail="PDF file not found")
 
     return FileResponse(str(pdf_path), media_type="application/pdf")

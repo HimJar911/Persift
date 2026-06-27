@@ -121,10 +121,15 @@ def rewrite_resume(resume_text: str, jd_text: str, keyword_match_data: dict) -> 
 
     Returns the modified resume, or the original unchanged on any error.
     """
+    if not OPENAI_API_KEY:
+        logger.warning("Layer 4 disabled: OPENAI_API_KEY not set — returning original resume unchanged")
+        return resume_text
+
     missing = keyword_match_data.get("missing", [])
     present = keyword_match_data.get("present", [])
 
     try:
+        # TODO: swap to Claude API (claude-sonnet-4-6) when credits available — 3-line change: replace openai client init, model name, and response parsing
         response = _get_client().chat.completions.create(
             model=_MODEL,
             max_tokens=_MAX_TOKENS,

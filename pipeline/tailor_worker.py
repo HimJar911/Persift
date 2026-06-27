@@ -16,8 +16,6 @@ import logging
 from datetime import timezone
 from pathlib import Path
 
-from weasyprint import HTML as _WeasyHTML
-
 from db import get_pool
 from pipeline.formatter import check_ats_format
 from pipeline.injector import inject_keywords
@@ -42,6 +40,7 @@ def _to_html(resume_text: str) -> str:
 
 
 def _write_pdf(resume_text: str, pdf_path: Path) -> None:
+    from weasyprint import HTML as _WeasyHTML
     _WeasyHTML(string=_to_html(resume_text)).write_pdf(str(pdf_path))
 
 

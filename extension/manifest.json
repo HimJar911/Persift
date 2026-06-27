@@ -7,7 +7,9 @@
   "host_permissions": [
     "http://localhost:8000/*",
     "https://*.greenhouse.io/*",
-    "https://boards.greenhouse.io/*"
+    "https://boards.greenhouse.io/*",
+    "https://*.ashbyhq.com/*",
+    "https://job-boards.greenhouse.io/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -25,9 +27,17 @@
     {
       "matches": [
         "https://*.greenhouse.io/application*",
-        "https://boards.greenhouse.io/*/jobs/*"
+        "https://boards.greenhouse.io/*/jobs/*",
+        "https://job-boards.greenhouse.io/*"
       ],
       "js": ["api.js", "content/greenhouse.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.ashbyhq.com/jobs/*"
+      ],
+      "js": ["api.js", "content/ashby.js"],
       "run_at": "document_idle"
     }
   ],

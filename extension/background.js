@@ -3,6 +3,8 @@
 
 importScripts('api.js');
 
+const DEBUG_MODE = true; // set false before shipping
+
 const DEFAULT_STATE = {
   phase: 'idle',           // idle | fetching | tab_open | filling | post_submit_wait
   current_job: null,       // { job_id, job_ats, apply_url, company_name, title } | null
@@ -44,7 +46,7 @@ async function checkStale(state) {
     if (state.current_job) {
       await markFailed(state.current_job.job_id, state.current_job.job_ats, 'stale_timeout');
     }
-    await closeTab(state.current_tab_id);
+    // await closeTab(state.current_tab_id);
     await resetToIdle();
     return true;
   }
@@ -125,10 +127,10 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = await getState();
   if (tabId !== state.current_tab_id) return;
   if (state.phase !== 'filling' && state.phase !== 'tab_open') return;
-  if (state.current_job) {
-    await markFailed(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
-  }
-  await resetToIdle();
+  // if (state.current_job) {
+  //   await markFailed(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
+  // }
+  // await resetToIdle();
 });
 
 // Message listener — content script and popup communicate here.
@@ -162,7 +164,8 @@ async function handleMessage(message, sendResponse) {
       await chrome.storage.local.set({ phase: 'post_submit_wait' });
       const delayMin = 0.5 + Math.random() * 1;
       await chrome.alarms.create('next_job_alarm', { delayInMinutes: delayMin });
-      await closeTab(state.current_tab_id);
+      // DEBUG: tab left open
+      // await closeTab(state.current_tab_id);
       sendResponse({ ok: true });
       break;
     }
@@ -171,7 +174,8 @@ async function handleMessage(message, sendResponse) {
       if (state.current_job) {
         await markFailed(state.current_job.job_id, state.current_job.job_ats, message.reason);
       }
-      await closeTab(state.current_tab_id);
+      // DEBUG: tab left open
+      // await closeTab(state.current_tab_id);
       await resetToIdle();
       sendResponse({ ok: true });
       break;
@@ -183,11 +187,23 @@ async function handleMessage(message, sendResponse) {
       break;
     }
 
+    case 'fetch_resume': {
+      const blob = await getResumePdf(message.job_id, message.job_ats);
+      if (!blob) { sendResponse({ ok: false }); break; }
+      const buffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      sendResponse({ ok: true, data: btoa(binary) });
+      break;
+    }
+
     case 'needs_review': {
       if (state.current_job) {
-        await markFailed(state.current_job.job_id, state.current_job.job_ats, 'skipped_complex');
+        await markNeedsReview(state.current_job.job_id, state.current_job.job_ats, message.reason || 'awaiting_user_submit');
       }
-      await closeTab(state.current_tab_id);
+      // if (DEBUG_MODE) await new Promise(r => setTimeout(r, 10000));
+      // await closeTab(state.current_tab_id);
       await resetToIdle({
         pending_review: state.current_job
           ? { ...state.current_job, reason: message.reason }

@@ -1,8 +1,70 @@
 # Persift — Claude Code Context
 
-Persift is the outcome data layer for early-career hiring. Students get autonomous job applications. We collect labeled training data — every application, outcome, and user-job interaction — that compounds into the most valuable dataset in early-career hiring. Eventually, employers pay for the hiring signal that data produces.
+> **Active launch plan:** See `LAUNCH_PLAN.md` (at C:\Users\himan\Desktop\Persift\LAUNCH_PLAN.md) for the locked day-by-day build plan. Hard launch date: July 15, 2026. Tech week pitch: July 27, 2026. All session work should be checked against that plan first.
 
-The product surface the user sees: install Chrome extension, build profile, system finds and applies to relevant jobs automatically. The strategic identity: a data company building two proprietary flywheels — outcome data and user-driven job discovery data.
+Persift is the outcome data layer for early-career hiring. Students get autonomous job applications and automatic tracking. Career centers get live visibility into student job searches and outcomes without self-reporting. Revenue comes from institutions (university career centers), not students.
+
+---
+
+## Strategic Identity (updated June 26, 2026)
+
+**Two-sided product:**
+- **Students (free):** Finds roles early (before LinkedIn), tailors resume, auto-applies, tracks automatically. Auto-submit unlocks after user manually reviews first 10 applications.
+- **Career centers (paid):** Live visibility into what students are actually doing — applications sent, interviews converting, who's stuck — without waiting for self-reported surveys. Recurring institutional budget. Cohort refills every year so no churn.
+
+**Competitor context:**
+- Jobright: horizontal, consumer — won't follow into institutional vertical
+- Tsenta (YC S26): on-device, can't centrally collect outcome data. Does cover Workday via Gmail OTP flow.
+- 12Twenty/CareerLink: CRM for career centers, outcome data still self-reported via surveys. ASU just switched to it (June 2026).
+
+**Outcome capture mechanism:** Apply-through exhaust + Gmail signal parsing for interview/rejection signals. Binary: interview or not-interview. Silence past 3-4 weeks = inferred rejection.
+
+---
+
+## Beta Launch Scope (locked June 26, 2026)
+
+- **ATSes:** Greenhouse, Ashby, Lever, SmartRecruiters. Workday = post-launch v2.
+- **Tailoring:** L1-L4 all enabled. Anthropic API key incoming. L4 swap point marked in rewriter.py.
+- **Gmail tracking:** OAuth testing mode, 100 user cap, gmail.readonly + calendar.readonly. Interview/rejection signal detection. Start CASA audit at 80 users.
+- **Infrastructure:** AWS (RDS + S3 + Cognito + ECS + Secrets Manager). Migrate off Render on Day 8 (July 3).
+- **Frontend:** Next.js 14 App Router, TypeScript, Tailwind. Full build — 7-step onboarding, dashboard (3 panels), application detail, profile/settings. Unique visual identity separate from landing page.
+- **Chrome Web Store:** Submit June 30. $5 developer fee.
+- **Beta target:** 100 users.
+
+---
+
+## Current State (June 26, 2026)
+
+### What's Working
+- Greenhouse auto-fill confirmed on Geotab (job_id=5153686008) and OfferUp (job_id=8004171, immigration answer pending)
+- All June 24 fixes are in the working tree but **NOT committed/pushed** — commit these before starting new work
+- Discovery pipeline live on Render (Jobright polling every 60 min, Worker A every 90 min)
+- Backend pipeline works locally. main.py --no-discover NOT YET RUN — all job descriptions still empty
+- 18K+ jobs in DB, 6,082+ companies, 1 pro user, 2 user_jobs (test rows)
+
+### Uncommitted Changes (working tree as of June 26)
+These are all the June 24 session fixes sitting uncommitted:
+- `api/server.py` — full profile fields in GET /users/{user_id}, _NeedsReviewReq model, POST /jobs/{job_id}/needs_review endpoint, base-resume fallback in GET /jobs/{job_id}/resume, CORSMiddleware added
+- `extension/api.js` — markNeedsReview() added, BASE_URL on localhost:8000
+- `extension/background.js` — DEBUG_MODE=true, closeTab() commented out in needs_review handler and checkStale()
+- `extension/content/greenhouse.js` — all June 24 fixes (school combobox, state/country, phone country code, synonym fallbacks, handledLabels regex, sponsorship scoping, hardcoded ID removed)
+- `extension/manifest.json` — updated host_permissions
+- `main.py` — --check flag added
+- `pipeline/rewriter.py` — WARNING log when OPENAI_API_KEY unset, TODO comment for Claude swap
+- `pipeline/tailor_worker.py` — weasyprint lazy import
+- `scripts/db_stats.py` — new file
+
+**First thing tomorrow: commit all of these before touching anything else.**
+
+---
+
+## Day 1 Tasks (June 26 — TODAY)
+
+- [ ] Commit all uncommitted working tree changes
+- [ ] Add immigration support answer via update_profile.py (answer: "No")
+- [ ] Re-run OfferUp test end-to-end, confirm all June 24 fixes hold
+- [ ] Run main.py --no-discover — populate job descriptions, verify matching pipeline works
+- [ ] Verify tailor worker advancing queued → applying correctly
 
 ---
 
@@ -10,111 +72,124 @@ The product surface the user sees: install Chrome extension, build profile, syst
 
 | File / Folder | What it does |
 |---|---|
-| `main.py` | Orchestrator. Scheduler, company list loading from DB (30-min refresh cycle), polling cycles, seed mode, nightly cleanup job |
+| `main.py` | Orchestrator. Scheduler, company list loading from DB (30-min refresh cycle), polling cycles, seed mode, nightly cleanup job. --check flag added. --no-discover flag: runs without discovery. |
 | `config.py` | All config and constants. Reads from `.env`. Single source of truth. Includes SCORER_MODEL_VERSION, REWRITER_MODEL_VERSION, PIPELINE_VERSION |
 | `db.py` | DB abstraction — asyncpg connection pool. Public functions: init_db, filter_new_ids, mark_seen_batch, increment_consecutive_failures, reset_consecutive_failures |
-| `discover_companies.py` | CLI tool. Monthly CDX crawl to expand ATS slug lists. Writes to both JSON files AND companies table (Fix 2 complete). _upsert_companies_to_db() added. |
-| `discovery_runner.py` | Slim Render scheduler. Runs Jobright poller (60 min) + Worker A (90 min) only. No matcher, tailor, or API. Entry point for Render deployment. Health server on $PORT (stdlib only) keeps free tier alive via uptime-monitor. |
-| `api/server.py` | FastAPI user ingestion API. POST /users, GET /health, GET /jobs/{job_id}/resume, GET /jobs/queue, GET /jobs/queue/count, POST /jobs/{job_id}/applied, POST /jobs/{job_id}/failed |
-| `pollers/greenhouse.py` | Polls Greenhouse boards API. 2,127 companies. consecutive_failures wired. |
-| `pollers/ashby.py` | Polls Ashby posting API. 2,767 companies. consecutive_failures wired. |
-| `pollers/lever.py` | Polls Lever postings API. 303 companies. consecutive_failures wired. |
-| `pollers/smartrecruiters.py` | Polls SmartRecruiters API. 885 companies. 3-page cap, 6-slug blacklist. consecutive_failures wired. |
-| `pollers/workday.py` | Polls Workday tenant APIs. Being phased out — Jobright covers these |
-| `pollers/jobright.py` | Polls Jobright aggregator API. 22 intern categories, hourly, ~48K+ jobs. fetch_jd() for lazy JD fetching. NOTE: apply_url is NOT returned by the bulk API or jobs/info without auth. |
-| `pollers/custom.py` | Config-driven poller for custom company APIs |
+| `discover_companies.py` | CLI tool. Monthly CDX crawl to expand ATS slug lists. Writes to both JSON files AND companies table. |
+| `discovery_runner.py` | Slim Render scheduler. Runs Jobright poller (60 min) + Worker A (90 min) only. No matcher, tailor, or API. Health server on $PORT. |
+| `api/server.py` | FastAPI user ingestion API. GET /users/{user_id} returns all profile fields including desired_hourly_min/max, custom_answers (parsed JSON), previous_employers (parsed JSON). POST /jobs/{job_id}/needs_review added. Base-resume fallback in GET /jobs/{job_id}/resume. CORSMiddleware allow_origins=["*"]. |
+| `pollers/greenhouse.py` | Polls Greenhouse boards API. 2,127 companies. |
+| `pollers/ashby.py` | Polls Ashby posting API. 2,767 companies. |
+| `pollers/lever.py` | Polls Lever postings API. 303 companies. |
+| `pollers/smartrecruiters.py` | Polls SmartRecruiters API. 885 companies. 3-page cap, 6-slug blacklist. |
+| `pollers/jobright.py` | Polls Jobright aggregator API. 22 intern categories, ~48K+ jobs. |
 | `pollers/filter.py` | Shared filtering: is_intern_role(), is_entry_level(), assign_categories(), matches_title() |
-| `pipeline/detector.py` | Dedup against DB. Marks new jobs as seen |
-| `pipeline/enricher.py` | Normalizes raw poller output into consistent shape |
-| `pipeline/scorer.py` | Layer 1+2: keyword extraction (pure Python) + relevance scoring (sentence-transformers all-MiniLM-L6-v2) |
-| `pipeline/injector.py` | Layer 3: keyword injection into resume skills section. JSON-backed tech term list |
-| `pipeline/rewriter.py` | Layer 4: LLM bullet rewrite via OpenAI GPT-4o. Migrating to Claude API when credits available |
-| `pipeline/formatter.py` | Layer 5: ATS formatting check. 5 checks: word count, section headers, single column, no tables, no page numbers |
-| `pipeline/tailor_worker.py` | Tailor worker: processes queued user_jobs through Layers 3-5. Pro users first, Semaphore(5). Outputs .txt and .pdf. Now populates resume_text_snapshot, tailored_resume_text, resume_snapshot_id. |
-| `pipeline/matcher.py` | Matching engine: pairs new jobs to users via 6 hard filters + scoring. Runs every 6 minutes. Lazy Jobright JD fetch. Now populates ML snapshot fields and model_predictions. |
-| `pipeline/notifier.py` | Slack Block Kit notification sender. notify_excluded_company() for amber excluded-company alerts. |
-| `pipeline/discovery_worker.py` | Worker A v1.1.0. Slug matching → career page fingerprinter → companies table. Fetches dataSource.companyResult.companyURL from Jobright __NEXT_DATA__, tries /careers /jobs /career /join /work-with-us, greps HTML for ATS signatures, inserts discovered companies with match_method='career_page_fingerprint'. |
-| `migrations/` | SQL migration files. Run in order against Postgres. 001-013 complete. |
-| `scripts/seed_companies.py` | One-time seed script. Already run — 6,082 companies in DB. Do not run again. |
-| `Dockerfile.discovery` | Slim Docker image for Render. No WeasyPrint, no sentence-transformers. Deps: asyncpg httpx psycopg2-binary apscheduler python-dotenv. |
-| `render.yaml` | Render blueprint. type: web (free tier), plan: free Postgres. Wires DATABASE_URL automatically. |
-| `extension/manifest.json` | Chrome extension manifest V3. |
-| `extension/background.js` | Event-driven state machine service worker. |
-| `extension/api.js` | Shared backend API module. BASE_URL hardcoded to localhost — must update to production before any real user. |
-| `extension/content/greenhouse.js` | Greenhouse form filler. |
-| `extension/popup/popup.html` | Extension popup HTML. 6 states. |
-| `extension/popup/popup.js` | Popup state renderer. |
-| `extension/popup/popup.css` | Popup styles. Dark warm theme. |
-| `extension/icons/` | icon16/32/48/128.png — Persift P mark logo |
+| `pipeline/detector.py` | Dedup against DB. |
+| `pipeline/enricher.py` | Normalizes raw poller output. Populates description field on jobs. |
+| `pipeline/scorer.py` | L1+L2: keyword extraction + relevance scoring (all-MiniLM-L6-v2). score_resume() → 0-100. |
+| `pipeline/injector.py` | L3: keyword injection into resume skills section. |
+| `pipeline/rewriter.py` | L4: LLM bullet rewrite. Currently disabled (no API key). WARNING log added. TODO comment marks 3-line Claude API swap point (claude-sonnet-4-6). |
+| `pipeline/formatter.py` | L5: ATS formatting check. 5 checks. |
+| `pipeline/tailor_worker.py` | Tailor worker: queued → applying. Pro users first, Semaphore(5). weasyprint lazy import. |
+| `pipeline/matcher.py` | Matching engine. 6 hard filters + scoring. _SCORE_THRESHOLD = 50. |
+| `pipeline/notifier.py` | Slack Block Kit notification sender. |
+| `pipeline/discovery_worker.py` | Worker A v1.1.0. _BATCH_SIZE=50. |
+| `migrations/` | SQL migration files. 001-014 complete. |
+| `extension/manifest.json` | Chrome extension manifest V3. host_permissions: localhost:8000, *.greenhouse.io, boards.greenhouse.io, job-boards.greenhouse.io, *.ashbyhq.com. |
+| `extension/background.js` | Service worker state machine. DEBUG_MODE=true (SET FALSE BEFORE PRODUCTION). closeTab() commented out (RESTORE BEFORE PRODUCTION). |
+| `extension/api.js` | Shared API module. BASE_URL: localhost:8000 (REVERT TO AWS URL BEFORE PRODUCTION). markNeedsReview() added. |
+| `extension/content/greenhouse.js` | Greenhouse form filler — see architecture section below. |
+| `extension/content/ashby.js` | Ashby form filler. Not yet confirmed end-to-end. |
+| `extension/popup/` | Popup HTML/JS/CSS. Needs redesign per launch plan. |
+| `extension/TEST_COMMANDS.md` | Step-by-step test commands. |
+| `insert_job.py` | Test utility — inserts job into user_jobs. |
+| `update_profile.py` | Test utility — updates user profile fields in application_settings JSONB. |
+| `scripts/db_stats.py` | DB stats script. |
 
 ---
 
-## Strategic Identity (locked May 26, 2026)
+## greenhouse.js — Architecture (as of June 24, 2026)
 
-Persift is the outcome data layer for early-career hiring. The auto-apply product is the wedge. The real value is two compounding datasets:
+Fill order:
+1. Basic fields — first_name, last_name, email, phone, linkedin, github, preferred_name, location_city
+2. Resume upload — background.js fetches PDF (base64), content script converts to Blob via DataTransfer
+3. Work auth — native select → radio → combobox → label scan. Added "eligible to work in the us", "work in the us on a long term" variants.
+4. EEO — fillEeoField() tries direct ID, then combobox, then native select
+5. Classifier sweep — FIELD_DEFS pattern matching with weights
+6. Education — school ('school--0'), degree ('degree--0'), discipline ('discipline--0'), end-month/year — all comboboxes. School uses type-to-search approach (open, type 8 chars, wait for aria-controls, click match).
+7. State & Country — findFieldByLabelText() with variants. Fills "Arizona, United States". Combobox fallback kept.
+8. Phone country code — intl-tel-input library. Opens via button.iti__selected-country, listbox via [id$="__country-listbox"]. Must fill BEFORE phone number.
+9. Internship duration checkboxes — reads from custom_answers "how long of an internship"
+10. Graduation date text field — findNearText scan
+11. Hourly compensation — midpoint of desired_hourly_min + desired_hourly_max. Multiple label variants.
+12. Custom answers sweep — document-wide scan. getLabelForEl() + findCustomAnswer() fuzzy match. QUESTION_ALIASES for semantic variants. handledLabels regex skips already-filled fields.
+13. Sponsorship — scoped to form only, checks divs with class*=field or class*=question. Added "immigration support", "immigration assistance" variants.
+14. Submit or handoff — auto_submit=false sends needs_review (correct endpoint now)
 
-1. **Outcome dataset**: every application labeled with downstream results (callback, interview, offer, ghost, rejection). After 100K applications this is irreplaceable — competitors cannot backfill historical outcome data.
+**Key utilities:** fillText(), waitFor(), openReactSelect(), fillCombobox(), findComboboxByLabel(), findNearText(), findCustomAnswer(), getLabelForEl(), handledLabels regex, findFieldByLabelText()
 
-2. **Discovery dataset**: every job a user browses, clicks, saves, or pastes becomes job-discovery signal. After 500 active users this compounds independently of the outcome dataset.
-
-The endgame: employers pay $4K-$30K per hire for hiring signal derived from this data. The student wedge is how we earn the right to build the candidate graph.
-
-One-sentence pitch: "Persift is building the outcome dataset for early-career hiring. Students get autonomous job applications. We get labeled training data — and a self-expanding map of who's hiring — that nobody else has."
-
-**Competitor context (May 30):** Tsenta (YC S26) — desktop app, on-device, 50K+ career pages, 12 ATSes, $9.99/mo Pro, 55K monthly visits. Key weakness: on-device architecture cannot collect outcome data centrally. Persift's data flywheel thesis is structurally impossible for Tsenta to replicate.
-
----
-
-## Current Pipeline State
-
-```
-[discovery_runner.py — LIVE on Render as of June 1, 2026]
-[https://persift-discovery.example.com — uptime-monitor ping every 5 min]
-poll_jobright() → dedup → INSERT discovery_staging (company_name, no apply_url)
-                                          ↓
-                    [every 90 min] run_discovery_cycle() — Worker A v1.1.0
-                    → Step 1: exact company_name match (fast-path, now active after 6,082-row backfill)
-                    → Step 2: slug candidates (4 variants, ~10% hit rate)
-                    → Step 3: fetch Jobright jobs/info/{jobId} __NEXT_DATA__
-                              → dataSource.companyResult.companyURL → domain
-                    → Step 4: try /careers /jobs /career /join /work-with-us
-                    → Step 5: grep HTML for ATS signatures
-                              → polled ATS (ashby/greenhouse/lever/smartrecruiters):
-                                  INSERT companies (discovered_via='fingerprint') → result='added'
-                              → unpolled ATS (workday/bamboohr/jobvite):
-                                  queue_manual_review (bucket='known_ats_unclear_slug')
-                              → no signature / no career page / no domain:
-                                  queue_manual_review (bucket='unknown_ats')
-
-[main.py — full pipeline, NOT on Render, crashes locally on Windows]
-poll_all() → detect_new_jobs() → enrich() → notify_slack()
-                                                    ↓
-                                    [every 6 min] run_matching_cycle()
-                                    (never run yet — 0 user_jobs, 1 user, 18,147 jobs in DB)
-                                                    ↓
-                                    [every 10 min] run_tailor_cycle()
-                                    (broken locally: weasyprint not installed on Windows)
-                                                    ↓
-                                    [Chrome extension] auto-apply
-                                    (queue always empty — tailor never sets status='applying')
-                                                    ↓
-                                    [3AM daily] run_cleanup_job()
-```
-
-**DB snapshot (June 1, 2026):** 1 pro user | 18,147 jobs (greenhouse: 744, ashby: 514, lever: 119, smartrecruiters: 614, jobright: 8,642, workday: 7,245, custom: 269) | 0 user_jobs | 6,082 companies seeded
-
-**LOCAL WINDOWS NOTE:** `main.py` crashes on import — `weasyprint` requires GTK/Cairo on Windows. Works on Render Linux. To fix locally: `pip install weasyprint --break-system-packages` (may still need GTK). Render Dockerfile.discovery excludes weasyprint by design.
+**Known remaining issues:**
+- getLabelForEl() returns empty for some text inputs (aria-labelledby not yet checked)
+- School fill silently skips if aria-controls never populates (no fallback)
+- Degree synonyms narrow (Undergraduate, BA, Bachelor of Arts not covered)
+- Immigration support answer not yet in custom_answers profile (add via update_profile.py, answer: "No")
 
 ---
 
-## Jobright API — Critical Notes (updated June 1, 2026)
+## Extension Architecture
 
-- Bulk API (`swan/mini-sites/list` POST): returns jobId, tabCategory, postedAt, properties (title, company, location, salary, workModel, industry, companySize, qualifications, h1bSponsored). **NO apply_url, NO domain.**
-- `jobs/info/{jobId}` unauthenticated **__NEXT_DATA__**: apply_url is auth-gated and **not in `__NEXT_DATA__` at all**. The `source` field (e.g. value `1`) is **not a reliable ATS enum** — maps to Ashby, Oracle, Workday all the same.
-- `jobs/info/{jobId}` unauthenticated **DOES** return `companyResult.companyURL` (company website). **Correct JSON path: `props.pageProps.dataSource.companyResult.companyURL`** — NOT `props.pageProps.jobResult.companyResult.companyURL` (that key is empty).
-- GitHub repos (36 public): markdown mirrors of jobright.ai. No apply URLs.
-- **Conclusion on apply_url:** Cannot get ATS apply URLs from Jobright without authentication. Use company domain fingerprinting instead.
-- **Conclusion on domain:** `dataSource.companyResult.companyURL` works unauthenticated. Worker A v1.1.0 uses this as the fingerprinting entry point.
+**Full flow:**
+1. poll_alarm fires every 5 min → fetchNextJob() → /jobs/queue?user_id=...
+2. Gets job (status='applying') → opens URL in background tab
+3. Tab loads → phase → 'filling'
+4. Content script sends 'ready' → background.js fetches profile via getProfile() → responds with full context
+5. Content script fills all fields, uploads resume PDF via background.js message passing
+6. auto_submit=false → sends needs_review (marks DB status=needs_review via POST /jobs/{job_id}/needs_review), tab stays open
+7. auto_submit=true → clicks submit, waits confirmation
+8. background.js marks applied/failed, closes tab, waits 0.5-1.5 min, next job
+
+**CRITICAL — job status flow:** queued → applying → applied|failed|needs_review|dismissed
+Queue endpoint returns status='applying' only. Tailor worker advances queued → applying.
+
+**DEBUG flags — MUST restore before any real user:**
+- extension/background.js: DEBUG_MODE=false, uncomment closeTab() in needs_review handler and checkStale()
+- extension/api.js: revert BASE_URL to AWS production URL
+- api/server.py: restrict CORS allow_origins from ["*"] to chrome-extension:// origin
+
+---
+
+## Profile Fields (application_settings JSONB)
+
+| Field | Test value |
+|---|---|
+| first_name | Himanshu |
+| last_name | Jarodiya |
+| email | himanshujar911@gmail.com (users.email column) |
+| phone | REDACTED-PHONE |
+| linkedin_url | REDACTED-LINKEDIN |
+| github_url | https://github.com/HimJar911 |
+| preferred_name | Himanshu |
+| location_city | REDACTED |
+| location_state | AZ |
+| location_country | United States |
+| school | Arizona State University |
+| degree | Bachelors |
+| major | Computer Science |
+| gpa | 3.52 |
+| graduation_date | May 2027 |
+| eeo_gender | Male |
+| eeo_race | Asian |
+| eeo_hispanic | false |
+| eeo_veteran | I am not a protected veteran |
+| eeo_disability | No, I do not have a disability and have not had one in the past |
+| work_authorized | true |
+| desired_hourly_min | 25 |
+| desired_hourly_max | 40 |
+| previous_employers | ["Johnson & Johnson", "Virtusa Corporation", "The Silicon Partners", "Arizona State University"] |
+| custom_answers | 23-entry JSON array — immigration support answer PENDING (add "No") |
+
+**custom_answers keys (23 entries):**
+where did you hear about | how did you hear about this job opportunity | why do you want to work here | why are you interested in this role | tell us about yourself | what are your strengths | what is your greatest weakness | describe a challenge you faced | where do you see yourself in 5 years | what field are you looking to complete your internship | what term were you looking to start | how long of an internship are you looking for | will you consent to a background check | were you previously employed | are you available to work full time | are you able to commute | what is your expected date of graduation | what is your expected graduation | do you have experience with | are you currently enrolled | veteran of the armed forces | hourly compensation expectations | compensation expectations | cover letter
 
 ---
 
@@ -122,214 +197,44 @@ poll_all() → detect_new_jobs() → enrich() → notify_slack()
 
 ### users
 `id UUID PK`. `tier TEXT` CHECK ('free', 'pro'). `preferences JSONB`. `work_auth JSONB`. `resume_text TEXT`. `application_settings JSONB`.
-Structured columns: `requires_sponsorship BOOLEAN`, `work_auth_type TEXT`, `available_start_date DATE`, `university TEXT`, `graduation_date DATE`, `major TEXT`, `cohort_signup_week DATE`.
 
 ### jobs
-Composite PK: `(job_id, ats)`. `categories TEXT[]` with GIN index. `sources TEXT[]`. `posted_at BIGINT` (ms epoch).
-New: `jd_structured JSONB`, `jd_captured_at TIMESTAMPTZ`, `last_seen_at TIMESTAMPTZ`, `estimated_fill_date TIMESTAMPTZ`, `extractor_version TEXT`.
-
-### companies
-`id SERIAL PK`. `canonical_company_id UUID NOT NULL`. `slug TEXT NOT NULL`. `ats TEXT NOT NULL`. UNIQUE: `(slug, ats)`. `is_active BOOLEAN`. `consecutive_failures INT`.
-New: `canonical_domain TEXT`, `industry TEXT`, `headcount_range TEXT`, `discovered_via TEXT`, `discovered_at TIMESTAMPTZ`, `posting_velocity NUMERIC`, `match_method TEXT`, `match_confidence TEXT`, `company_name TEXT`.
-
-**6,082 companies seeded. 5,975 unique canonical_company_ids.**
-
-### discovery_staging
-`id SERIAL PK`. `job_id TEXT NOT NULL`. `job_ats TEXT NOT NULL`. `company_name TEXT`. `apply_url TEXT`. `staged_at TIMESTAMPTZ DEFAULT NOW()`. `processed BOOLEAN DEFAULT FALSE`. `processed_at TIMESTAMPTZ`. `result TEXT` CHECK ('added','already_known','queued_manual','failed'). `result_canonical_company_id UUID`. `worker_version TEXT`. UNIQUE: `(job_id, job_ats)`.
-Partial index on unprocessed rows. Cascades to manual_review_queue.
-
-### manual_review_queue
-Created by Worker A on startup (CREATE IF NOT EXISTS). `id SERIAL PK`. `apply_url TEXT`. `company_name TEXT`. `staged_job_id INT FK → discovery_staging`. `bucket TEXT` CHECK ('known_ats_unclear_slug','unknown_ats'). `created_at TIMESTAMPTZ`. `resolved BOOLEAN DEFAULT FALSE`.
-
-### resume_snapshots
-`id SERIAL PK`. `user_id UUID FK`. `version_number INT`. `resume_text TEXT`. `resume_structured JSONB`. `is_active BOOLEAN`.
+Composite PK: `(job_id, ats)`. `description TEXT NOT NULL DEFAULT ''`. `categories TEXT[]`. `sources TEXT[]`. `posted_at BIGINT`.
 
 ### user_jobs
-`id SERIAL PK`. UNIQUE: `(user_id, job_id, job_ats)`. Status, ML columns, trigger-maintained `current_stage`.
-
-### application_outcomes
-APPEND-ONLY. `outcome_type TEXT` (applied_confirmed through offer_expired). Correction chain via `corrects_outcome_id`.
-
-### model_predictions, gmail_authorizations, gmail_signals, user_job_interactions, aggregate_benchmarks, company_merge_candidates
-(unchanged from May 26 doc)
-
-### poller_state
-Stores `cursor JSONB` per poller name. Used by discovery_runner.py to track Jobright `since_ms`.
-
----
-
-## Key Config Values
-
-| Constant | Value | Notes |
-|---|---|---|
-| DATABASE_URL | `postgresql://persift:persift@localhost:5432/persift` | Swap for Render internal URL in prod |
-| POLL_INTERVAL_MINUTES | 10 | Tier 1 polling frequency |
-| OPENAI_MODEL | `gpt-4o` | Migrating to claude-sonnet-4-6 when credits available |
-| SCORER_MODEL_VERSION | `all-MiniLM-L6-v2-v1` | Tagged on all model_predictions rows |
-| PIPELINE_VERSION | `1.0.0` | Tagged in feature_snapshot JSONB |
-
----
-
-## Discovery Pipeline Design (June 1, 2026)
-
-**Goal:** Self-expanding company → ATS mapping database. Jobright feeds company names continuously. Worker A resolves each to an ATS + slug and adds it to the polling list, forever, on Render.
-
-Worker A v1.1.0 detection cascade:
-1. Exact `company_name` match (case-insensitive) — ACTIVE, fast-path (6,082 rows backfilled June 1)
-2. Slug candidates from company name (4 variants, hyphenated + concatenated, with/without suffixes) — ACTIVE (~10% hit rate)
-3. Fetch `jobs/info/{jobId}` → parse `__NEXT_DATA__` → `dataSource.companyResult.companyURL` — ACTIVE
-4. Try `/careers`, `/jobs`, `/career`, `/join`, `/work-with-us` on that domain — ACTIVE
-5. Grep HTML for ATS fingerprints → extract slug from embedded ATS URLs — ACTIVE
-   - Polled ATS match → INSERT companies, result='added'
-   - Unpolled ATS (workday/bamboohr/jobvite) → manual_review_queue, bucket='known_ats_unclear_slug'
-   - No signature / SPA → manual_review_queue, bucket='unknown_ats'
-6. BuiltWith paid API — August, $295/month (solves SPAs)
-
-**Tiered resolution strategy:**
-- Tier 1: Static HTML fingerprint (free, built, runs on Render) → catches ~30% of companies
-- Tier 2: CommonCrawl DuckDB batch query (free, needs AWS creds — support case submitted June 1) → catches SPA companies whose career pages CommonCrawl has already crawled
-- Tier 3: BuiltWith API (August, $295/mo) → catches everything remaining
-
-**First run results (May 30):** 8,642 companies analyzed | 849 already_known | 7,793 queued for review
-
-**Slug matching gaps identified (June 1):**
-- `company_name` column was NULL for all seeded rows — Step 1 never fired. Fixed via backfill.
-- Step 2 is exact match only — no fuzzy/trigram. Misses abbreviations (IBM), trade names (Google/Alphabet), ATS-specific short slugs.
-- Improvement path: pg_trgm similarity on slug, reverse slug-to-name comparison, expand suffix strip list.
-
----
-
-## Discovery Pipeline — Investigation Log (June 1, 2026)
-
-### What we investigated
-
-**Jobright bulk API field dump** (confirmed via debug print on first job object):
-```json
-{ "jobId": "...", "tabCategory": ["intern:us:human_resources"], "postedAt": 1780312896000,
-  "properties": { "title", "company", "location", "salary", "workModel", "industry": ["Hospital"],
-                  "companySize": "1001-5000", "qualifications", "expLevel", "jobFunction",
-                  "h1bSponsored", "isNewGrad", "roleType", "hireTime", "graduateTime" } }
-```
-No `apply_url`, no `domain`, no `website`. `industry` and `companySize` are new fields we weren't capturing — now stored in bulk result.
-
-**Jobright jobs/info/{jobId} __NEXT_DATA__ structure** (confirmed on multiple jobs):
-- Correct path: `props.pageProps.dataSource.companyResult.companyURL` → e.g. `"https://www.joinhomebase.com"`
-- Wrong path previously assumed: `props.pageProps.jobResult.companyResult` → empty dict `{}`
-- `source` field: value `1` maps to Ashby, Oracle, AND Workday — not a reliable ATS enum, abandoned
-- `dataSource` also contains: companyName, companySize, companyDesc, companyCategories, companyTwitterURL, companyLinkedinURL, companyCrunchbaseURL, companyFoundYear, companyLocation, fundraisingCurrentStage, fundraisingTotalFunding, leadership, pressReferences, h1bAnnualJobCount, isAgency
-
-**Worker A fingerprinting test (5 rows from manual_review_queue, June 1):**
-
-| Company | Domain | Career Page | ATS | Result |
-|---|---|---|---|---|
-| Kwest Group | kwestgroup.com | Not found (all 5 paths 404) | — | skipped |
-| RemoteHunter | remotehunter.com | /jobs (26K chars) | None (custom board) | unknown_ats |
-| BillGO | billgo.com | /careers (90K chars) | None (SPA, ATS loads after JS) | unknown_ats |
-| Alston & Bird | alston.com | /careers (31K chars) | workday (wd1, via myworkdayjobs.com link) | known_ats_unclear_slug |
-
-Key finding: static HTML fingerprinter catches companies with server-rendered ATS embeds. SPAs where the ATS widget loads after JS render are missed — this is the majority of modern career pages.
-
-**CommonCrawl investigation:**
-- CDX API (`index.commoncrawl.org`): consistently 504s for CC-MAIN-2026-21 (too new, under load). Older crawls also 504. Not viable for real-time single-company lookups.
-- Columnar index parquet on S3: correct architecture for bulk queries. `s3://commoncrawl/cc-index/table/cc-main/warc/crawl=CC-MAIN-2026-21/subset=warc/*.parquet`. DuckDB anonymous S3 access fails with 403 — requires AWS credentials even for public bucket.
-- AWS account ID 496006843764 suspended (free credits exhausted). Support case submitted June 1, 2026. Account can be reopened before July 25, 2026.
-- CommonCrawl is the right Tier 2 solution once credentials are restored.
-
-**Pipeline status audit (June 1):**
-- All pollers: import clean, work correctly.
-- Detector, enricher, scorer, injector, notifier, matcher, api.server: all import clean, no bugs found.
-- `main.py`: crashes on import — `tailor_worker.py` does `from weasyprint import HTML` at module level. weasyprint not installed on Windows. All other imports succeed.
-- `rewriter.py`: `openai` package installed but `OPENAI_API_KEY` not set → silently returns un-rewritten resume. Layer 4 effectively disabled.
-- `matcher.py`: never run. 0 rows in `user_jobs`. Needs a fresh poll cycle (jobs WHERE first_seen_at > NOW() - 6min) after main.py is fixed.
-- Extension: BASE_URL hardcoded to localhost. Content scripts only cover Greenhouse. No Ashby/Lever/SmartRecruiters scripts exist.
-
----
-
-## Pending Work (Next Session)
-
-| Priority | Task | Status |
-|---|---|---|
-| 1 | Check Jobright API for company website/domain field | **DONE** — bulk API has no domain; jobs/info/{jobId} __NEXT_DATA__ dataSource.companyResult.companyURL works unauthenticated |
-| 2 | Build company domain fingerprinting in Worker A | **DONE** — Worker A v1.1.0 built and tested. Static HTML fingerprinter live on Render. |
-| 3 | Deploy to Render — run migrations 001-013 against Render Postgres | **DONE** — Live at https://persift-discovery.example.com. uptime-monitor keeping alive. |
-| 4 | Internal dashboard for manual_review_queue | Pending |
-| 5 | Cybersecurity deep dive with Opus (before beta users) | Pending — HIGH, required before any real user |
-| 6 | Gmail scanner design (after cybersecurity) | Pending |
-| 7 | Fix weasyprint locally — main.py import crash on Windows | Pending — Render unaffected |
-| 8 | Set OPENAI_API_KEY or swap rewriter.py to Claude API (claude-sonnet-4-6, 3-line change) | Pending — Layer 4 silently disabled without it |
-| 9 | Build Ashby content script — highest impact (514 companies, clean API-based forms) | Pending |
-| 10 | Build Lever and SmartRecruiters content scripts | Pending (after Ashby) |
-| 11 | Update BASE_URL in extension/api.js to production URL before any real user | Pending |
-| 12 | Await AWS support response — unblocks CommonCrawl Tier 2 batch worker | Pending — account suspended, case submitted June 1 |
-| 13 | README rewrite | **DONE** — rewritten June 1, committed |
-
----
-
-## Known Issues (updated June 1, 2026)
-
-| Issue | Severity | Notes |
-|---|---|---|
-| apply_url always NULL in discovery_staging | by design | Jobright auth-gates it. Fingerprinting pipeline uses domain instead. |
-| Worker A added count: 0 on first run | RESOLVED | Was blocked by NULL company_name. Fixed: 6,082 rows backfilled June 1. Fingerprinter now active. |
-| main.py crashes on import — Windows only | HIGH | weasyprint not installed. `from weasyprint import HTML` at module level in tailor_worker.py. Works on Render Linux. |
-| OPENAI_API_KEY not set | Medium | Layer 4 (LLM rewrite) silently no-ops — pro users get L3 injection only |
-| AWS account suspended | HIGH | Blocks CommonCrawl Tier 2. Support case submitted June 1. Account ID: 496006843764. Must reopen before July 25, 2026. |
-| BASE_URL hardcoded to localhost in extension/api.js | HIGH | Must point to production URL before any real user can install extension |
-| Content scripts only cover Greenhouse | HIGH | Ashby, Lever, SmartRecruiters content scripts don't exist — 3 of 4 polled ATSes can't be auto-applied |
-| host_permissions only covers localhost + greenhouse.io | HIGH | Chrome blocks extension requests to any other ATS domain |
-| Extension queue always empty | HIGH | weasyprint crash prevents tailor from advancing user_jobs status to 'applying' — extension has nothing to process |
-| Matcher never run | HIGH | 0 rows in user_jobs. 1 pro user, 18,147 jobs in DB. Needs main.py running with a fresh poll cycle. |
-| SPA career pages missed by fingerprinter | Medium | ATS widget loads after JS render — static HTML fetch finds no signature. Tier 2 (CommonCrawl) and Tier 3 (BuiltWith) solve this. |
-| httpx logging at INFO level | Low | Floods Render logs — set to WARNING before next real run |
-| Behavioral simulation basic | Medium | Mouse trajectories not fully implemented — Phase 2 |
-| Layer 4 essay generation not built | Medium | Extension skips essay questions — Phase 2 |
-| OpenAI → Claude API swap pending | Low | Waiting on Anthropic credits. 3-line change in rewriter.py. |
-| Cybersecurity review not done | HIGH | Required before any beta users |
-| Gmail scanner not built | — | After cybersecurity review |
-
----
-
-## Design System (Locked May 25, 2026)
-
-**Direction:** Editorial Quiet Confidence.
-
-**Colors:**
-| Token | Value |
-|---|---|
-| Background | #1a1816 |
-| Surface | #221f1c |
-| Border | #2d2a26 |
-| Text primary | #faf8f5 |
-| Text secondary | #d4cfc4 |
-| Text muted | #8a857d |
-| Green | #97C459 |
-| Amber | #EF9F27 / #FAC775 |
-
-**Typography:** Source Serif 4 + Inter. Upgrade to GT Sectra + Sohne Mono when revenue available.
+Status flow: queued → applying → applied|failed|needs_review|dismissed.
 
 ---
 
 ## How to Run
 
 ```bash
-# Start Postgres (required first)
+# Start Postgres
 docker compose up -d
 
-# Discovery pipeline only (for Render)
-python discovery_runner.py
+# Check imports clean
+python main.py --check
 
-# Full pipeline (when ready — do not run before Render deployment)
+# Full pipeline — live poll populates descriptions
 python main.py --no-discover
+
+# Matcher — all jobs
+python -m pipeline.matcher --all
 
 # User ingestion API
 uvicorn api.server:app --reload
 
-# Backfill discovery_staging from existing jobs table
-# (run in PowerShell against local Docker)
-echo "INSERT INTO discovery_staging (job_id, job_ats, company_name, apply_url) SELECT job_id, ats, company_name, apply_url FROM jobs WHERE ats = 'jobright' ON CONFLICT (job_id, job_ats) DO NOTHING;" | docker exec -i persift-db psql -U persift -d persift
+# PowerShell — load .env
+Get-Content .env | ForEach-Object { if ($_ -match '^([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 
-# Reset Jobright timestamp (force full re-fetch)
-echo "DELETE FROM poller_state WHERE poller = 'jobright';" | docker exec -i persift-db psql -U persift -d persift
+# Reset test job (PowerShell — no -it flag)
+docker exec persift-db psql -U persift -d persift -c "UPDATE user_jobs SET status='applying', current_stage='applied', failure_reason='' WHERE job_id='5153686008';"
+
+# Reset extension state (Service Worker console)
+chrome.storage.local.set({phase:'idle', current_job:null, current_tab_id:null, phase_started_at:null, user_id:'46e66cfa-e625-4ffc-b8dc-7bf75e21db26'}, ()=>console.log('reset'))
+
+# Trigger test cycle (Service Worker console)
+runPollCycle()
 ```
 
 ---
@@ -337,37 +242,26 @@ echo "DELETE FROM poller_state WHERE poller = 'jobright';" | docker exec -i pers
 ## Environment Variables (.env)
 
 ```
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=          # not yet set
+OPENAI_API_KEY=          # not set — Layer 4 disabled until Anthropic key arrives
+ANTHROPIC_API_KEY=       # incoming — will enable L4 in rewriter.py (3-line swap)
 SLACK_WEBHOOK_URL=
 POLL_INTERVAL_MINUTES=10
 LOG_LEVEL=INFO
 DATABASE_URL=postgresql://persift:persift@localhost:5432/persift
+RENDER_DATABASE_URL=     # external Render Postgres URL
 ```
 
 ---
 
-## Dependencies
+## Test Data
 
-```bash
-pip install weasyprint --break-system-packages
-pip install asyncpg fastapi uvicorn httpx sentence-transformers openai anthropic python-docx pdfplumber psycopg2-binary apscheduler python-dotenv
+- Test user ID: `46e66cfa-e625-4ffc-b8dc-7bf75e21db26`
+- Test user email: `himanshujar911@gmail.com`
+- Test job 1: job_id=5153686008, ats=greenhouse, apply_url=https://job-boards.greenhouse.io/internshiplist2000/jobs/5153686008 (Geotab — FULLY CONFIRMED)
+- Test job 2: job_id=8004171, ats=greenhouse, apply_url=https://job-boards.greenhouse.io/offerup/jobs/8004171 (OfferUp — immigration answer pending)
+
+**Reset SQL:**
+```sql
+UPDATE user_jobs SET status='applying', current_stage='applied', failure_reason='' WHERE job_id='5153686008';
+UPDATE user_jobs SET status='applying', current_stage='applied', failure_reason='' WHERE job_id='8004171';
 ```
-
----
-
-## LinkedIn Build-in-Public Status
-
-| Post | Status |
-|---|---|
-| Post 1 (IBM rejection story) — 1,212 impressions | Done |
-| Post 2 (800 apps, 0 interviews) — 8,146 impressions | Done |
-| Post 3 (interview empathy post) | Done |
-| Post 4 (Microsoft pipeline post) | Done |
-| Post 5 (referral filled headcount) | Done |
-| May 30 — 5am idea, 7,793 companies identified | Done |
-| May 31 — Empty apartment moving out | Done |
-| June 1 — Landed in Seattle. Brother's couch. All in. | Done |
-| June 2-6 — Daily grind posts | Planned |
-| June 7-10 — Introduce Persift by name | Planned |
-| June 21+ — Beta waitlist | Planned |

@@ -552,5 +552,16 @@ if __name__ == "__main__":
              "as-is, regardless of age. Useful when files are stale but "
              "discovery is not needed.",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Import all modules and exit without starting the scheduler. "
+             "Use to verify the import chain is clean on Windows.",
+    )
     args = parser.parse_args()
+
+    if args.check:
+        print("all imports OK")
+        sys.exit(0)
+
     asyncio.run(main(seed=args.seed, discover=args.discover, no_discover=args.no_discover))
