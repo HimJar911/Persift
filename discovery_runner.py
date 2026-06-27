@@ -1,9 +1,9 @@
-"""Slim Render scheduler: Jobright poller + discovery pipeline only.
+"""Slim Render scheduler: Jobright poller only.
 
 No Tier-1 ATSes, no matcher, no tailor worker, no API.
-Runs two concurrent asyncio loops:
-  - run_jobright_cycle()  every 60 minutes
-  - run_discovery_cycle() every 90 minutes
+Worker A (run_discovery_cycle) disabled until BuiltWith integration is ready.
+Runs one loop:
+  - run_jobright_cycle() every 60 minutes
 """
 
 import asyncio
@@ -19,7 +19,6 @@ import httpx
 from config import LOG_LEVEL
 from db import init_db, close_db, get_pool
 from pipeline.detector import detect_new_jobs
-from pipeline.discovery_worker import run_discovery_cycle
 from pollers.filter import is_intern_role
 from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHORE
 
@@ -189,15 +188,9 @@ async def _jobright_loop() -> None:
         await asyncio.sleep(60 * 60)
 
 
-async def _discovery_loop() -> None:
-    """Runs Worker A every 90 minutes. Fires immediately on first iteration."""
-    while True:
-        logger.info("Discovery loop: iteration starting")
-        try:
-            await run_discovery_cycle()
-        except Exception:
-            logger.exception("Discovery cycle failed — will retry in 90 min")
-        await asyncio.sleep(90 * 60)
+# Worker A (run_discovery_cycle) is disabled until BuiltWith integration is
+# available. Almost all staged companies end up queued_manual without it,
+# and running it concurrently with the Jobright poller causes OOM on 512MB.
 
 
 # ---------------------------------------------------------------------------
@@ -209,17 +202,8 @@ async def main() -> None:
     await init_db()
 
     try:
-        try:
-            await run_jobright_cycle()
-        except Exception:
-            logger.exception("Jobright startup cycle failed — continuing to loops")
-        try:
-            await run_discovery_cycle()
-        except Exception:
-            logger.exception("Discovery startup cycle failed — continuing to loops")
-
-        logger.info("Loops started — Jobright every 60 min, discovery every 90 min")
-        await asyncio.gather(_jobright_loop(), _discovery_loop())
+        logger.info("Loops started — Jobright every 60 min")
+        await _jobright_loop()
     finally:
         await close_db()
 
