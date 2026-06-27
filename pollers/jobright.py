@@ -24,21 +24,21 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _INTERN_CATEGORIES: list[str] = [
-    "swe", "ml_ai", "data_analyst", "data_engineer",
-    "product_management", "accounting_and_finance", "marketing",
+    "swe", "ml_ai", "data_analysis",
+    "product_management", "accounting_finance", "marketing_gen",
     "cyber_security", "consulting", "human_resources",
-    "legal_and_compliance", "sales", "customer_service_and_support",
-    "education_and_training", "health care", "supply_chain",
-    "creatives_and_design", "engineering_and_development",
-    "business_analyst", "management_and_executive",
-    "public_sector_and_government", "arts_and_entertainment",
+    "legal_compliance", "sales", "customer_service",
+    "education_training", "healthcare", "supply_chain",
+    "creatives_design", "engineering_development",
+    "business_analyst", "management_executive",
+    "public_sector", "arts_entertainment",
 ]
 
 # Map new-grad slugs that differ from their intern equivalents.
 _NEWGRAD_SLUG_MAP: dict[str, str] = {
     "swe": "software_engineering",
     "ml_ai": "machine_learning_and_ai",
-    "data_analyst": "data_analysis",
+    "data_analysis": "data_analysis",
     "cyber_security": "cybersecurity",
     "project_manager": "project_management",
 }

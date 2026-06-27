@@ -18,9 +18,7 @@ import httpx
 
 from config import LOG_LEVEL
 from db import init_db, close_db, get_pool
-from pipeline.detector import detect_new_jobs
-from pollers.filter import is_intern_role
-from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHORE
+from pollers.jobright import poll_jobright
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
@@ -158,19 +156,14 @@ async def run_jobright_cycle() -> None:
                 min(timestamps), max(timestamps),
             )
 
-    jobs = [j for j in raw_jobs if is_intern_role(j["title"])]
-    logger.info("Jobright: %d jobs after is_intern_role filter", len(jobs))
+    await _save_jobright_timestamp(raw_jobs)
 
-    await _save_jobright_timestamp(jobs)
-
-    new_jobs = await detect_new_jobs(jobs, "jobright")
-    logger.info("Jobright: %d genuinely new (not yet in jobs table)", len(new_jobs))
-    if not new_jobs:
+    if not raw_jobs:
         logger.info("=== Jobright cycle complete — no new jobs ===")
         return
 
-    await _stage_for_discovery(new_jobs)
-    logger.info("=== Jobright cycle complete — %d new jobs staged ===", len(new_jobs))
+    await _stage_for_discovery(raw_jobs)
+    logger.info("=== Jobright cycle complete — %d jobs staged ===", len(raw_jobs))
 
 
 # ---------------------------------------------------------------------------
