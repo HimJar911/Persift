@@ -58,6 +58,16 @@ async function markFailed(jobId, jobAts, reason) {
   } catch { return false; }
 }
 
+async function getDocument(userId, docType) {
+  try {
+    const resp = await fetch(
+      `${BASE_URL}/users/${encodeURIComponent(userId)}/documents/${encodeURIComponent(docType)}`
+    );
+    if (!resp.ok) return null;
+    return await resp.blob();
+  } catch { return null; }
+}
+
 async function getResumePdf(jobId, jobAts) {
   const user_id = await getUserId();
   if (!user_id) return null;

@@ -198,6 +198,19 @@ async function handleMessage(message, sendResponse) {
       break;
     }
 
+    case 'fetch_document': {
+      const userId = await getUserId();
+      if (!userId) { sendResponse({ ok: false }); break; }
+      const blob = await getDocument(userId, message.doc_type);
+      if (!blob) { sendResponse({ ok: false }); break; }
+      const buffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      sendResponse({ ok: true, data: btoa(binary) });
+      break;
+    }
+
     case 'needs_review': {
       if (state.current_job) {
         await markNeedsReview(state.current_job.job_id, state.current_job.job_ats, message.reason || 'awaiting_user_submit');

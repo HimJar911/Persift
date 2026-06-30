@@ -167,7 +167,8 @@ async def get_user_profile(user_id: str):
                    COALESCE(application_settings->>'eeo_veteran',     '') AS eeo_veteran,
                    COALESCE(application_settings->>'eeo_disability',  '') AS eeo_disability,
                    COALESCE((application_settings->>'work_authorized')::boolean::text, 'true') AS work_authorized,
-                   COALESCE((work_auth->>'needs_sponsorship')::boolean::text, 'false') AS needs_sponsorship,
+                   COALESCE((application_settings->>'needs_sponsorship')::boolean::text, (work_auth->>'needs_sponsorship')::boolean::text, 'false') AS needs_sponsorship,
+                   COALESCE(application_settings->>'visa_type', 'OTHER') AS visa_type,
                    COALESCE((application_settings->>'desired_hourly_min')::int, 0) AS desired_hourly_min,
                    COALESCE((application_settings->>'desired_hourly_max')::int, 0) AS desired_hourly_max,
                    COALESCE(application_settings->'custom_answers', '[]'::jsonb)::text AS custom_answers,
@@ -383,6 +384,18 @@ async def mark_failed(job_id: str, body: _FailedReq):
         user_job_id, failure_stage, failure_reason,
     )
     return {"ok": True}
+
+
+_ALLOWED_DOC_TYPES = {"transcript_undergrad", "transcript_grad"}
+
+@app.get("/users/{user_id}/documents/{doc_type}")
+async def get_user_document(user_id: str, doc_type: str):
+    if doc_type not in _ALLOWED_DOC_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown doc_type: {doc_type}")
+    pdf_path = RESUMES_DIR / user_id / f"{doc_type}.pdf"
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Document not found")
+    return FileResponse(str(pdf_path), media_type="application/pdf")
 
 
 @app.get("/jobs/{job_id}/resume")
