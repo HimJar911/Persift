@@ -42,25 +42,31 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
 async def _fetch_active_users(conn) -> list[dict]:
     rows = await conn.fetch(
         """
-        SELECT id, tier, preferences, resume_text, work_auth, application_settings,
-               requires_sponsorship, work_auth_type, university, graduation_date, major
+        SELECT id, tier, preferences, resume_text, work_auth, application_settings
         FROM users WHERE resume_text != ''
         """
     )
     result = []
     for r in rows:
+        work_auth = json.loads(r["work_auth"])
+        app       = json.loads(r["application_settings"])
+        # ML/profile attributes are sourced from the application_settings JSONB
+        # (single source of truth — written by the signup API and update_profile.py).
+        # The legacy top-level columns (requires_sponsorship/work_auth_type/university/
+        # graduation_date/major) are never populated for API-created users, so we
+        # derive these from JSONB instead. See ARCHITECTURE.md "profile data location".
         result.append({
             "id":                   r["id"],
             "tier":                 r["tier"],
             "preferences":          json.loads(r["preferences"]),
             "resume_text":          r["resume_text"],
-            "work_auth":            json.loads(r["work_auth"]),
-            "application_settings": json.loads(r["application_settings"]),
-            "requires_sponsorship": r["requires_sponsorship"],
-            "work_auth_type":       r["work_auth_type"],
-            "university":           r["university"],
-            "graduation_date":      r["graduation_date"],
-            "major":                r["major"],
+            "work_auth":            work_auth,
+            "application_settings": app,
+            "requires_sponsorship": app.get("needs_sponsorship", work_auth.get("needs_sponsorship")),
+            "work_auth_type":       app.get("visa_type"),
+            "university":           app.get("school"),
+            "graduation_date":      app.get("graduation_date"),
+            "major":                app.get("major"),
         })
     return result
 
