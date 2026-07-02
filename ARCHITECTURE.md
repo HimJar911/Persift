@@ -4,31 +4,41 @@
 
 ---
 
-## The spine: `user_jobs.status` lifecycle
+## The spine: `user_jobs.status` lifecycle (TARGET ARCH — migrated Jul 1, 2026)
 
-`user_jobs.status` is the single most coupled value in the system. **Three** components write it and the API read-contract depends on the exact strings. Changing a status literal in one place silently breaks the others.
+`user_jobs.status` is the single most coupled value in the system. Every legal edge has **exactly one writer** (the redesign's core rule — no more 4 writers stepping on one column). Changing a status literal in one place silently breaks the others. Full lifecycle + rationale: `DESIGN_NOTES.md`.
 
 ```
-matcher.py            →  'queued'        (or 'notify_only' for excluded companies)
-tailor_worker.py      →  'queued' → 'applying'   (after tailoring + PDF written to disk)
-                         'queued' → 'failed'     (on tailor exception, retry_count++)
-api/server.py         reads ONLY 'applying' in:  GET /jobs/queue, GET /jobs/queue/count,
-                                                 GET /jobs/{id}/resume
-extension (background.js) drives:  'applying' → 'applied' | 'failed' | 'needs_review'
-main.py run_cleanup_job →  'applying' → 'expired'      (48h stuck)
-                           'applying' → 'failed_stale'  (1h stuck)
-                           DELETEs terminal rows (dismissed/applied/failed) older than 90d
+matcher.py         →  'matched'   (pairing created; tailor's work queue)
+                      'notified'  (terminal — excluded-company match; notify, never apply)
+tailor_worker.py   →  'matched' → 'preparing'   (atomic claim, FOR UPDATE SKIP LOCKED)
+                      'preparing' → 'ready'      (artifact on disk)
+                      'preparing' → 'abandoned'  (tailor crashed; self-reported + failure_reason)
+api/server.py      →  POST /jobs/claim: 'ready' → 'submitting'  (atomic, stamps lease)
+                      POST /jobs/{id}/submitted:    'submitting'|'awaiting_review' → 'submitted'
+                      POST /jobs/{id}/awaiting_review: 'submitting' → 'awaiting_review'
+                      POST /jobs/{id}/released:     'submitting' → 'ready' (retry) | 'abandoned' (cap)
+                      POST /jobs/{id}/heartbeat:    'submitting' → 'submitting' (lease renew)
+                      reads 'ready' in: /jobs/queue/count; 'ready'|'submitting' in /jobs/{id}/resume
+extension          →  drives claim → submitted | awaiting_review | released (NEVER writes abandoned)
+main.py cleanup    →  'submitting' → 'abandoned'  (lease expired — SOLE writer of this edge)
+                      'abandoned' → 'ready'        (retry under cap)
+                      DELETEs terminal rows ('submitted'/'abandoned') older than 90d
 ```
+
+Three custodial spans: **System** (`matched`,`preparing`,`ready`) → **Client** (`submitting`,`awaiting_review`) → **World** (`submitted`). Axis A (phase) = `status`; axis B (employer outcome) = `application_outcomes`/`current_stage`; axis C (failure cause) = `failure_reason`. Never conflate them.
 
 **Invariants:**
-- The queue endpoint (`/jobs/queue`) returns rows with `status='applying'` ONLY. The tailor worker is what advances `queued`→`applying`. If matching produces `queued` rows but the tailor worker never runs, **the extension's queue is empty** even though matches exist.
-- `GET /jobs/{id}/resume` 404s unless status is exactly `'applying'` (server.py:417). A tailored PDF on disk is not enough.
-- Status strings `expired` / `failed_stale` are written by cleanup but **may not be in the `user_jobs_status_check` CHECK constraint** — code comment at main.py:362 flags the pending migration. Adding a new status string requires a migration to the CHECK constraint or the UPDATE throws.
-- If you rename any status string: grep ALL of `api/server.py`, `pipeline/matcher.py`, `pipeline/tailor_worker.py`, `main.py`, `extension/background.js`, `extension/api.js` before committing.
+- Claim is atomic (`UPDATE...RETURNING FOR UPDATE SKIP LOCKED`). The old read-then-act `GET /jobs/queue` gap (double-apply) is gone. `/jobs/claim` is a POST, not a GET.
+- Only the CLIENT span uses the lease (`lease_expires_at`, 10 min, renewed by `/heartbeat`). Backend failures are synchronous/self-reported (no lease). **Cleanup is the SOLE writer of `submitting → abandoned`;** the extension never self-abandons.
+- `extension_detected` may write ONLY `applied_confirmed` (source→type CHECK on `application_outcomes`). A mechanical failure can never write a fake employer outcome (bug #3, structurally impossible).
+- `GET /jobs/{id}/resume` 404s unless status is `ready` or `submitting`.
+- Adding/renaming a status requires a migration to `user_jobs_status_check` (currently: matched/preparing/ready/submitting/awaiting_review/submitted/abandoned/notified).
+- If you rename any status: grep ALL of `api/server.py`, `pipeline/matcher.py`, `pipeline/tailor_worker.py`, `main.py`, `extension/background.js`, `extension/api.js` before committing.
 
 **Ripple grep recipe (run before touching status):**
 ```bash
-grep -rn "'applying'\|'queued'\|'applied'\|'needs_review'\|'failed'\|'dismissed'" \
+grep -rn "'matched'\|'preparing'\|'ready'\|'submitting'\|'awaiting_review'\|'submitted'\|'abandoned'\|'notified'" \
   api/ pipeline/ main.py extension/
 ```
 
@@ -40,50 +50,61 @@ grep -rn "'applying'\|'queued'\|'applied'\|'needs_review'\|'failed'\|'dismissed'
 
 | Extension call (`api.js`) | API endpoint (`server.py`) | Couples on |
 |---|---|---|
-| `fetchNextJob()` | `GET /jobs/queue?user_id=` | returns `{jobs:[{job_id, job_ats, apply_url, company_name, title, ...}]}`; only `applying` |
-| `getProfile(userId)` | `GET /users/{user_id}` | returns flattened profile incl. `visa_type`, `needs_sponsorship`, `custom_answers[]`, `previous_employers[]` |
-| `markApplied(jobId, jobAts)` | `POST /jobs/{id}/applied` | body `{user_id, job_ats}` → status `applied` + writes `application_outcomes` + `model_predictions` |
-| `markNeedsReview(...)` | `POST /jobs/{id}/needs_review` | body `{user_id, job_ats, reason}` → status `needs_review` |
-| `markFailed(...)` | `POST /jobs/{id}/failed` | body `{user_id, job_ats, reason, failure_stage}` → status `failed` + `application_attempts` + `application_outcomes` |
-| `getResumePdf(jobId, jobAts)` | `GET /jobs/{id}/resume?job_ats=&user_id=` | FileResponse PDF; falls back to `base_resume.pdf` if no tailored file |
+| `claimNextJob()` | `POST /jobs/claim` | body `{user_id}` → atomic `ready`→`submitting`+lease; returns `{job:{job_id, job_ats, apply_url, company_name, title, ...}}` or `{job:null}` |
+| `getProfile(userId)` | `GET /users/{user_id}` | flattened profile incl. `visa_type`, `needs_sponsorship`, `custom_answers[]`; moved fields read from COLUMNS, aliased to extension keys (`university`→`school`, DATE→"Mon YYYY") |
+| `markSubmitted(jobId, jobAts, snapshots)` | `POST /jobs/{id}/submitted` | body `{user_id, job_ats, snapshot_filled?, snapshot_submitted?}` → `submitted` + `applied_confirmed` outcome + `field_corrections` (if snapshots) + `model_predictions`; ONE txn |
+| `markAwaitingReview(...)` | `POST /jobs/{id}/awaiting_review` | body `{user_id, job_ats, reason}` → `submitting`→`awaiting_review` |
+| `markReleased(...)` | `POST /jobs/{id}/released` | body `{user_id, job_ats, reason, failure_stage}` → `submitting`→`ready`(retry)|`abandoned`(cap) + `application_attempts`; NO outcome |
+| `sendHeartbeat(jobId, jobAts)` | `POST /jobs/{id}/heartbeat` | body `{user_id, job_ats}` → renew lease on `submitting` |
+| `getResumePdf(jobId, jobAts)` | `GET /jobs/{id}/resume?job_ats=&user_id=` | FileResponse PDF; requires `ready`|`submitting`; falls back to `base_resume.pdf` |
+| `getQueueCount()` | `GET /jobs/queue/count?user_id=` | counts `ready` rows |
 | `getDocument(userId, docType)` | `GET /users/{id}/documents/{doc_type}` | only `transcript_undergrad`/`transcript_grad` allowed |
 
 **Invariants:**
-- `getProfile` field names map 1:1 to `filler_utils.js` `resolveValue()` category keys. Renaming a JSON key in `server.py:get_user_profile` requires the matching change in `filler_utils.js`.
+- `getProfile` field names map 1:1 to `filler_utils.js` `resolveValue()` category keys. Renaming a JSON key in `server.py:get_user_profile` requires the matching change in `filler_utils.js`. (The endpoint aliases columns back to the old JSON key names, so the 3-way contract with filler_utils is UNCHANGED by the field-home migration.)
 - `BASE_URL` in `api.js` (currently `localhost:8000`) must point at the deployed API. CORS in `server.py` (currently `["*"]`) must allow the extension origin. These two are a pair — see DEBUG flags below.
-- The extension fills the profile returned by `getProfile`; the **profile shape is set by the SQL in `server.py:143-186`**, not by the DB schema directly (it reads from `application_settings` JSONB with COALESCE defaults).
+- The **fat `/submitted` endpoint** does status + outcome + field_corrections in ONE transaction — never split it (a submit without its corrections, or vice versa, is a data gap).
+- **KNOWN BUG (Jul 1, next session):** extension review→submit is broken. `needs_review` handler `resetToIdle()`s and clears `current_job`, so on user-submit the content script re-handshakes and gets a null job → "no context or job — exiting"; `awaiting_review → submitted` never fires. See STATE.md.
 
 ---
 
-## Contract: profile data location (JSONB vs columns)
+## Contract: profile data location — ONE home per fact (migration 016, Jul 1, 2026)
 
-Two competing homes for user attributes — a known source of confusion:
+The dual-home bug class is STRUCTURALLY FIXED. The governing rule: a fact is a **COLUMN** if anything but the form-filler reasons about it (matcher/metrics/ML); **JSONB** if only stored and handed back whole. **No field in both.**
 
-- **`users.application_settings` (JSONB):** written by `api/server.py:create_user` and `update_profile.py`. Source of truth for the extension (visa_type, eeo_*, custom_answers, location_*, gpa, etc.). The `GET /users/{id}` endpoint reads exclusively from here.
-- **`users.requires_sponsorship / work_auth_type / university / graduation_date / major` (top-level columns, added in migration 006):** read by `pipeline/matcher.py:_fetch_active_users` and snapshotted into `user_profile_snapshot` for ML.
+- **COLUMNS on `users`** (system reasons about them): `university`, `major`, `gpa`, `graduation_date` (DATE, canonical), `needs_sponsorship`, `visa_type`, `location_city`, `location_state`, `location_preference`, `resume_text`, `tier`, `email`. Read by `matcher._fetch_active_users` and `get_user_profile`.
+- **`users.application_settings` (JSONB)** — form-fill carry-along ONLY: first_name, last_name, phone, linkedin_url, github_url, preferred_name, degree, location_country, eeo_*, work_authorized, previous_employers, desired_hourly/salary_* (comp fallback), custom_answers.
 
-**Resolved (Jun 30, 2026):** `create_user` only ever populated the JSONB, leaving the top-level columns NULL for API-created users — which silently emptied the ML `user_profile_snapshot`. Fixed by sourcing those attributes from JSONB in `matcher._fetch_active_users` (the single source of truth), not from the legacy columns. The 5 columns (`requires_sponsorship/work_auth_type/university/graduation_date/major`) remain in the table but are no longer read. JSONB mapping: university←`school`, work_auth_type←`visa_type`, requires_sponsorship←`needs_sponsorship`, major/graduation_date direct.
+**Consumers of the moved fields (all updated Jul 1):**
+- `matcher._fetch_active_users` reads the COLUMNS (was JSONB). Dict keys: `needs_sponsorship`, `visa_type`, `university`, `major`, `graduation_date`.
+- `get_user_profile` reads columns, **aliases back to the extension's expected JSON keys** (`university`→`school`; `graduation_date` DATE→`to_char('FMMonth YYYY')`→"May 2027"). So the extension/filler contract is unchanged.
+- `create_user` writes `needs_sponsorship` to the COLUMN.
+
+**⚠ `update_profile.py` NOT yet migrated** — it still writes `visa_type`/`needs_sponsorship` into JSONB. Re-running it re-introduces the dual-home. Fix before next use (STATE.md). The old `work_auth`/`work_auth_type` JSONB+column are GONE.
 
 ---
 
 ## Pipeline layers (tailoring) — who calls what
 
 ```
-matcher.run_matching_cycle()    → writes 'queued' user_jobs + model_predictions
+matcher.run_matching_cycle()    → writes 'matched' user_jobs + model_predictions
         ↓ (separate APScheduler job, every 10 min)
 tailor_worker.run_tailor_cycle()
+        ├─ atomic claim 'matched' → 'preparing'  (FOR UPDATE SKIP LOCKED)
         ├─ L3 inject_keywords()       (pipeline/injector.py)  — all tiers, pure Python
         ├─ L4 rewrite_resume()        (pipeline/rewriter.py)  — PRO ONLY, Semaphore(5)
         │       └─ currently returns input unchanged if OPENAI_API_KEY unset
         ├─ L5 check_ats_format()      (pipeline/formatter.py) — non-blocking, logs issues
         ├─ writes PDF via weasyprint  (lazy import in _write_pdf)
-        └─ status 'queued' → 'applying'
+        ├─ success:  'preparing' → 'ready'
+        └─ failure:  'preparing' → 'abandoned' + failure_reason (self-reported, no outcome)
 ```
 
 **Invariants:**
 - `rewriter.py` is the **L4 Claude swap point** (currently OpenAI/gpt-4o; strategy is `claude-sonnet-4-6`). `config.OPENAI_MODEL` and `config.REWRITER_MODEL_VERSION` are still gpt-4o — stale vs. strategy (documented issue).
-- The tailor worker writes the PDF to `outputs/resumes/{user_id}/{job_id}_{ats}_tailored.pdf`. `GET /jobs/{id}/resume` reads that exact path. Path scheme is a coupling: `safe_id = job_id.replace("/", "_")` in BOTH tailor_worker.py:189 and server.py:420.
-- `main.py process_single_job()` (the polling path) has its tailoring/PDF code **commented out** (test mode). So the live tailoring path is matcher→tailor_worker ONLY. Restoring polling-path tailoring = uncomment main.py:223-272.
+- The tailor worker writes the PDF to `outputs/resumes/{user_id}/{job_id}_{ats}_tailored.pdf`. `GET /jobs/{id}/resume` reads that exact path. Path scheme is a coupling: `safe_id = job_id.replace("/", "_")` in BOTH `tailor_worker.py` and `server.py`.
+- `preparing` exists solely for crash recovery: distinguishes "never started" (`matched`, safe to re-run) from "started and died" (`preparing`, may have a partial artifact).
+- The old docx/PDF tailoring path (`pipeline/tailor.py`/`docx_editor.py`/`pdf_gen.py`) and `main.py`'s commented tailoring block were DELETED (Jul 1). Live tailoring is matcher→tailor_worker ONLY. `main.py process_single_job()` = enrich + Slack (placeholder for the extension handoff).
 
 ---
 
@@ -145,7 +166,7 @@ These are intentionally set for local testing and will break/leak in production.
 | File | Flag | Prod value |
 |---|---|---|
 | `extension/background.js` | `DEBUG_MODE = true` (line 6) | `false` |
-| `extension/background.js` | `closeTab()` commented in `needs_review`, `success`, `failed`, `checkStale` | uncomment all |
+| `extension/background.js` | `closeTab()` commented in `needs_review`, `success`, `failed`/released, `checkStale` | uncomment all |
 | `extension/api.js` | `BASE_URL = localhost:8000` | AWS prod URL |
 | `api/server.py` | CORS `allow_origins=["*"]` | `chrome-extension://<id>` |
 
@@ -153,8 +174,8 @@ These are intentionally set for local testing and will break/leak in production.
 
 ---
 
-## Full table inventory (17 tables — see migrations/)
+## Full table inventory (18 tables — see migrations/ 001–018)
 
-`companies`, `jobs`, `users`, `user_jobs`, `poller_state`, `resume_snapshots`, `application_outcomes`, `application_attempts`, `application_events`, `model_predictions`, `gmail_authorizations`, `gmail_signals`, `user_job_interactions`, `aggregate_benchmarks`, `company_merge_candidates`, `discovery_staging`, plus `manual_review_queue` (created at runtime by `discovery_worker._ensure_manual_review_table`).
+`companies`, `jobs`, `users`, `user_jobs`, `poller_state`, `resume_snapshots`, `application_outcomes`, `application_attempts`, `application_events`, `model_predictions`, `gmail_authorizations`, `gmail_signals`, `user_job_interactions`, `aggregate_benchmarks`, `company_merge_candidates`, `discovery_staging`, `field_corrections` (migration 015 — two-snapshot diff, A/B-only PII), plus `manual_review_queue` (created at runtime by `discovery_worker._ensure_manual_review_table`).
 
 **ML/outcome tables** (`application_outcomes`, `application_attempts`, `model_predictions`) are written opportunistically — every insert is wrapped in try/except that logs a WARNING but never blocks the main status update. So a missing/unmigrated ML column degrades data collection silently rather than failing the apply.
