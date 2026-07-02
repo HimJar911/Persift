@@ -8,51 +8,83 @@ async function getUserId() {
   return user_id || null;
 }
 
-async function fetchNextJob() {
-  const id = await getUserId();
-  if (!id) return null;
+// Atomically claim the next 'ready' application (server moves ready -> submitting
+// and stamps a lease). Replaces the old GET /jobs/queue. Returns the job or null.
+async function claimNextJob() {
+  const user_id = await getUserId();
+  if (!user_id) return null;
   try {
-    const resp = await fetch(`${BASE_URL}/jobs/queue?user_id=${encodeURIComponent(id)}&limit=1`);
+    const resp = await fetch(`${BASE_URL}/jobs/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id }),
+    });
     if (!resp.ok) return null;
     const data = await resp.json();
-    return data.jobs?.[0] || null;
+    return data.job || null;
   } catch { return null; }
 }
 
-async function markApplied(jobId, jobAts) {
+// Confirm a submitted application. Fat endpoint: pass snapshots ({filled, submitted})
+// only when review was on (auto-submit off) so the server records field corrections.
+async function markSubmitted(jobId, jobAts, snapshots) {
   const user_id = await getUserId();
   if (!user_id) return false;
   try {
-    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/applied`, {
+    const body = { user_id, job_ats: jobAts };
+    if (snapshots && snapshots.filled && snapshots.submitted) {
+      body.snapshot_filled = snapshots.filled;
+      body.snapshot_submitted = snapshots.submitted;
+    }
+    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/submitted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return resp.ok;
+  } catch { return false; }
+}
+
+// Fill done, auto-submit off: park for the user to review & submit.
+async function markAwaitingReview(jobId, jobAts, reason) {
+  const user_id = await getUserId();
+  if (!user_id) return false;
+  try {
+    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/awaiting_review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, job_ats: jobAts, reason }),
+    });
+    return resp.ok;
+  } catch { return false; }
+}
+
+// Client voluntarily gives up a claim it can't finish (skip / clean in-client
+// failure). Server decides retry (-> ready) vs terminal (-> abandoned) by count.
+// Replaces the old markFailed. The client NEVER declares a job abandoned itself;
+// stale/dead claims are reaped server-side by the lease sweep.
+async function markReleased(jobId, jobAts, reason) {
+  const user_id = await getUserId();
+  if (!user_id) return false;
+  try {
+    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/released`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, job_ats: jobAts, reason }),
+    });
+    return resp.ok;
+  } catch { return false; }
+}
+
+// Renew the lease on the currently-claimed (submitting) job.
+async function sendHeartbeat(jobId, jobAts) {
+  const user_id = await getUserId();
+  if (!user_id) return false;
+  try {
+    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id, job_ats: jobAts }),
-    });
-    return resp.ok;
-  } catch { return false; }
-}
-
-async function markNeedsReview(jobId, jobAts, reason) {
-  const user_id = await getUserId();
-  if (!user_id) return false;
-  try {
-    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/needs_review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id, job_ats: jobAts, reason }),
-    });
-    return resp.ok;
-  } catch { return false; }
-}
-
-async function markFailed(jobId, jobAts, reason) {
-  const user_id = await getUserId();
-  if (!user_id) return false;
-  try {
-    const resp = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/failed`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id, job_ats: jobAts, reason }),
     });
     return resp.ok;
   } catch { return false; }

@@ -42,38 +42,34 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
 async def _fetch_active_users(conn) -> list[dict]:
     rows = await conn.fetch(
         """
-        SELECT id, tier, preferences, resume_text, work_auth, application_settings
+        SELECT id, tier, preferences, resume_text, application_settings,
+               needs_sponsorship, visa_type, university, major, graduation_date
         FROM users WHERE resume_text != ''
         """
     )
     result = []
     for r in rows:
-        work_auth = json.loads(r["work_auth"])
-        app       = json.loads(r["application_settings"])
-        # ML/profile attributes are sourced from the application_settings JSONB
-        # (single source of truth — written by the signup API and update_profile.py).
-        # The legacy top-level columns (requires_sponsorship/work_auth_type/university/
-        # graduation_date/major) are never populated for API-created users, so we
-        # derive these from JSONB instead. See ARCHITECTURE.md "profile data location".
+        app = json.loads(r["application_settings"])
+        # Profile facts the matcher reasons about live in COLUMNS (field-home
+        # migration 016 — one home per fact). application_settings JSONB now holds
+        # only form-fill carry-along (job_types/locations/blacklist etc.).
         result.append({
             "id":                   r["id"],
             "tier":                 r["tier"],
             "preferences":          json.loads(r["preferences"]),
             "resume_text":          r["resume_text"],
-            "work_auth":            work_auth,
             "application_settings": app,
-            "requires_sponsorship": app.get("needs_sponsorship", work_auth.get("needs_sponsorship")),
-            "work_auth_type":       app.get("visa_type"),
-            "university":           app.get("school"),
-            "graduation_date":      app.get("graduation_date"),
-            "major":                app.get("major"),
+            "needs_sponsorship":    r["needs_sponsorship"],
+            "visa_type":            r["visa_type"],
+            "university":           r["university"],
+            "graduation_date":      r["graduation_date"],
+            "major":                r["major"],
         })
     return result
 
 
 def _passes_hard_filters(job: dict, user: dict) -> bool:
     prefs    = user["preferences"]
-    work_auth = user["work_auth"]
     app      = user["application_settings"]
 
     # 1. Category match
@@ -84,8 +80,8 @@ def _passes_hard_filters(job: dict, user: dict) -> bool:
     if job["work_model"] != "Unknown" and job["work_model"] not in set(prefs.get("work_models", [])):
         return False
 
-    # 3. Sponsorship filter
-    if work_auth.get("needs_sponsorship") and job["h1b_sponsored"] == "No":
+    # 3. Sponsorship filter — reads the needs_sponsorship COLUMN (migration 016)
+    if user.get("needs_sponsorship") and job["h1b_sponsored"] == "No":
         return False
 
     # 4. Job type match — absent/empty "job_types" means match all
@@ -118,8 +114,8 @@ async def _fetch_jobright_jd(job: dict, client: httpx.AsyncClient, sem: asyncio.
         job["description"] = text
 
 
-async def _bulk_insert_matches(conn, matches: list[dict], status: str = "queued") -> None:
-    """Bulk unnest insert — used for notify_only matches where RETURNING id is not needed."""
+async def _bulk_insert_matches(conn, matches: list[dict], status: str = "matched") -> None:
+    """Bulk unnest insert — used for `notified` matches where RETURNING id is not needed."""
     await conn.execute(
         """
         INSERT INTO user_jobs
@@ -160,8 +156,8 @@ def _build_user_profile_snapshot(user: dict) -> dict:
     """Snapshot of user profile state at match time for ML training."""
     return {
         "tier":                  user.get("tier"),
-        "requires_sponsorship":  user.get("requires_sponsorship"),
-        "work_auth_type":        user.get("work_auth_type"),
+        "needs_sponsorship":     user.get("needs_sponsorship"),
+        "visa_type":             user.get("visa_type"),
         "university":            user.get("university"),
         "graduation_date":       str(user.get("graduation_date")) if user.get("graduation_date") else None,
         "major":                 user.get("major"),
@@ -193,7 +189,7 @@ async def _insert_queued_match_with_prediction(conn, match: dict) -> None:
             (user_id, job_id, job_ats, status, relevance_score, keyword_match_data,
              jd_text_snapshot, user_profile_snapshot, days_since_posting,
              hour_submitted, day_of_week, submission_mode)
-        VALUES ($1, $2, $3, 'queued', $4, $5::jsonb, $6, $7::jsonb, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, 'matched', $4, $5::jsonb, $6, $7::jsonb, $8, $9, $10, $11)
         ON CONFLICT (user_id, job_id, job_ats) DO NOTHING
         RETURNING id
         """,
@@ -227,7 +223,7 @@ async def _insert_queued_match_with_prediction(conn, match: dict) -> None:
         "hour_submitted":     match.get("hour_submitted"),
         "day_of_week":        match.get("day_of_week"),
         "user_tier":          match.get("user_tier"),
-        "requires_sponsorship": match.get("requires_sponsorship"),
+        "needs_sponsorship":  match.get("needs_sponsorship"),
         "tailoring_eligible": score >= 80,
         "pipeline_version":   PIPELINE_VERSION,
     }
@@ -337,13 +333,13 @@ async def run_matching_cycle() -> None:
                 "days_since_posting":    days_since_posting,
                 "hour_submitted":        now_utc.hour,
                 "day_of_week":           now_utc.weekday(),
-                "submission_mode":       "autonomous" if auto_submit else "review_before_submit",
+                "submission_mode":       "auto" if auto_submit else "review",
                 # Feature fields for model_predictions (queued path only)
                 "job_categories":        list(job.get("categories") or []),
                 "job_work_model":        job.get("work_model"),
                 "job_experience_level":  job.get("experience_level"),
                 "user_tier":             user.get("tier"),
-                "requires_sponsorship":  user.get("requires_sponsorship"),
+                "needs_sponsorship":     user.get("needs_sponsorship"),
             }
 
             if job["company_slug"] in excluded:
@@ -360,7 +356,7 @@ async def run_matching_cycle() -> None:
         for m in queued_matches:
             await _insert_queued_match_with_prediction(conn, m)
         if notify_matches:
-            await _bulk_insert_matches(conn, notify_matches, "notify_only")
+            await _bulk_insert_matches(conn, notify_matches, "notified")
 
     for nm in notify_matches:
         try:
@@ -369,7 +365,7 @@ async def run_matching_cycle() -> None:
             logger.warning("notify_excluded_company failed: %s", exc)
 
     logger.info(
-        "Matching cycle done — %d queued, %d notify_only, %d below threshold (%d jobs, %d users)",
+        "Matching cycle done — %d matched, %d notified, %d below threshold (%d jobs, %d users)",
         len(queued_matches), len(notify_matches), below_threshold, len(jobs), len(users),
     )
 

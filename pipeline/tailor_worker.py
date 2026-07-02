@@ -46,7 +46,26 @@ def _write_pdf(resume_text: str, pdf_path: Path) -> None:
 
 _BATCH_SIZE = 50
 
-_FETCH_SQL = """
+# Atomic claim: matched -> preparing (FOR UPDATE SKIP LOCKED so two tailor
+# cycles never grab the same rows). `preparing` distinguishes "started and died"
+# (may have a partial artifact) from "never started" (`matched`) on crash
+# recovery. Pro-first, oldest-first. See DESIGN_NOTES.md lifecycle.
+_CLAIM_SQL = """
+UPDATE user_jobs
+SET status = 'preparing', updated_at = NOW()
+WHERE id IN (
+    SELECT uj.id
+    FROM user_jobs uj
+    JOIN users u ON uj.user_id = u.id
+    WHERE uj.status = 'matched'
+    ORDER BY CASE WHEN u.tier = 'pro' THEN 0 ELSE 1 END, uj.created_at ASC
+    FOR UPDATE OF uj SKIP LOCKED
+    LIMIT $1
+)
+RETURNING id AS row_id
+"""
+
+_DETAIL_SQL = """
 SELECT
     uj.id              AS row_id,
     uj.user_id,
@@ -62,9 +81,8 @@ SELECT
 FROM user_jobs uj
 JOIN users u ON uj.user_id = u.id
 JOIN jobs  j ON uj.job_id = j.job_id AND uj.job_ats = j.ats
-WHERE uj.status = 'queued'
+WHERE uj.id = ANY($1::int[])
 ORDER BY CASE WHEN u.tier = 'pro' THEN 0 ELSE 1 END, uj.created_at ASC
-LIMIT $1
 """
 
 
@@ -194,11 +212,12 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
 
         async with pool.acquire() as conn:
             await conn.execute(
-                # 'applying' = resume tailored and ready for the Chrome extension to submit.
-                # 'applied'  = set by the extension after confirmed submission.
+                # 'ready' = resume tailored, artifact on disk; the extension queue
+                # returns this (System->Client handoff). 'submitted' is set later
+                # by the extension after confirmed submission.
                 """
                 UPDATE user_jobs
-                SET status = 'applying', tailored_resume_path = $1, updated_at = NOW()
+                SET status = 'ready', tailored_resume_path = $1, updated_at = NOW()
                 WHERE id = $2
                 """,
                 str(pdf_path), row_id,
@@ -221,14 +240,20 @@ async def _process_row(row: dict, sem: asyncio.Semaphore) -> bool:
             "Tailor failed — user_jobs.id=%s job=%s/%s: %s",
             row_id, job_ats, job_id, exc,
         )
+        # Tailor is backend/in-process: self-report preparing -> abandoned with
+        # the cause. No lease/cleanup involved (only client-span deaths need
+        # reaping). failure_reason is axis C; NO outcome is written (axis B).
         async with pool.acquire() as conn:
             await conn.execute(
                 """
                 UPDATE user_jobs
-                SET status = 'failed', retry_count = retry_count + 1, updated_at = NOW()
+                SET status = 'abandoned',
+                    failure_reason = $2,
+                    retry_count = retry_count + 1,
+                    updated_at = NOW()
                 WHERE id = $1
                 """,
-                row_id,
+                row_id, f"tailor_error: {exc}"[:500],
             )
         return False
 
@@ -238,13 +263,14 @@ async def run_tailor_cycle() -> None:
     pool = get_pool()
 
     async with pool.acquire() as conn:
-        rows = await conn.fetch(_FETCH_SQL, _BATCH_SIZE)
+        claimed = await conn.fetch(_CLAIM_SQL, _BATCH_SIZE)
+        if not claimed:
+            logger.info("Tailor cycle: no matched jobs")
+            return
+        row_ids = [c["row_id"] for c in claimed]
+        rows = await conn.fetch(_DETAIL_SQL, row_ids)
 
-    if not rows:
-        logger.info("Tailor cycle: no queued jobs")
-        return
-
-    logger.info("Tailor cycle: processing %d queued jobs (pro first)", len(rows))
+    logger.info("Tailor cycle: processing %d matched jobs (pro first)", len(rows))
 
     sem     = asyncio.Semaphore(5)
     tasks   = [asyncio.create_task(_process_row(dict(r), sem)) for r in rows]

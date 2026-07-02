@@ -90,7 +90,7 @@ async def create_user(
     blacklisted_list = [s.strip() for s in blacklisted_companies.split(",") if s.strip()]
 
     preferences          = json.dumps({"categories": categories_list, "work_models": work_models_list})
-    work_auth            = json.dumps({"needs_sponsorship": needs_sponsorship})
+    # needs_sponsorship is now a COLUMN (field-home migration 016), not work_auth JSONB.
     application_settings = json.dumps({
         "excluded_companies":  excluded_list,
         "blacklisted_companies": blacklisted_list,
@@ -101,11 +101,11 @@ async def create_user(
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                INSERT INTO users (email, tier, preferences, resume_text, work_auth, application_settings)
-                VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb)
+                INSERT INTO users (email, tier, preferences, resume_text, needs_sponsorship, application_settings)
+                VALUES ($1, $2, $3::jsonb, $4, $5, $6::jsonb)
                 RETURNING id
                 """,
-                email, tier, preferences, resume_text, work_auth, application_settings,
+                email, tier, preferences, resume_text, needs_sponsorship, application_settings,
             )
     except UniqueViolationError:
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -122,22 +122,30 @@ async def create_user(
     return JSONResponse(status_code=201, content={"user_id": str(user_id)})
 
 
-class _AppliedReq(BaseModel):
+class _SubmittedReq(BaseModel):
     user_id: str
     job_ats: str
+    # Field Correction two-snapshot payload — present ONLY when review was on
+    # (submission_mode='review'). Raw snapshots; the server derives the diff.
+    snapshot_filled: dict | None = None      # #1: what Persift filled
+    snapshot_submitted: dict | None = None   # #2: what the user submitted
 
 
-class _FailedReq(BaseModel):
+class _AwaitingReviewReq(BaseModel):
     user_id: str
     job_ats: str
     reason: str = ""
+
+
+class _ReleasedReq(BaseModel):
+    user_id: str
+    job_ats: str
+    reason: str = ""              # mechanical/user reason (axis C), NOT an outcome
     failure_stage: str | None = None
 
 
-class _NeedsReviewReq(BaseModel):
-    user_id: str
-    job_ats: str
-    reason: str = ""
+# Retry cap shared by user-skip and mechanical death (lifecycle §Mechanism 3).
+_RETRY_CAP = 2
 
 
 @app.get("/users/{user_id}")
@@ -151,24 +159,30 @@ async def get_user_profile(user_id: str):
                    COALESCE(application_settings->>'last_name',       '') AS last_name,
                    COALESCE(application_settings->>'phone',           '') AS phone,
                    COALESCE(application_settings->>'linkedin_url',    '') AS linkedin_url,
-                   COALESCE(application_settings->>'location_city',   '') AS location_city,
-                   COALESCE(application_settings->>'location_state',  '') AS location_state,
+                   -- location_city/state now COLUMNS (field-home migration 016)
+                   COALESCE(location_city,  '') AS location_city,
+                   COALESCE(location_state, '') AS location_state,
                    COALESCE(application_settings->>'location_country','') AS location_country,
                    COALESCE(application_settings->>'github_url',      '') AS github_url,
                    COALESCE(application_settings->>'preferred_name',  '') AS preferred_name,
-                   COALESCE(application_settings->>'school',          '') AS school,
-                   COALESCE(application_settings->>'degree',          '') AS degree,
-                   COALESCE(application_settings->>'major',           '') AS major,
-                   COALESCE(application_settings->>'gpa',             '') AS gpa,
-                   COALESCE(application_settings->>'graduation_date', '') AS graduation_date,
+                   -- university/major/gpa/graduation_date now COLUMNS. Aliased back to
+                   -- the extension's expected keys (school, etc.). graduation_date is a
+                   -- DATE column; render as 'Mon YYYY' free-text for the filler (per
+                   -- store-canonical/render-per-form; filler reformats as each form needs).
+                   COALESCE(university, '') AS school,
+                   COALESCE(application_settings->>'degree', '') AS degree,
+                   COALESCE(major, '') AS major,
+                   COALESCE(gpa::text, '') AS gpa,
+                   COALESCE(to_char(graduation_date, 'FMMonth YYYY'), '') AS graduation_date,
                    COALESCE(application_settings->>'eeo_gender',      '') AS eeo_gender,
                    COALESCE(application_settings->>'eeo_race',        '') AS eeo_race,
                    COALESCE((application_settings->>'eeo_hispanic')::boolean::text, 'false') AS eeo_hispanic,
                    COALESCE(application_settings->>'eeo_veteran',     '') AS eeo_veteran,
                    COALESCE(application_settings->>'eeo_disability',  '') AS eeo_disability,
                    COALESCE((application_settings->>'work_authorized')::boolean::text, 'true') AS work_authorized,
-                   COALESCE((application_settings->>'needs_sponsorship')::boolean::text, (work_auth->>'needs_sponsorship')::boolean::text, 'false') AS needs_sponsorship,
-                   COALESCE(application_settings->>'visa_type', 'OTHER') AS visa_type,
+                   -- needs_sponsorship/visa_type now COLUMNS
+                   COALESCE(needs_sponsorship::text, 'false') AS needs_sponsorship,
+                   COALESCE(visa_type, 'OTHER') AS visa_type,
                    COALESCE((application_settings->>'desired_hourly_min')::int, 0) AS desired_hourly_min,
                    COALESCE((application_settings->>'desired_hourly_max')::int, 0) AS desired_hourly_max,
                    COALESCE(application_settings->'custom_answers', '[]'::jsonb)::text AS custom_answers,
@@ -186,14 +200,50 @@ async def get_user_profile(user_id: str):
     return result
 
 
-@app.get("/jobs/queue")
-async def get_job_queue(
-    user_id: str = Query(...),
-    limit: int = Query(default=1, ge=1, le=20),
-):
+class _ClaimReq(BaseModel):
+    user_id: str
+
+
+# Lease duration for a claimed application (lifecycle Mechanism 2). A submitting
+# row whose lease_expires_at is in the past is dead and gets reaped by cleanup.
+_LEASE_MINUTES = 10
+
+
+@app.post("/jobs/claim")
+async def claim_job(body: _ClaimReq):
+    """Atomically claim the next 'ready' application for this user.
+
+    Read+write in ONE statement (UPDATE ... RETURNING with FOR UPDATE SKIP
+    LOCKED) so only one caller can ever win a given row — closes the
+    read-then-act gap that let two pollers double-apply. Moves ready ->
+    submitting and stamps the lease. Replaces the old GET /jobs/queue.
+    """
     pool = get_pool()
     async with pool.acquire() as conn:
-        rows = await conn.fetch(
+        row = await conn.fetchrow(
+            """
+            UPDATE user_jobs uj
+            SET status = 'submitting',
+                lease_expires_at = NOW() + ($2 || ' minutes')::interval,
+                updated_at = NOW()
+            WHERE uj.id = (
+                SELECT id FROM user_jobs
+                WHERE user_id = $1::uuid AND status = 'ready'
+                ORDER BY created_at ASC
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+            )
+            RETURNING uj.id, uj.job_id, uj.job_ats
+            """,
+            body.user_id, str(_LEASE_MINUTES),
+        )
+
+    if row is None:
+        return {"job": None}
+
+    # Second read joins job + profile carry-along for the extension to fill with.
+    async with pool.acquire() as conn:
+        detail = await conn.fetchrow(
             """
             SELECT
                 j.job_id, j.ats AS job_ats, j.apply_url, j.company_name, j.title,
@@ -202,18 +252,42 @@ async def get_job_queue(
                 COALESCE(u.application_settings->>'last_name',  '') AS last_name,
                 COALESCE(u.application_settings->>'phone',       '') AS phone,
                 COALESCE(u.application_settings->>'linkedin_url','') AS linkedin_url,
-                COALESCE(u.application_settings->>'location_city','') AS location_city
-            FROM user_jobs uj
-            JOIN jobs  j ON j.job_id = uj.job_id AND j.ats = uj.job_ats
-            JOIN users u ON u.id = uj.user_id
-            WHERE uj.user_id = $1::uuid AND uj.status = 'applying'
-            ORDER BY uj.created_at ASC
-            LIMIT $2
+                u.location_city
+            FROM jobs  j
+            JOIN users u ON u.id = $1::uuid
+            WHERE j.job_id = $2 AND j.ats = $3
             """,
-            user_id, limit,
+            body.user_id, row["job_id"], row["job_ats"],
         )
-    jobs = [dict(r) for r in rows]
-    return {"jobs": jobs}
+    return {"job": dict(detail) if detail else None}
+
+
+class _HeartbeatReq(BaseModel):
+    user_id: str
+    job_ats: str
+
+
+@app.post("/jobs/{job_id}/heartbeat")
+async def heartbeat(job_id: str, body: _HeartbeatReq):
+    """Renew the lease on a submitting job so cleanup won't reap it while the
+    extension is actively filling. submitting -> submitting (lease bumped)."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs
+            SET lease_expires_at = NOW() + ($4 || ' minutes')::interval,
+                updated_at = NOW()
+            WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+              AND status = 'submitting'
+            """,
+            body.user_id, job_id, body.job_ats, str(_LEASE_MINUTES),
+        )
+    if int(tag.split()[-1]) == 0:
+        raise HTTPException(
+            status_code=404, detail="user_job not found or not in submitting state"
+        )
+    return {"ok": True}
 
 
 @app.get("/jobs/queue/count")
@@ -221,33 +295,45 @@ async def get_queue_count(user_id: str = Query(...)):
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT COUNT(*) AS count FROM user_jobs WHERE user_id = $1::uuid AND status = 'applying'",
+            "SELECT COUNT(*) AS count FROM user_jobs WHERE user_id = $1::uuid AND status = 'ready'",
             user_id,
         )
     return {"count": row["count"] if row else 0}
 
 
-@app.post("/jobs/{job_id}/applied")
-async def mark_applied(job_id: str, body: _AppliedReq):
+@app.post("/jobs/{job_id}/submitted")
+async def mark_submitted(job_id: str, body: _SubmittedReq):
+    """Confirm a submitted application. Fat endpoint (one transaction):
+
+    - status: submitting -> submitted (auto) OR awaiting_review -> submitted (review).
+    - outcome: append applied_confirmed (the ONLY type extension_detected may write).
+    - field_corrections: if snapshots present (review was on), insert both raw
+      snapshots; the diff is derived later/server-side.
+    - model_predictions: mark the prediction evaluated.
+
+    All-or-nothing so we never record a submit without its corrections, or vice
+    versa. Terminal for `status` — hands off to the Outcome entity.
+    """
+    has_snapshots = body.snapshot_filled is not None and body.snapshot_submitted is not None
     pool = get_pool()
     async with pool.acquire() as conn:
-        tag = await conn.execute(
-            """
-            UPDATE user_jobs SET status = 'applied', updated_at = NOW()
-            WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
-            """,
-            body.user_id, job_id, body.job_ats,
-        )
-    if int(tag.split()[-1]) == 0:
-        raise HTTPException(status_code=404, detail="user_job not found")
+        async with conn.transaction():
+            user_job_id = await conn.fetchval(
+                """
+                UPDATE user_jobs SET status = 'submitted', updated_at = NOW()
+                WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+                  AND status IN ('submitting', 'awaiting_review')
+                RETURNING id
+                """,
+                body.user_id, job_id, body.job_ats,
+            )
+            if user_job_id is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="user_job not found or not in submitting/awaiting_review state",
+                )
 
-    async with pool.acquire() as conn:
-        user_job_id = await conn.fetchval(
-            "SELECT id FROM user_jobs WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3",
-            body.user_id, job_id, body.job_ats,
-        )
-
-        try:
+            # applied_confirmed — the one fact the browser directly witnesses.
             await conn.execute(
                 """
                 INSERT INTO application_outcomes (
@@ -261,13 +347,20 @@ async def mark_applied(job_id: str, body: _AppliedReq):
                 """,
                 user_job_id,
             )
-        except Exception as e:
-            logger.warning(
-                "Failed to insert applied_confirmed outcome for user_job %s: %s",
-                user_job_id, e,
-            )
 
-        try:
+            # Field Correction — only when review was on (snapshots supplied).
+            if has_snapshots:
+                await conn.execute(
+                    """
+                    INSERT INTO field_corrections (
+                        user_job_id, snapshot_filled, snapshot_submitted
+                    ) VALUES ($1, $2::jsonb, $3::jsonb)
+                    """,
+                    user_job_id,
+                    json.dumps(body.snapshot_filled),
+                    json.dumps(body.snapshot_submitted),
+                )
+
             await conn.execute(
                 """
                 UPDATE model_predictions
@@ -283,63 +376,91 @@ async def mark_applied(job_id: str, body: _AppliedReq):
                 """,
                 user_job_id,
             )
-        except Exception as e:
-            logger.warning(
-                "Failed to update model_predictions for user_job %s: %s",
-                user_job_id, e,
-            )
 
     logger.debug(
-        "Application confirmed: user_job=%s outcome=applied_confirmed", user_job_id
+        "Application submitted: user_job=%s corrections=%s", user_job_id, has_snapshots
     )
     return {"ok": True}
 
 
-@app.post("/jobs/{job_id}/needs_review")
-async def mark_needs_review(job_id: str, body: _NeedsReviewReq):
+@app.post("/jobs/{job_id}/awaiting_review")
+async def mark_awaiting_review(job_id: str, body: _AwaitingReviewReq):
+    """Fill done, auto-submit OFF: park for the user to review & submit.
+    submitting -> awaiting_review. Exits via POST /jobs/{id}/submitted."""
     pool = get_pool()
     async with pool.acquire() as conn:
         tag = await conn.execute(
             """
-            UPDATE user_jobs SET status = 'needs_review', updated_at = NOW()
+            UPDATE user_jobs SET status = 'awaiting_review', updated_at = NOW()
             WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+              AND status = 'submitting'
             """,
             body.user_id, job_id, body.job_ats,
         )
     if int(tag.split()[-1]) == 0:
-        raise HTTPException(status_code=404, detail="user_job not found")
-    logger.debug("needs_review: job=%s reason=%s", job_id, body.reason)
+        raise HTTPException(
+            status_code=404, detail="user_job not found or not in submitting state"
+        )
+    logger.debug("awaiting_review: job=%s reason=%s", job_id, body.reason)
     return {"ok": True}
 
 
-@app.post("/jobs/{job_id}/failed")
-async def mark_failed(job_id: str, body: _FailedReq):
+@app.post("/jobs/{job_id}/released")
+async def mark_released(job_id: str, body: _ReleasedReq):
+    """Client voluntarily gives up a claim it can't finish (skip, or a clean
+    in-client failure). Replaces the old /failed.
+
+    - retry_count < cap: submitting -> ready (retryable; artifact still good, no
+      re-tailor). Re-served on the next claim. retry_count += 1.
+    - retry_count >= cap: submitting -> abandoned (terminal); failure_reason set.
+
+    Writes an application_attempt (mechanical tracking) but NEVER an outcome —
+    mechanical/user non-completion is axis C (failure_reason), not axis B
+    (employer verdict). This is the bug #3 fix: /failed no longer fabricates
+    'rejected' outcomes. Server-side cleanup, not this endpoint, reaps
+    lease-expired rows (submitting -> abandoned)."""
     pool = get_pool()
     async with pool.acquire() as conn:
-        tag = await conn.execute(
-            """
-            UPDATE user_jobs SET status = 'failed', updated_at = NOW()
-            WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
-            """,
-            body.user_id, job_id, body.job_ats,
-        )
-    if int(tag.split()[-1]) == 0:
-        raise HTTPException(status_code=404, detail="user_job not found")
-
-    failure_reason = body.reason
-    failure_stage  = body.failure_stage
-
-    async with pool.acquire() as conn:
-        user_job_id = await conn.fetchval(
-            "SELECT id FROM user_jobs WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3",
-            body.user_id, job_id, body.job_ats,
-        )
-
-        try:
-            retry_count = await conn.fetchval(
-                "SELECT retry_count FROM user_jobs WHERE id = $1",
-                user_job_id,
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                SELECT id, retry_count FROM user_jobs
+                WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+                  AND status = 'submitting'
+                FOR UPDATE
+                """,
+                body.user_id, job_id, body.job_ats,
             )
+            if row is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="user_job not found or not in submitting state",
+                )
+            user_job_id = row["id"]
+            new_retry = (row["retry_count"] or 0) + 1
+            terminal = new_retry > _RETRY_CAP
+
+            if terminal:
+                await conn.execute(
+                    """
+                    UPDATE user_jobs
+                    SET status = 'abandoned', retry_count = $2,
+                        failure_reason = $3, lease_expires_at = NULL, updated_at = NOW()
+                    WHERE id = $1
+                    """,
+                    user_job_id, new_retry, body.reason or None,
+                )
+            else:
+                await conn.execute(
+                    """
+                    UPDATE user_jobs
+                    SET status = 'ready', retry_count = $2,
+                        lease_expires_at = NULL, updated_at = NOW()
+                    WHERE id = $1
+                    """,
+                    user_job_id, new_retry,
+                )
+
             await conn.execute(
                 """
                 INSERT INTO application_attempts (
@@ -347,43 +468,15 @@ async def mark_failed(job_id: str, body: _FailedReq):
                     success, failure_stage, error_details, created_at
                 ) VALUES ($1, $2, NOW(), NOW(), FALSE, $3, $4::jsonb, NOW())
                 """,
-                user_job_id,
-                (retry_count or 0) + 1,
-                failure_stage,
-                json.dumps({"reason": failure_reason}),
-            )
-        except Exception as e:
-            logger.warning(
-                "Failed to insert application_attempt for user_job %s: %s",
-                user_job_id, e,
-            )
-
-        try:
-            await conn.execute(
-                """
-                INSERT INTO application_outcomes (
-                    user_job_id, outcome_type, outcome_date, outcome_source,
-                    confidence, previous_outcome_type, outcome_metadata, created_at
-                )
-                SELECT $1, 'rejected', NOW(), 'extension_detected',
-                       1.0, current_stage, $2::jsonb, NOW()
-                FROM user_jobs
-                WHERE id = $1
-                """,
-                user_job_id,
-                json.dumps({"failure_reason": failure_reason, "failure_stage": failure_stage}),
-            )
-        except Exception as e:
-            logger.warning(
-                "Failed to insert failed outcome for user_job %s: %s",
-                user_job_id, e,
+                user_job_id, new_retry, body.failure_stage,
+                json.dumps({"reason": body.reason}),
             )
 
     logger.debug(
-        "Application failed: user_job=%s stage=%s reason=%s",
-        user_job_id, failure_stage, failure_reason,
+        "Application released: user_job=%s retry=%d terminal=%s reason=%s",
+        user_job_id, new_retry, terminal, body.reason,
     )
-    return {"ok": True}
+    return {"ok": True, "terminal": terminal, "retry_count": new_retry}
 
 
 _ALLOWED_DOC_TYPES = {"transcript_undergrad", "transcript_grad"}
@@ -414,8 +507,8 @@ async def get_tailored_resume(
             user_id, job_id, job_ats,
         )
 
-    if row is None or row["status"] != "applying":
-        raise HTTPException(status_code=404, detail="Resume not found or job not in applying state")
+    if row is None or row["status"] not in ("ready", "submitting"):
+        raise HTTPException(status_code=404, detail="Resume not found or job not in ready/submitting state")
 
     safe_id  = job_id.replace("/", "_")
     pdf_path = RESUMES_DIR / user_id / f"{safe_id}_{job_ats}_tailored.pdf"

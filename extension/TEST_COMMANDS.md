@@ -12,15 +12,17 @@ docker compose up -d
 uvicorn api.server:app --reload
 ```
 
-## 3. Reset job
+## 3. Reset job (target-arch: claimable status is `ready`, NOT `applying`)
 ```powershell
-docker exec persift-db psql -U persift -d persift -c "UPDATE user_jobs SET status='applying', current_stage='applied', failure_reason='' WHERE job_id='8004171';"
+docker exec persift-db psql -U persift -d persift -c "UPDATE user_jobs SET status='ready', current_stage=NULL, failure_reason=NULL, lease_expires_at=NULL, retry_count=0 WHERE job_id='8004171';"
 ```
 
 **Verkada (active test):**
 ```powershell
-docker exec persift-db psql -U persift -d persift -c "UPDATE user_jobs SET status='applying', failure_reason='' WHERE job_id='5099422007';"
+docker exec persift-db psql -U persift -d persift -c "UPDATE user_jobs SET status='ready', failure_reason=NULL, lease_expires_at=NULL, retry_count=0 WHERE job_id='5099422007';"
 ```
+
+> **Lifecycle now:** matched → preparing → ready → submitting → submitted (+ awaiting_review; terminal abandoned/notified). Extension claims `ready` via POST /jobs/claim (atomic). Old `applying`/`applied` are GONE — the CHECK constraint rejects them.
 
 ## 4. Reload extension
 `chrome://extensions` → Persift → reload icon

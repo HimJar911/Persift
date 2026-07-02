@@ -1,8 +1,8 @@
 """Layer 5 — ATS formatting check.
 
 Pure Python, $0 cost. Runs after Layer 4 (or after Layer 3 for score 50-79 users)
-and before status is set to 'applying'. Non-blocking: issues are logged and stored
-but never prevent advancement to 'applying'.
+and before status is set to 'ready'. Non-blocking: issues are logged and stored
+but never prevent advancement to 'ready'.
 
 Single public function: check_ats_format(resume_text) -> {"passed": bool, "issues": list[str]}
 

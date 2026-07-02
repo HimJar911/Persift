@@ -23,9 +23,6 @@ from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHOR
 from pollers.filter import is_entry_level, is_intern_role
 from pipeline.detector import detect_new_jobs
 from pipeline.enricher import enrich
-from pipeline.tailor import tailor_resume, _build_plain_text_from_json, _load_base_resume
-from pipeline.pdf_gen import convert_docx_to_pdf, generate_pdf_fallback
-from pipeline.docx_editor import edit_docx
 from pipeline.matcher import run_matching_cycle
 from pipeline.tailor_worker import run_tailor_cycle
 from pipeline.discovery_worker import run_discovery_cycle
@@ -86,10 +83,6 @@ COMPANY_FILES = {
 
 COMPANY_FILE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60  # 30 days
 _SLUG_REFRESH_INTERVAL_SECONDS = 30 * 60  # re-query DB every 30 minutes
-
-# Limits concurrent OpenAI API calls so we don't blow through rate limits.
-# Keep at 2 to stay within the 30K TPM limit on gpt-4o.
-TAILOR_SEMAPHORE = asyncio.Semaphore(2)
 
 # Company lists populated at startup.
 _greenhouse_slugs: list[str] = []
@@ -220,57 +213,6 @@ async def process_single_job(raw_job: dict) -> None:
     except Exception:
         logger.exception("Failed to send Slack notification for %s at %s", job["title"], job["company_name"])
 
-    # --- Full pipeline (disabled for testing — restore when ready) ---
-    # job = enrich(raw_job)
-    # logger.info(
-    #     "Processing: %s at %s (%s)",
-    #     job["title"], job["company_name"], job["ats"],
-    # )
-    #
-    # # --- Tailor ---
-    # async with TAILOR_SEMAPHORE:
-    #     try:
-    #         tailoring_data, changes_text = await tailor_resume(job)
-    #     except Exception:
-    #         logger.exception("Failed to tailor resume for %s at %s", job["title"], job["company_name"])
-    #         return
-    #
-    # # --- Generate PDF ---
-    # pdf_path = None
-    #
-    # # Primary path: docx editing + LibreOffice conversion
-    # if tailoring_data is not None:
-    #     try:
-    #         temp_docx = edit_docx(tailoring_data, job["company_slug"], job["job_id"])
-    #         pdf_path = await convert_docx_to_pdf(temp_docx)
-    #         # Clean up temp docx on success
-    #         if pdf_path is not None and temp_docx.exists():
-    #             temp_docx.unlink()
-    #             logger.debug("Deleted temp docx: %s", temp_docx.name)
-    #     except Exception:
-    #         logger.exception(
-    #             "Docx editing failed for %s at %s — falling back to ReportLab",
-    #             job["title"], job["company_name"],
-    #         )
-    #
-    # # Fallback: ReportLab PDF from plain text
-    # if pdf_path is None:
-    #     try:
-    #         if tailoring_data is not None:
-    #             plain_text = _build_plain_text_from_json(tailoring_data, _load_base_resume())
-    #         else:
-    #             plain_text = changes_text  # raw LLM output when JSON parse failed
-    #         pdf_path = await generate_pdf_fallback(plain_text, job["company_slug"], job["job_id"])
-    #     except Exception:
-    #         logger.exception("Failed to generate PDF for %s at %s", job["title"], job["company_name"])
-    #         return
-    #
-    # # --- Notify ---
-    # try:
-    #     await send_slack_notification(job, changes_text, pdf_path)
-    # except Exception:
-    #     logger.exception("Failed to send Slack notification for %s at %s", job["title"], job["company_name"])
-
 
 async def process_new_jobs(raw_jobs: list[dict], ats: str) -> None:
     """Detect new jobs and process them concurrently (bounded by semaphore)."""
@@ -334,53 +276,63 @@ async def run_jobright_cycle() -> None:
     logger.info("=== Jobright cycle complete ===")
 
 
+_RETRY_CAP = 2  # shared with api/server.py /released (lifecycle §Mechanism 3)
+
+
 async def run_cleanup_job() -> None:
-    """Nightly cleanup — removes old terminal-state rows from user_jobs."""
+    """Nightly cleanup — target-architecture lifecycle (DESIGN_NOTES.md).
+
+    Cleanup is the SOLE writer of `submitting → abandoned` (client-span deaths
+    are reaped here, not self-reported — see lifecycle §Mechanism 2). Order:
+    reap dead leases first, then retry the mechanical ones, then delete old
+    terminal rows.
+    """
     pool = get_pool()
     async with pool.acquire() as conn:
+        # 1. Lease-expiry reap: a `submitting` row whose lease is past is dead
+        #    (extension died / tab closed / network gone). Collapses the old
+        #    48h/1h expired+failed_stale sweeps into ONE. Reason recorded on the row.
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs
+            SET status = 'abandoned',
+                failure_reason = COALESCE(failure_reason, 'lease_expired'),
+                retry_count = retry_count + 1,
+                lease_expires_at = NULL,
+                updated_at = NOW()
+            WHERE status = 'submitting'
+              AND lease_expires_at IS NOT NULL
+              AND lease_expires_at < NOW()
+            """
+        )
+        logger.info("Cleanup: reaped %d lease-expired submitting jobs -> abandoned",
+                    int(tag.split()[-1]))
+
+        # 2. Retry: mechanical abandons under the cap go back to `ready` (artifact
+        #    still good, no re-tailor). At/over cap they stay abandoned = terminal.
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs
+            SET status = 'ready', updated_at = NOW()
+            WHERE status = 'abandoned'
+              AND retry_count <= $1
+              AND failure_reason IS DISTINCT FROM 'posting_gone'
+            """,
+            _RETRY_CAP,
+        )
+        logger.info("Cleanup: retried %d abandoned jobs -> ready (under cap)",
+                    int(tag.split()[-1]))
+
+        # 3. Delete old terminal rows (new lifecycle names).
         tag = await conn.execute(
             """
             DELETE FROM user_jobs
-            WHERE status IN ('dismissed', 'applied', 'failed')
+            WHERE status IN ('submitted', 'abandoned')
               AND updated_at < NOW() - INTERVAL '90 days'
             """
         )
-        deleted = int(tag.split()[-1])
-        logger.info("Cleanup: deleted %d stale user_jobs (90-day rule)", deleted)
-
-        tag = await conn.execute(
-            """
-            DELETE FROM user_jobs
-            WHERE status = 'failed'
-              AND retry_count >= 3
-              AND updated_at < NOW() - INTERVAL '7 days'
-            """
-        )
-        deleted = int(tag.split()[-1])
-        logger.info("Cleanup: deleted %d exhausted-retry user_jobs (7-day rule)", deleted)
-
-        # Expire applying jobs — 48-hour check first so long-stuck jobs get 'expired'
-        # rather than 'failed_stale'. Requires migration to add these statuses to the
-        # user_jobs_status_check constraint (see CLAUDE.md).
-        tag = await conn.execute(
-            """
-            UPDATE user_jobs SET status = 'expired', updated_at = NOW()
-            WHERE status = 'applying'
-              AND updated_at < NOW() - INTERVAL '48 hours'
-            """
-        )
-        updated = int(tag.split()[-1])
-        logger.info("Cleanup: marked %d applying user_jobs as expired (48-hour rule)", updated)
-
-        tag = await conn.execute(
-            """
-            UPDATE user_jobs SET status = 'failed_stale', updated_at = NOW()
-            WHERE status = 'applying'
-              AND updated_at < NOW() - INTERVAL '1 hour'
-            """
-        )
-        updated = int(tag.split()[-1])
-        logger.info("Cleanup: marked %d applying user_jobs as failed_stale (1-hour rule)", updated)
+        logger.info("Cleanup: deleted %d stale terminal user_jobs (90-day rule)",
+                    int(tag.split()[-1]))
 
 
 async def run_seed() -> None:

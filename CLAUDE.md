@@ -32,21 +32,20 @@ This codebase has more coupling than its size suggests — a status string, an A
 
 | File / Folder | What it does |
 |---|---|
-| `main.py` | Orchestrator + APScheduler. Flags: --seed, --discover, --no-discover, --check. **`process_single_job` polling-path tailoring is commented out (test mode).** |
+| `main.py` | Orchestrator + APScheduler. Flags: --seed, --discover, --no-discover, --check. `process_single_job` = enrich + Slack (placeholder for extension handoff). Cleanup job = lease-expiry sweep (target-arch). |
 | `config.py` | All config/constants — single source of truth. SEARCH_PROFILE, fallback slugs, model versions. (Still gpt-4o; strategy is Claude — see STATE.md.) |
 | `db.py` | asyncpg pool. init_db, filter_new_ids, mark_seen_batch, consecutive_failures helpers. |
 | `discover_companies.py` | CLI: company discovery crawl → JSON + companies table. |
 | `discovery_runner.py` | Slim Render entry point: jobright poll + Worker A as pure asyncio loops (no APScheduler). Subset of main.py — keep in sync. |
 | `update_profile.py` | Standalone: merges profile fields into application_settings. Safe to re-run. |
-| `insert_job.py` | Test utility — inserts a row into user_jobs. |
 | **api/** | |
-| `api/server.py` | FastAPI. /users, /users/{id}, /jobs/queue, /jobs/{id}/{applied,failed,needs_review,resume}, /users/{id}/documents/{type}. CORS allow_origins=["*"] (debug). |
+| `api/server.py` | FastAPI (target-arch contract). /users, /users/{id}, POST /jobs/claim (atomic), /jobs/{id}/{submitted,awaiting_review,released,heartbeat,resume}, /jobs/queue/count, /users/{id}/documents/{type}. CORS allow_origins=["*"] (debug). |
 | **pollers/** | |
 | `pollers/{greenhouse,ashby,lever,smartrecruiters,workday,custom,jobright}.py` | Per-source pollers. Workday = post-launch v2 (kept, deferred). |
 | `pollers/filter.py` | Shared filtering: is_intern_role, is_entry_level, assign_categories, matches_title. Imported widely. |
 | **pipeline/** | |
-| `pipeline/matcher.py` | Matching: 6 hard filters + scoring. Writes 'queued' user_jobs + model_predictions. _SCORE_THRESHOLD=50. 6-min lookback (coupled to scheduler cadence). |
-| `pipeline/tailor_worker.py` | queued→applying. L3+L4+L5, pro-first, Semaphore(5), weasyprint lazy import. Writes tailored PDF. |
+| `pipeline/matcher.py` | Matching: 6 hard filters + scoring. Writes 'matched' user_jobs (excluded→'notified') + model_predictions. Reads profile from COLUMNS. _SCORE_THRESHOLD=50. 6-min lookback (coupled to scheduler cadence). |
+| `pipeline/tailor_worker.py` | Atomic-claims matched→preparing, success→ready, failure→abandoned. L3+L4+L5, pro-first, Semaphore(5), weasyprint lazy import. Writes tailored PDF. |
 | `pipeline/scorer.py` | L1+L2: keyword extraction + relevance (all-MiniLM-L6-v2). |
 | `pipeline/injector.py` | L3: keyword injection. |
 | `pipeline/rewriter.py` | L4: LLM bullet rewrite. **Claude swap point** (currently OpenAI). |
@@ -54,8 +53,7 @@ This codebase has more coupling than its size suggests — a status string, an A
 | `pipeline/discovery_worker.py` | Worker A v1.1.0: discovery_staging → ATS fingerprint → companies. _BATCH_SIZE=50. |
 | `pipeline/notifier.py` | Slack Block Kit notifications. |
 | `pipeline/detector.py`, `enricher.py` | New-job detection + enrichment. Used by main.py polling path. |
-| `pipeline/tailor.py`, `docx_editor.py`, `pdf_gen.py` | Full tailor/docx/PDF path. **Dormant** — reachable only via main.py's commented-out pipeline. |
-| **migrations/** | 001–014. **17 tables total** (see ARCHITECTURE.md inventory) — not just users/jobs/user_jobs. |
+| **migrations/** | 001–018. **18 tables total** (+ `field_corrections`, migration 015; see ARCHITECTURE.md inventory). |
 | **extension/** | |
 | `extension/manifest.json` | MV3. filler_utils.js injected before greenhouse.js + ashby.js. |
 | `extension/filler_utils.js` | ~1240-line shared form-filler. See filler_utils section below. |
@@ -91,23 +89,23 @@ Shared module injected before every ATS content script. All functions global (no
 
 ---
 
-## Profile fields (`application_settings` JSONB)
+## Profile fields — one home per fact (migration 016)
 
-first_name, last_name, email, phone, linkedin_url, github_url, preferred_name,
-location_city/state/country, school, degree, major, gpa, graduation_date,
-visa_type (F1), needs_sponsorship, eeo_gender/race/hispanic/veteran/disability,
-work_authorized, desired_hourly_min/max, previous_employers[], custom_answers[] (24 entries).
+**COLUMNS on `users`** (system reasons about them — matcher/metrics/ML): `email`, `tier`, `university`, `major`, `gpa`, `graduation_date` (DATE, canonical), `needs_sponsorship`, `visa_type`, `location_city`, `location_state`, `location_preference`, `resume_text`.
 
-Test values + the full 24-key custom_answers list live in `update_profile.py` (source of truth — it's the script that writes them).
+**`application_settings` JSONB** (form-fill carry-along, never queried): first_name, last_name, phone, linkedin_url, github_url, preferred_name, degree, location_country, eeo_*, work_authorized, previous_employers[], desired_hourly/salary_* (comp fallback), custom_answers[] (until LLM free-text lands).
+
+Governing rule: a fact is a COLUMN if anything but the form-filler reasons about it; JSONB if only stored & handed back whole. **No field in both.** `get_user_profile` aliases columns back to the extension's expected keys (e.g. `university`→`school`, DATE→"Mon YYYY"). Test values live in `update_profile.py`.
 
 ---
 
 ## Postgres schema (core tables)
 
-- **users:** `id UUID PK`, `tier` ('free'|'pro'), `preferences JSONB`, `work_auth JSONB`, `resume_text TEXT`, `application_settings JSONB`, plus top-level `requires_sponsorship/work_auth_type/university/graduation_date/major` (migration 006).
+- **users:** `id UUID PK`, `tier` ('free'|'pro'), `preferences JSONB`, `resume_text TEXT`, `application_settings JSONB`, + profile COLUMNS: `university/major/gpa/graduation_date/needs_sponsorship/visa_type/location_city/location_state/location_preference` (migration 016). (`work_auth JSONB`/`work_auth_type` removed.)
 - **jobs:** composite PK `(job_id, ats)`, `description TEXT DEFAULT ''`, `categories TEXT[]`, `posted_at BIGINT`.
-- **user_jobs:** status flow `queued → applying → applied|failed|needs_review|dismissed` (+ `notify_only`, `expired`, `failed_stale`). **See ARCHITECTURE.md for the full lifecycle and writers.**
-- Full 17-table inventory: ARCHITECTURE.md.
+- **user_jobs:** target-arch lifecycle `matched → preparing → ready → submitting → submitted` (+ `awaiting_review`, terminal `abandoned`, terminal `notified`). `lease_expires_at`, `failure_reason`, `submission_mode` (auto|review). **See ARCHITECTURE.md / DESIGN_NOTES.md for full lifecycle + single-writer-per-edge.**
+- **field_corrections:** two-snapshot diff (migration 015), A/B-only PII.
+- Full 18-table inventory: ARCHITECTURE.md.
 
 ---
 

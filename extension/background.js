@@ -38,14 +38,16 @@ async function closeTab(tabId) {
 }
 
 // Stale detection — called on every alarm before anything else.
-// Returns true if stale was detected and state was reset.
+// Returns true if stale was detected and local state was reset.
+//
+// The client NO LONGER declares the job failed/abandoned here. Client-span
+// deaths are reaped SERVER-side by the lease-expiry sweep (a submitting row
+// whose lease is >10 min stale -> abandoned). We only reset our own in-memory
+// state so we can pick up the next job; the server owns the row's fate.
 async function checkStale(state) {
   if (state.phase === 'idle' || state.phase === 'post_submit_wait') return false;
   const TEN_MIN = 10 * 60 * 1000;
   if (state.phase_started_at && Date.now() - state.phase_started_at > TEN_MIN) {
-    if (state.current_job) {
-      await markFailed(state.current_job.job_id, state.current_job.job_ats, 'stale_timeout');
-    }
     // await closeTab(state.current_tab_id);
     await resetToIdle();
     return true;
@@ -62,7 +64,7 @@ async function runPollCycle() {
 
   await chrome.storage.local.set({ phase: 'fetching' });
 
-  const job = await fetchNextJob();
+  const job = await claimNextJob();
   if (!job) {
     await chrome.storage.local.set({ phase: 'idle' });
     return;
@@ -128,7 +130,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   if (tabId !== state.current_tab_id) return;
   if (state.phase !== 'filling' && state.phase !== 'tab_open') return;
   // if (state.current_job) {
-  //   await markFailed(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
+  //   await markReleased(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
   // }
   // await resetToIdle();
 });
@@ -159,7 +161,12 @@ async function handleMessage(message, sendResponse) {
 
     case 'success': {
       if (state.current_job) {
-        await markApplied(state.current_job.job_id, state.current_job.job_ats);
+        // message.snapshots ({filled, submitted}) present only when review was on.
+        await markSubmitted(
+          state.current_job.job_id,
+          state.current_job.job_ats,
+          message.snapshots,
+        );
       }
       await chrome.storage.local.set({ phase: 'post_submit_wait' });
       const delayMin = 0.5 + Math.random() * 1;
@@ -171,8 +178,10 @@ async function handleMessage(message, sendResponse) {
     }
 
     case 'failed': {
+      // Clean in-client failure = release the claim; server decides retry vs
+      // terminal by count. Client never writes 'abandoned' itself.
       if (state.current_job) {
-        await markFailed(state.current_job.job_id, state.current_job.job_ats, message.reason);
+        await markReleased(state.current_job.job_id, state.current_job.job_ats, message.reason);
       }
       // DEBUG: tab left open
       // await closeTab(state.current_tab_id);
@@ -182,7 +191,12 @@ async function handleMessage(message, sendResponse) {
     }
 
     case 'heartbeat': {
+      // Bump local freshness AND renew the server-side lease so cleanup won't
+      // reap an actively-filling job.
       await chrome.storage.local.set({ phase_started_at: Date.now() });
+      if (state.current_job) {
+        await sendHeartbeat(state.current_job.job_id, state.current_job.job_ats);
+      }
       sendResponse({ ok: true });
       break;
     }
@@ -213,7 +227,7 @@ async function handleMessage(message, sendResponse) {
 
     case 'needs_review': {
       if (state.current_job) {
-        await markNeedsReview(state.current_job.job_id, state.current_job.job_ats, message.reason || 'awaiting_user_submit');
+        await markAwaitingReview(state.current_job.job_id, state.current_job.job_ats, message.reason || 'awaiting_user_submit');
       }
       // if (DEBUG_MODE) await new Promise(r => setTimeout(r, 10000));
       // await closeTab(state.current_tab_id);
@@ -238,9 +252,11 @@ async function handleMessage(message, sendResponse) {
       break;
     }
     case 'skip': {
-      // Stop and skip current job
+      // User skips the current job = release the claim. Server: skip once ->
+      // ready (re-served next poll); skip twice -> abandoned (terminal). Count
+      // does the work, not the client.
       if (state.current_job) {
-        await markFailed(state.current_job.job_id, state.current_job.job_ats, 'user_skipped');
+        await markReleased(state.current_job.job_id, state.current_job.job_ats, 'user_skipped');
       }
       await closeTab(state.current_tab_id);
       await resetToIdle();

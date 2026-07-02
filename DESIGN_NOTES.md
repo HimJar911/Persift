@@ -1,6 +1,6 @@
-# Persift — Target Architecture: Design Notes (IN PROGRESS)
+c# Persift — Target Architecture: Design Notes (COMPLETE — ready to promote)
 
-> **Status: work-in-progress design discussion.** This captures decisions locked through discussion on June 30, 2026. It is NOT the current architecture — it's the *target*. Current state lives in CLAUDE.md / ARCHITECTURE.md / STATE.md. When this design is complete and approved, it becomes `TARGET_ARCHITECTURE.md` and we write a migration path from today's code to it.
+> **Status: design COMPLETE (all sections locked through discussion, June 30 – July 1, 2026).** This is NOT the current architecture — it's the *target*, plus the migration path to reach it. Current state lives in CLAUDE.md / ARCHITECTURE.md / STATE.md. Next step: promote this to `TARGET_ARCHITECTURE.md` and execute the Migration path (bottom of file).
 >
 > **How these decisions were made:** discussion-first. Each was explained, debated, and approved by the founder before being recorded here. Do not change anything here without the same process.
 
@@ -16,14 +16,12 @@
 1. Domain model — 6 entities · Column-vs-JSONB rule · Student fields · LLM free-text · computed comp · Job identity · two pipelines.
 2. **Application lifecycle** — state set (7 phases, 3 spans) + transitions + ownership + retry. COMPLETE.
 3. **Outcome capture** — append-only stream, 3 sources, source→type constraint, A/B/C/D data framing, 2 scope decisions. COMPLETE.
-4. **Field Correction mechanism** — two-snapshot diff. COMPLETE except ONE open call ↓.
+4. **Field Correction** — two-snapshot diff + dedicated `field_corrections` table (entity home). COMPLETE.
+5. **Pipeline & entry points** — two-jobs reframe (live ingestion vs backlog banking), Flow A order (resolve→dedup, cheap pre-filter), narrow duplication extract, `discovery_staging`=banking-only. COMPLETE.
+6. **Contracts** — API↔extension. 7-endpoint target table, queue→atomic-claim POST, `/failed` deleted as outcome-writer, fat `/submitted` carries snapshots, client reaping→server. COMPLETE.
+7. **Migration path** — clean break, 9 ordered steps (schema→data→server→extension→delete), constraint widen/narrow two-step, gated deferrals. COMPLETE.
 
-**Pick up EXACTLY here — first action tomorrow:**
-- **(a) OPEN DECISION to settle first:** Field Correction entity home — dedicated `field_corrections` table vs reuse `application_events`. Recorded lean: dedicated (PII isolation). Get the founder's ruling, record it. (~5 min)
-- **(b) Then, remaining sections in order** (est. ~1.5–2 hrs total, discussion-first):
-  1. **Pipeline & entry points** (~20–30 min) — main.py vs discovery_runner.py duplication; the two-pipeline split (job ingestion Flow A vs company discovery).
-  2. **Contracts** (~30–45 min) — API↔extension. **Heaviest.** The queue endpoint becomes an atomic claim (`UPDATE...RETURNING` + `FOR UPDATE SKIP LOCKED`), NOT a `GET` — carried from the lifecycle section. Every renamed status ripples here.
-  3. **Migration path** (~30–45 min) — ordered safe steps from today's code (1 user, ~18K jobs — lots of leverage) to this target. Depends on Contracts being final.
+**DESIGN IS COMPLETE.** All sections locked. Next: promote to `TARGET_ARCHITECTURE.md` and execute Migration steps 1–4 (DB-only, safe) first. See "▶ DESIGN COMPLETE" at the bottom.
 - **Watch for:** Contracts or Migration may surface something that reopens the lifecycle (e.g. the atomic-claim ripple). That's the good kind of catch — on paper, not in code. Flag it, don't paper over it.
 
 ---
@@ -159,7 +157,7 @@ Target: these become two distinct pipelines; `discovery_staging` stops being a s
 **Not a status (parked in its correct home):**
 - *why it failed* → `failure_reason` field (axis C)
 - *what the employer did* → **Outcome** entity (axis B)
-- *auto vs review vs notify-only* → **`submission_mode`** flag on the Application (today's `notify_only` was a non-phase wearing a status)
+- *auto vs review* → **`submission_mode`** flag on the Application (`auto | review`; today's `notify_only` was a non-phase wearing a status — now CUT entirely, see Migration §)
 - *stuck duration / retries* → timestamps + `retry_count`
 
 **Bugs in today's model this design kills** (found by reading matcher/tailor_worker/server/background/main, June 30):
@@ -299,20 +297,142 @@ No per-question UI; the diff IS the capture. Only occurs when review is on (auto
 
 **PII isolation (hard rule):** snapshot values are the most sensitive data in the system (name, visa, salary, essay text). A/B-only — **never crosses to C**. Tightest retention/consent of any data we hold.
 
-**OPEN — entity home:** dedicated `field_corrections` table (clean separation, own PII retention, one row per review = both snapshots + derived diff) VS reuse `application_events` (cheaper, no new table, but mixes PII into the otherwise-aggregate-safe behavioral/D log). Founder lean pending. (Recorded lean: dedicated, for PII isolation.)
+**Entity home — LOCKED: dedicated `field_corrections` table.** One row per review = both snapshots (raw) + server-derived diff. Own retention/consent policy. Rationale: snapshots hold the most PII in the system (name, visa, salary, essay text); reusing `application_events` (the aggregate-safe D log) would pour crown-jewel PII into the one table meant to stay clean enough to aggregate/share — directly breaking the A/B-vs-C/D wall the rest of the architecture rests on. The cost is one migration (trivial at 1 user). **This table is A/B-only — never crosses to C.**
 
 ---
 
-## Still to design (next sessions)
+## Pipeline & entry points — LOCKED
 
-1. **Pipeline & entry points** — resolve main.py vs discovery_runner.py duplication.
-3. **Contracts** — API↔extension (incl. queue endpoint → atomic claim, per lifecycle); (B/C/D) raw-event capture grain.
-4. **Migration path** — ordered, safe steps from today's code to this target.
+**The reframe that unlocked this: `main.py` and `discovery_runner.py` are NOT the same pipeline duplicated — they are two genuinely different jobs.** Earlier framing ("the duplication is the bug") was wrong.
+
+- **Live ingestion** (`main.py`): resolve a Jobright job's true identity *now* → promote to `jobs` → matcher → extension applies. Real-time, small volume. (The Slack write in `process_single_job` is a **placeholder for the extension handoff**, not a bug — it stands in until the extension is the consumer.)
+- **Backlog banking** (`discovery_runner.py` on Render): Jobright's DB ≫ ours. Can't resolve now (BuiltWith costs money; Worker A was the cheap substitute and it didn't work → disabled). So **accumulate raw unresolved Jobright jobs into `discovery_staging` now**, resolve the whole backlog in ONE bulk pass the day BuiltWith is affordable. Deferred, large volume.
+
+Because they want different things (resolve-immediately vs. bank-for-later), their `run_jobright_cycle` implementations *should* differ. Do NOT force them to share one cycle.
+
+**Three problems this section addresses (renumbered from the tangle):**
+1. **Flow A exists in neither file** (correctness bug). `main.py` resolves then Slack-notifies (data evaporates, nothing lands in `jobs`); `discovery_runner` banks raw and stops (no resolve/dedup/promote, Worker A off). The live ingestion pipeline is missing its middle. **This section builds it.**
+2. **Narrow real duplication.** Only the truly-identical scaffolding is duplicated: the Jobright timestamp helpers (`_load_jobright_timestamp`/`_save_jobright_timestamp`, verbatim) and the `poll_jobright` call. **Extract these to a shared module.** The cycle logic around them legitimately differs — keep separate.
+3. **`discovery_staging` overload** was Worker A (company discovery) writing there alongside job-banking. With Worker A dead and its own design pass pending, in the target `discovery_staging` belongs to the **banking pipeline alone** (holding tank for unresolved Jobright jobs). Company discovery gets its own home when that pass happens.
+
+### Live-ingestion Flow A — the order (LOCKED)
+
+```
+poll → seniority filter
+     → cheap pre-filter on Jobright provenance (drop Jobright ids already resolved before)
+     → resolve apply URL (get TRUE identity: real ATS + native id)
+     → dedup vs jobs on TRUE identity (new → promote; existing → append discovery source, no new row)
+     → matcher picks up
+```
+
+**Two rulings locked:**
+- **Resolve BEFORE the true-identity dedup**, not after. You only know the true identity after resolving, and dedup must be against the *true* identity so two Jobright postings of one real role collapse to a single `jobs` row (append to sources list — per Job-entity "Dedup"). Today's `main.py` dedups first on the *Jobright* id then resolves — backwards for the new model.
+- **Cheap Jobright-id pre-filter in front of resolve** (cost guard). Resolution is the expensive step (HTTP now, BuiltWith later) and Jobright re-serves the same postings every poll. Cache the Jobright→true-id mapping and skip re-resolving known Jobright ids. Does NOT violate "resolve then insert" (nothing enters `jobs` pre-resolution) — it's a provenance pre-filter, not an identity dedup. Reuses existing `seen_ids`/`poller_state` machinery.
+
+**Deferred to the BuiltWith pass (intent locked, mechanics later):** the bulk-resolve job that drains the `discovery_staging` backlog through the same resolve→dedup→promote steps once BuiltWith lands.
+
+**Entry-point shape:** shared scaffolding module (Jobright helpers + poll) imported by both; each entry point keeps its own thin cycle + scheduler wiring. Deploy-target question (Render-dies-with-AWS vs. two-targets-forever) deferred — the shared-core shape is correct either way and doesn't depend on it.
+
+---
+
+## Contracts — API↔extension (LOCKED)
+
+Read against today's code (`api/server.py`, `extension/api.js`, `extension/background.js`, June 30). The lifecycle rename ripples into every endpoint; the atomic-claim ripple (lifecycle §Mechanism 1) reshapes the queue endpoint from a read into a write.
+
+### Target endpoint table
+
+| Endpoint | Method | Lifecycle effect | Outcome effect | Extension caller |
+|---|---|---|---|---|
+| `POST /jobs/claim` | **POST** (was `GET /jobs/queue`) | atomic `ready → submitting`, stamp `lease_expires_at`, `RETURNING` the job | — | `fetchNextJob` → becomes a claim |
+| `GET /jobs/queue/count` | GET | counts `ready` (was `applying`) | — | `getQueueCount` |
+| `POST /jobs/{id}/heartbeat` | POST | `submitting → submitting`, renew lease (`lease_expires_at = NOW()+10min`) | — | new `heartbeat` (formalizes today's in-memory `phase_started_at` bump) |
+| `POST /jobs/{id}/submitted` | POST | `submitting → submitted` OR `awaiting_review → submitted`. **Fat endpoint:** body carries optional `{snapshots:[#1,#2]}` when review was on | writes **`applied_confirmed`** ONLY (source `extension_detected`, conf 1.0) | `markApplied` → renamed `markSubmitted` |
+| `POST /jobs/{id}/awaiting_review` | POST | `submitting → awaiting_review` (fill done, auto-submit OFF) | — | `markNeedsReview` → renamed |
+| `POST /jobs/{id}/released` | POST | `submitting → ready` (client voluntarily gives up a claim it can't finish; increments `retry_count`, respects cap). NOT abandon. | — | replaces client-side `markFailed('user_skipped'/'stale_timeout')` |
+| `GET /jobs/{id}/resume` | GET | requires status `ready` OR `submitting` (was `applying`) | — | `getResumePdf` |
+
+### The five breaks (all locked)
+
+1. **Queue GET → atomic claim POST.** `GET /jobs/queue` (SELECT `applying`) had a read-then-act gap → double-apply. Now `POST /jobs/claim` = one-statement `UPDATE user_jobs SET status='submitting', lease_expires_at=NOW()+'10 min' WHERE id=(SELECT id ... WHERE status='ready' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING ...`. DB is the single arbiter. Extension's `fetchNextJob` stops being a passive read.
+
+2. **Status strings rename everywhere** (server SQL + extension phase names): `applying` → `ready` (queue source) + `submitting` (claimed); `applied` → `submitted`; `needs_review` → `awaiting_review`; `failed`/`failed_stale`/`expired` → `abandoned` + `failure_reason`.
+
+3. **`/failed` DELETED as an outcome-writer (bug #3 fix).** Today's `mark_failed` inserts `application_outcomes` `outcome_type='rejected'` for EVERY failure incl. `user_skipped`/crash → poisons the moat. Per source→type constraint, `extension_detected` may write ONLY `applied_confirmed`. Mechanical/user non-completion is a **lifecycle** event (`abandoned` + `failure_reason`), never an outcome. The old `/failed` endpoint's job splits into: `/released` (client gives up, retryable) and server-side cleanup (`submitting → abandoned` on lease expiry). No extension endpoint writes `abandoned` directly.
+
+4. **`awaiting_review` gets an exit.** Old `needs_review` was a dead-end. Now `awaiting_review → submitted` via the fat `/submitted` endpoint, which ALSO carries the two Field-Correction snapshots.
+
+5. **Client-side reaping → server-side.** Today `checkStale` in `background.js` calls `markFailed('stale_timeout')` — client declares itself dead. Per lifecycle §Mechanism 2, `submitting → abandoned` is written by **cleanup ONLY** (server lease-expiry sweep). Client only heartbeats; it never self-abandons. If the client knows it's giving up cleanly, it calls `/released` (→ `ready`, not `abandoned`).
+
+### Fat-endpoint decision (LOCKED)
+
+Snapshots ride on `POST /jobs/{id}/submitted` — NOT a separate `/corrections` endpoint. Submit is ONE real-world event; splitting lifecycle-write from correction-write invites half-recorded state (submitted but corrections lost, or vice versa). Server does the `field_corrections` insert + `user_jobs` status update **in one transaction**. Snapshots are optional in the body (present only when review was on / auto-submit off).
+
+### Ripple carried forward
+- `background.js` phase names (`idle|fetching|tab_open|filling|post_submit_wait`) are the CLIENT's own state machine and stay client-side, but the messages that hit the API (`success`/`failed`/`needs_review`/`heartbeat`) remap to the new endpoints above. `skip` and `stale_timeout` stop calling `markFailed`; they call `/released`.
+- Migration section must sequence the rename so server + extension flip together (or the API accepts both old+new transiently). Carry to Migration.
+
+---
+
+## Migration path — clean break (LOCKED)
+
+**Style: clean break** (chosen given 1 user / ~18K jobs / extension not shipped / no external consumers). Rename in place, drop old outright, no dual-support shim. The "server+extension must flip together" worry from Contracts **evaporates** — you own both and there's no live traffic. The only real ordering constraint is **schema-before-code**: a change can't land until what it depends on exists, and can't break a consumer not yet updated.
+
+**Dependency spine:** schema → data rewrite → server code → extension code → delete old.
+
+### Ground truth (DB inspected July 1, 2026 — 1 user, backup taken)
+- **Migration-006 columns on `users` are ALL EMPTY** (`requires_sponsorship`, `work_auth_type`, `university`, `major`, `graduation_date`, `available_start_date`, `cohort_signup_week`). All real profile data lives in `application_settings` JSONB (28 keys). The dual-home bug is DORMANT (columns exist but unpopulated), so field-home migration is conflict-free: move JSONB→column, delete JSONB key, no reconciliation of competing values.
+- **Naming reconciliations LOCKED:** (a) rename empty col `requires_sponsorship` → `needs_sponsorship` (matches JSONB + design) incl. its index; (b) add `visa_type` column (populate from JSONB), **DROP** the dead empty `work_auth_type` col + its CHECK (unused third vocabulary). Populated JSONB names win; empty 006 artifacts that were never used get dropped.
+
+### Ordered steps
+
+1. **Schema — additive first (nothing reads these yet).**
+   - Add to `user_jobs`: `lease_expires_at TIMESTAMPTZ`. **(Confirmed present July 1: `failure_reason`, `submission_mode`, `current_stage`, `current_stage_entered_at`, `latest_outcome_id`, `retry_count`. Only `lease_expires_at` is genuinely new.)**
+   - **`submission_mode` values → `auto | review`** (replace existing CHECK `review_before_submit|autonomous`). **`notify_only` CUT ENTIRELY** — notifying "a job exists" has no value (job boards do it free) and opts the user out of apply-through + outcome capture, the whole product. It was already vestigial (not in the current mode CHECK; only a zero-row leftover in the old status CHECK). If a notify tier ever becomes real, re-add one CHECK value then — don't carry a dead branch through every state machine now.
+   - New table `field_corrections` (one row/review: `user_job_id`, `snapshot_filled JSONB`, `snapshot_submitted JSONB`, `diff JSONB`, timestamps). A/B-only, own retention.
+   - Add source→type CHECK on `application_outcomes`: `extension_detected` ⇒ `outcome_type='applied_confirmed'` only.
+
+1b. **Field homes — JSONB → columns (the founding-bug fix; conflict-free per Ground Truth).**
+   - Add columns: `gpa`, `visa_type`, `location_city`, `location_state`, `location_preference` (local|remote|anywhere — NEW, no data yet).
+   - Rename `requires_sponsorship` → `needs_sponsorship` (+ index `idx_users_requires_sponsorship` → `idx_users_needs_sponsorship`).
+   - **Data move:** copy JSONB `school`→`university`, `major`→`major`, `gpa`→`gpa`, `graduation_date`→`graduation_date`, `needs_sponsorship`→`needs_sponsorship`, `visa_type`→`visa_type`, `location_city/state`→cols; then **remove those keys from `application_settings`** so each fact has ONE home.
+   - **`graduation_date` storage LOCKED: canonical `date` column, coerce free-text.** JSONB held `"May 2027"` (month+year, no day). Rule: **store canonical (structured date, e.g. `2027-05-01`), render per-form at fill time.** From a date the filler can emit any format a form wants (calendar `05/01/2027`, free-text `May 2027`, split month/year dropdowns); the reverse (free-text→date) is an unreliable guess and would break calendar-day forms. The invented day (1st) is a harmless anchor — never surfaced (filler renders month+year for display). Parse any future free-text grad date to a canonical date on ingest.
+   - **Drop** dead `work_auth_type` col + `users_work_auth_type_check`.
+   - JSONB KEEPS (form-fill carry-along, never queried): `eeo_*`, `linkedin_url`, `github_url`, `preferred_name`, `previous_employers`, `phone`, `first_name`, `last_name`, `email`(also col), `degree`, `location_country`, `work_authorized`, compensation fallback, `custom_answers` (until LLM free-text lands). `desired_hourly_*`/`desired_salary_*` → per-design computed-per-job; leave as JSONB fallback for now.
+
+2. **Status CHECK constraint — WIDEN (the one unavoidable two-step).** A CHECK can't be renamed, only replaced, and can't forbid a value that rows still hold. So: replace `user_jobs_status_check` with one allowing **old + new** names transiently (`applying, applied, needs_review, failed, failed_stale, expired` AND `matched, preparing, ready, submitting, awaiting_review, submitted, abandoned`).
+
+3. **Data rewrite (one-shot — CONFIRMED tiny: 4 rows, all `needs_review`, nothing mid-flight).** Map: `needs_review → awaiting_review` (the only rows that exist); the other mappings (`queued→matched`, `applying→ready`, `applied→submitted`, `failed/failed_stale/expired→abandoned`) are defined for completeness but hit 0 rows today. **Delete any fake `rejected` outcomes** from `mark_failed` (bug #3 cleanup — verify count; likely 0 given no failed rows). Field-home JSONB→column data move (step 1b) runs in THIS transaction.
+
+4. **Status CHECK constraint — NARROW.** Replace again to allow **new names only**. Old names now impossible to write.
+
+5. **Server code.** Rewrite `api/server.py` endpoints to the target table (Contracts §): `GET /jobs/queue` → `POST /jobs/claim` (atomic `UPDATE...RETURNING FOR UPDATE SKIP LOCKED`); `/applied` → `/submitted` (fat, accepts snapshots, writes `field_corrections` + status in one txn); add `/heartbeat`, `/released`; `/needs_review` → `/awaiting_review`; **delete `/failed`'s outcome insert entirely**; `/resume` + `queue/count` read new statuses. Matcher/tailor_worker write new status names per lifecycle single-writer table.
+
+6. **Server cleanup job (`run_cleanup_job` in main.py).** Replace the 48h/1h `expired`/`failed_stale` sweeps with ONE lease-expiry sweep: `submitting` with `lease_expires_at < NOW()` → `abandoned`. Add the `abandoned → ready` retry (respecting `retry_count` cap = 2). This is now the SOLE writer of `submitting → abandoned`.
+
+7. **Extension code.** `api.js`: `fetchNextJob` → claim POST; `markApplied` → `markSubmitted` (sends snapshots when review-off); `markNeedsReview` → `markAwaitingReview`; rename/point `heartbeat`. `background.js`: `checkStale` stops calling `markFailed` — client no longer self-abandons; clean giveup (`skip`) calls `/released`, stale is left for server cleanup. Wire the two-snapshot capture (capture-phase Submit listener) — build later, but the endpoint accepts it now.
+
+8. **Pipeline (Flow A + entry points, from Pipeline §).** Reorder Jobright cycle to resolve→dedup-on-true-identity, add cheap Jobright-id pre-filter, make `main.py`'s cycle promote to `jobs` (replace the Slack stub when extension is the consumer). Extract shared Jobright scaffolding to a module imported by both entry points. `discovery_staging` = banking-only.
+
+9. **Delete old.** Remove dead statuses from any remaining references, drop the commented-out `process_single_job` full-pipeline block if superseded, retire `QUESTION_ALIASES`/`custom_answers` once LLM free-text lands (gated on Anthropic key — defer with L4).
+
+### Sequencing notes
+- Steps 1–4 are DB-only and safe to run before any code changes (additive, then a data rewrite while the constraint is wide).
+- Steps 5–7 (server + extension) can flip in either order under clean-break since there's no live traffic, but do **server before extension** so you can smoke-test endpoints with curl before the extension depends on them.
+- Steps 8–9 are independent of the status rename and can follow.
+- **Gated-on-Anthropic-key (defer, same as L4):** LLM free-text answers, `custom_answers`/`QUESTION_ALIASES` removal.
+- **Gated-on-BuiltWith (separate pass):** backlog bulk-resolve, company discovery / Worker A.
+
+---
+
+## ▶ DESIGN COMPLETE
+
+All target-architecture sections are locked. Next step is to promote this file to `TARGET_ARCHITECTURE.md` and begin executing the Migration path above (steps 1–4 first — DB-only, safe, high-leverage at 1 user). Keep CLAUDE.md/ARCHITECTURE.md/STATE.md honest as each step lands.
 
 ---
 
 ## Open threads to revisit
 
+- **Filler date-rendering helper (fill-time, lands with filler wiring):** given a stored canonical `date` + the detected field format (calendar / free-text / split dropdowns), output the right string. Belongs in `filler_utils`. Enables "store canonical, render per-form" for `graduation_date` (and any date field). Not part of the DB migration.
 - Company discovery / Worker A / BuiltWith is broken — needs its own design pass.
 - `config.py` still gpt-4o (deliberate — switching to Claude at tailoring time).
 - `main.py process_single_job` tailoring commented out (deliberate — tailoring not built yet).
