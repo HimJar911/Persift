@@ -185,6 +185,10 @@
     const { html }   = companyBlock(pending);
     const reasonText = _REASON_LABELS[pending?.reason] || (pending?.reason || 'Unknown reason');
     const applyUrl   = pending?.apply_url || '';
+    // The extension normally detects the human's own Submit click on the page
+    // itself and reports it automatically. These buttons are the fallback for
+    // when that tab/content-script is gone (closed, reloaded, discarded).
+    const isFilledReview = pending?.reason === 'awaiting_user_submit';
 
     root.innerHTML = buildShell({
       dotClass: 'amber', statusText: 'Needs review',
@@ -197,13 +201,20 @@
         </div>`,
       buttons: `
         ${applyUrl ? `<button class="btn btn--solid" id="open-btn" style="margin-bottom:6px">Open Application</button>` : ''}
-        <button class="btn btn--outline" id="dismiss-btn">Dismiss</button>`,
+        ${isFilledReview ? `<button class="btn btn--solid" id="confirm-btn" style="margin-bottom:6px">I submitted it</button>` : ''}
+        <button class="btn btn--outline" id="dismiss-btn">Give up</button>`,
       queueLabel: q, autoSubmit: as, amber: true,
     });
 
     if (applyUrl) {
       document.getElementById('open-btn').addEventListener('click', () => {
         chrome.tabs.create({ url: applyUrl });
+      });
+    }
+    if (isFilledReview) {
+      document.getElementById('confirm-btn').addEventListener('click', async () => {
+        await chrome.runtime.sendMessage({ type: 'manual_submit_confirm' });
+        await render();
       });
     }
     document.getElementById('dismiss-btn').addEventListener('click', async () => {
@@ -251,7 +262,7 @@
 
     if (!user_id) {
       renderUnconfigured(q, as);
-    } else if (phase === 'idle' && pending_review) {
+    } else if (phase === 'awaiting_review' && pending_review) {
       renderPendingReview(pending_review, q, as);
     } else if (phase === 'tab_open' || phase === 'filling') {
       renderFilling(current_job, q, as);

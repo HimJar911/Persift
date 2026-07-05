@@ -133,8 +133,11 @@
   const { job, auto_submit, needs_sponsorship, user_id,
           first_name, last_name, email, phone, linkedin_url, location_city } = context;
 
+  // job_id/job_ats travel with every message so background.js can identify
+  // which job a stale tab is reporting on even after it's no longer
+  // current_job, instead of relying solely on in-memory current_job.
   function send(msg) {
-    chrome.runtime.sendMessage(msg);
+    chrome.runtime.sendMessage({ ...msg, job_id: job?.job_id, job_ats: job?.job_ats });
   }
 
   // ── Wait for React to render the form ─────────────────────────────────────
@@ -314,9 +317,19 @@
   // ── Submit or hand off ─────────────────────────────────────────────────────
   await humanDelay(1000, 2000);
 
-  if (!auto_submit) {
-    send({ type: 'needs_review', reason: 'awaiting_user_submit' });
-    return exit();
+  const successText = /thank you|application received|successfully submitted|application submitted/i;
+  function detectSuccess() {
+    // Ashby is a SPA — no URL change on success, watch for success text only.
+    return successText.test(document.body.textContent);
+  }
+  function pollFor(getter, timeoutMs) {
+    return new Promise(resolve => {
+      const deadline = Date.now() + timeoutMs;
+      const poll = setInterval(() => {
+        if (getter()) { clearInterval(poll); return resolve(true); }
+        if (Date.now() > deadline) { clearInterval(poll); resolve(false); }
+      }, 500);
+    });
   }
 
   const submitBtn =
@@ -331,23 +344,38 @@
     return exit();
   }
 
+  if (!auto_submit) {
+    send({ type: 'needs_review', reason: 'awaiting_user_submit' });
+    // Stay alive: form is filled and parked for the human to click Submit
+    // themselves. Rather than polling detectSuccess() blindly from the start,
+    // wait for the actual click, THEN poll for confirmation — same as the
+    // auto-submit path below. Matches background.js's REVIEW_TIMEOUT_MS.
+    console.log('ashby: awaiting user submit — watching for click');
+    const REVIEW_WAIT_MS = 30 * 60 * 1000;
+    const clicked = await new Promise(resolve => {
+      const timer = setTimeout(() => resolve(false), REVIEW_WAIT_MS);
+      submitBtn.addEventListener('click', () => {
+        clearTimeout(timer);
+        resolve(true);
+      }, { once: true });
+    });
+
+    if (clicked) {
+      console.log('ashby: user clicked submit — waiting for confirmation');
+      const confirmed = await pollFor(detectSuccess, 10000);
+      if (confirmed) {
+        send({ type: 'success' });
+      }
+      // Ambiguous (clicked, no confirmation yet): don't send failed/released
+      // out from under a submit the user just made. 30-min review timeout
+      // upstream is the backstop.
+    }
+    return exit();
+  }
+
   await clickElement(submitBtn);
 
-  // Ashby is a SPA — no URL change on success, watch for success text only.
-  const confirmed = await new Promise(resolve => {
-    const deadline = Date.now() + 10000;
-    const poll = setInterval(() => {
-      const successText = /thank you|application received|successfully submitted|application submitted/i;
-      if (successText.test(document.body.textContent)) {
-        clearInterval(poll);
-        return resolve(true);
-      }
-      if (Date.now() > deadline) {
-        clearInterval(poll);
-        resolve(false);
-      }
-    }, 500);
-  });
+  const confirmed = await pollFor(detectSuccess, 10000);
 
   if (confirmed) {
     send({ type: 'success' });

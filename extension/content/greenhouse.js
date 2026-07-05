@@ -12,7 +12,18 @@ console.log('greenhouse.js injected');
   }, 30000);
 
   function exit() { clearInterval(heartbeatTimer); }
-  function send(msg) { chrome.runtime.sendMessage(msg); }
+  // job_id/job_ats travel with every message so background.js can identify
+  // which job a stale tab is reporting on even after it's no longer
+  // current_job (e.g. logging a genuine submit from a tab whose job was
+  // already given up on / reassigned) instead of relying solely on in-memory
+  // current_job, which a stale tab has no way to know has moved on.
+  function send(msg) {
+    chrome.runtime.sendMessage({
+      ...msg,
+      job_id: context?.job?.job_id,
+      job_ats: context?.job?.job_ats,
+    });
+  }
 
   // ── Handshake ──────────────────────────────────────────────────────────────
   await humanDelay(2000, 2000);
@@ -149,6 +160,41 @@ console.log('greenhouse.js injected');
 
   if (!context.auto_submit) {
     send({ type: 'needs_review', reason: 'awaiting_user_submit' });
+    // Stay alive: the form is filled and parked for the human to review and
+    // click Submit themselves on this same page. Rather than polling
+    // detectSuccess() blindly from the start (which can false-positive before
+    // any click — e.g. detectSuccess's URL check has no baseline to compare
+    // against yet), wait for the actual click on the submit button, THEN poll
+    // for confirmation exactly like the auto-submit path does below.
+    console.log('greenhouse: awaiting user submit — watching for click');
+    const REVIEW_WAIT_MS = 30 * 60 * 1000; // matches background.js REVIEW_TIMEOUT_MS
+    const submitBtn = atsConfig.findSubmitButton();
+
+    if (submitBtn) {
+      const clicked = await new Promise(resolve => {
+        const timer = setTimeout(() => resolve(false), REVIEW_WAIT_MS);
+        submitBtn.addEventListener('click', () => {
+          clearTimeout(timer);
+          resolve(true);
+        }, { once: true });
+      });
+
+      if (clicked) {
+        console.log('greenhouse: user clicked submit — waiting for confirmation');
+        const confirmed = await waitFor(atsConfig.detectSuccess, 10000);
+        if (confirmed) {
+          console.log('greenhouse: submission confirmed');
+          send({ type: 'success' });
+        }
+        // Ambiguous (clicked but no confirmation): leave it to the user —
+        // don't send failed/released out from under a submit they just made.
+        // The 30-min review timeout is the backstop if something's truly stuck.
+      }
+      // Not clicked within the window: say nothing: background.js's own
+      // review timeout (same duration) will release the claim.
+    } else {
+      console.log('greenhouse: submit button not found — nothing to watch');
+    }
     return exit();
   }
 

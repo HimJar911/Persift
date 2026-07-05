@@ -6,7 +6,7 @@ importScripts('api.js');
 const DEBUG_MODE = true; // set false before shipping
 
 const DEFAULT_STATE = {
-  phase: 'idle',           // idle | fetching | tab_open | filling | post_submit_wait
+  phase: 'idle',           // idle | fetching | tab_open | filling | awaiting_review | post_submit_wait
   current_job: null,       // { job_id, job_ats, apply_url, company_name, title } | null
   current_tab_id: null,
   phase_started_at: null,
@@ -16,6 +16,10 @@ const DEFAULT_STATE = {
   needs_sponsorship: false,
   pending_review: null,    // { job_id, job_ats, apply_url, company_name, title, reason } | null
 };
+
+// awaiting_review is not lease-tracked server-side (the human decides when to
+// submit), but an abandoned tab shouldn't hold a phantom claim forever.
+const REVIEW_TIMEOUT_MS = 30 * 60 * 1000;
 
 async function getState() {
   const stored = await chrome.storage.local.get(Object.keys(DEFAULT_STATE));
@@ -46,6 +50,19 @@ async function closeTab(tabId) {
 // state so we can pick up the next job; the server owns the row's fate.
 async function checkStale(state) {
   if (state.phase === 'idle' || state.phase === 'post_submit_wait') return false;
+
+  if (state.phase === 'awaiting_review') {
+    if (state.phase_started_at && Date.now() - state.phase_started_at > REVIEW_TIMEOUT_MS) {
+      if (state.current_job) {
+        await markReleased(state.current_job.job_id, state.current_job.job_ats, 'review_timeout');
+      }
+      await closeTab(state.current_tab_id);
+      await resetToIdle({ pending_review: null });
+      return true;
+    }
+    return false;
+  }
+
   const TEN_MIN = 10 * 60 * 1000;
   if (state.phase_started_at && Date.now() - state.phase_started_at > TEN_MIN) {
     // await closeTab(state.current_tab_id);
@@ -128,6 +145,15 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = await getState();
   if (tabId !== state.current_tab_id) return;
+
+  if (state.phase === 'awaiting_review') {
+    if (state.current_job) {
+      await markReleased(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
+    }
+    await resetToIdle({ pending_review: null });
+    return;
+  }
+
   if (state.phase !== 'filling' && state.phase !== 'tab_open') return;
   // if (state.current_job) {
   //   await markReleased(state.current_job.job_id, state.current_job.job_ats, 'tab_closed_by_user');
@@ -137,15 +163,53 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 // Message listener — content script and popup communicate here.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  handleMessage(message, sendResponse);
+  handleMessage(message, sender, sendResponse);
   return true; // keep sendResponse alive for async reply
 });
 
-async function handleMessage(message, sendResponse) {
+// Messages that report on a specific in-flight job (as opposed to popup
+// actions, which have no sender.tab at all). A stale tab left alive past its
+// job's lifetime (given up on, released, replaced by a new claim) must not
+// be able to act on whatever job background.js currently thinks is current —
+// found by Fable's audit as a sharper version of the 'ready' cross-job bug
+// fixed earlier tonight: content scripts now stay alive up to 30 min
+// (awaiting_review), so an old tab surviving past its job's end is the
+// normal case, not a rare race.
+const TAB_SCOPED_MESSAGES = new Set(['success', 'failed', 'needs_review', 'heartbeat']);
+
+async function handleMessage(message, sender, sendResponse) {
   const state = await getState();
+
+  if (TAB_SCOPED_MESSAGES.has(message.type) &&
+      (!sender.tab || sender.tab.id !== state.current_tab_id)) {
+    // A genuine 'success' from a stale tab (job was given up on / reassigned,
+    // but the user submitted the old tab anyway) would otherwise vanish with
+    // no record anywhere. message.job_id/job_ats travel with every message
+    // (see greenhouse.js/ashby.js send()) specifically so we can still
+    // identify and log which job this was about, for manual reconciliation,
+    // instead of silently dropping a real submission on the floor.
+    if (message.type === 'success' && message.job_id) {
+      console.warn(
+        'Persift: stale-tab success ignored — job may need manual reconciliation:',
+        { job_id: message.job_id, job_ats: message.job_ats, current_job: state.current_job }
+      );
+    }
+    sendResponse({ ok: false, error: 'stale_tab' });
+    return;
+  }
 
   switch (message.type) {
     case 'ready': {
+      // Only the tab we actually opened for current_job gets fed job data.
+      // Content scripts auto-inject into ANY matching Greenhouse/Ashby URL
+      // (manifest match patterns aren't scoped to queued jobs), so a tab the
+      // user opened manually — or a leftover tab from a prior job — must not
+      // be handed whatever job happens to be in memory (e.g. one parked in
+      // awaiting_review, which now legitimately keeps current_job set).
+      if (!sender.tab || sender.tab.id !== state.current_tab_id) {
+        sendResponse({ job: null });
+        break;
+      }
       await chrome.storage.local.set({ phase: 'filling' });
       const userId = await getUserId();
       const profile = userId ? await getProfile(userId) : null;
@@ -168,7 +232,7 @@ async function handleMessage(message, sendResponse) {
           message.snapshots,
         );
       }
-      await chrome.storage.local.set({ phase: 'post_submit_wait' });
+      await chrome.storage.local.set({ phase: 'post_submit_wait', pending_review: null });
       const delayMin = 0.5 + Math.random() * 1;
       await chrome.alarms.create('next_job_alarm', { delayInMinutes: delayMin });
       // DEBUG: tab left open
@@ -229,9 +293,17 @@ async function handleMessage(message, sendResponse) {
       if (state.current_job) {
         await markAwaitingReview(state.current_job.job_id, state.current_job.job_ats, message.reason || 'awaiting_user_submit');
       }
-      // if (DEBUG_MODE) await new Promise(r => setTimeout(r, 10000));
-      // await closeTab(state.current_tab_id);
-      await resetToIdle({
+      // Unlike other review reasons, 'awaiting_user_submit' means the form IS
+      // filled and the content script is staying alive on the page to detect
+      // the human's own Submit click. Keep current_job so that eventual
+      // 'success' message (or the popup's manual-confirm fallback) can still
+      // resolve markSubmitted. Other reasons (no form found, unsupported
+      // layout) have nothing left to detect, but we keep current_job here too
+      // so the popup's fallback ('I submitted it' / 'Give up') still works
+      // uniformly for any pending_review.
+      await chrome.storage.local.set({
+        phase: 'awaiting_review',
+        phase_started_at: Date.now(),
         pending_review: state.current_job
           ? { ...state.current_job, reason: message.reason }
           : null,
@@ -263,8 +335,27 @@ async function handleMessage(message, sendResponse) {
       sendResponse({ ok: true });
       break;
     }
+    // Fallback for when the review tab/content-script is gone (discarded,
+    // closed, reloaded) so the live-detection path in the content script
+    // can't fire 'success' itself. User self-attests they submitted on the
+    // real page. No snapshots (that requires DOM access we no longer have).
+    case 'manual_submit_confirm': {
+      if (state.pending_review) {
+        await markSubmitted(state.pending_review.job_id, state.pending_review.job_ats);
+      }
+      await closeTab(state.current_tab_id);
+      await resetToIdle({ pending_review: null });
+      sendResponse({ ok: true });
+      break;
+    }
+
+    // User gives up on a parked review job without submitting it.
     case 'clear_review': {
-      await chrome.storage.local.set({ pending_review: null });
+      if (state.pending_review) {
+        await markReleased(state.pending_review.job_id, state.pending_review.job_ats, 'user_gave_up_review');
+      }
+      await closeTab(state.current_tab_id);
+      await resetToIdle({ pending_review: null });
       sendResponse({ ok: true });
       break;
     }
