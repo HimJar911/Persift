@@ -22,7 +22,6 @@ from pollers.custom import poll_custom
 from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHORE
 from pollers.filter import is_entry_level, is_intern_role
 from pipeline.detector import detect_new_jobs
-from pipeline.enricher import enrich
 from pipeline.matcher import run_matching_cycle
 from pipeline.tailor_worker import run_tailor_cycle
 from pipeline.discovery_worker import run_discovery_cycle
@@ -200,9 +199,12 @@ async def _maybe_refresh_slugs() -> None:
         logger.warning("Slug refresh failed — keeping previous data (%s)", exc)
 
 
-async def process_single_job(raw_job: dict) -> None:
-    """Enrich and notify — tailoring and PDF disabled for testing."""
-    job = enrich(raw_job)
+async def process_single_job(job: dict) -> None:
+    """Notify — tailoring and PDF disabled for testing.
+
+    Jobs arrive already enriched: detect_new_jobs enriches before insert
+    (enrich-before-insert fix, Jul 2026) and returns the enriched dicts.
+    """
     logger.info(
         "New job: %s at %s (%s) — categories: %s",
         job["title"], job["company_name"], job["ats"],
@@ -250,23 +252,27 @@ async def run_jobright_cycle() -> None:
     await _save_jobright_timestamp(jobs)
     logger.info("Jobright: %d jobs after seniority filter", len(jobs))
 
-    # Dedup against DB
-    new_jobs = await detect_new_jobs(jobs, "jobright")
+    # Dedup + resolve apply URLs + insert. Resolution runs as detect_new_jobs's
+    # pre_insert hook (new jobs only) so the resolved URL is persisted — the
+    # pre-Jul-2026 order inserted first, resolved into memory, and discarded,
+    # leaving every Jobright row with apply_url='' forever (fable_audit Area 1).
+    which = asyncio.Semaphore(_RESOLVE_SEMAPHORE)
+    async with httpx.AsyncClient() as client:
+        async def resolve_urls(new_jobs: list[dict]) -> None:
+            logger.info("Resolving apply URLs for %d new Jobright jobs", len(new_jobs))
+
+            async def resolve_one(job: dict) -> None:
+                async with which:
+                    raw_id = job["job_id"].removeprefix("jobright_")
+                    job["apply_url"] = await resolve_apply_url(raw_id, client)
+
+            await asyncio.gather(*[resolve_one(j) for j in new_jobs], return_exceptions=True)
+
+        new_jobs = await detect_new_jobs(jobs, "jobright", pre_insert=resolve_urls)
 
     if not new_jobs:
         logger.info("=== Jobright cycle complete — no new jobs ===")
         return
-
-    # Lazy apply URL resolution — only for new jobs
-    logger.info("Resolving apply URLs for %d new Jobright jobs", len(new_jobs))
-    which = asyncio.Semaphore(_RESOLVE_SEMAPHORE)
-    async with httpx.AsyncClient() as client:
-        async def resolve_one(job: dict) -> None:
-            async with which:
-                raw_id = job["job_id"].removeprefix("jobright_")
-                job["apply_url"] = await resolve_apply_url(raw_id, client)
-
-        await asyncio.gather(*[resolve_one(j) for j in new_jobs], return_exceptions=True)
 
     # Process new jobs through the pipeline
     await asyncio.gather(*(

@@ -276,6 +276,28 @@ async def run_matching_cycle() -> None:
             await asyncio.gather(*[
                 _fetch_jobright_jd(j, jd_client, jd_sem) for j in jobright_empty
             ])
+        # Write fetched JDs back to jobs.description so the tailor worker and
+        # future cycles read real text instead of re-fetching (or tailoring
+        # against '' — fable_audit Area 1). Guarded on description='' so a
+        # concurrent writer is never clobbered.
+        fetched = [j for j in jobright_empty if (j["description"] or "").strip()]
+        if fetched:
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    UPDATE jobs AS j SET description = c.description
+                    FROM (
+                        SELECT unnest($1::text[]) AS job_id,
+                               unnest($2::text[]) AS description
+                    ) AS c
+                    WHERE j.job_id = c.job_id AND j.ats = 'jobright'
+                      AND j.description = ''
+                    """,
+                    [j["job_id"] for j in fetched],
+                    [j["description"] for j in fetched],
+                )
+            logger.info("Wrote %d fetched Jobright JDs back to jobs.description", len(fetched))
+
         # Drop Jobright jobs that still have no description — nothing to score against
         jobs = [
             j for j in jobs

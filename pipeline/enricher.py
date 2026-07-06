@@ -1,3 +1,4 @@
+import html
 import logging
 import re
 
@@ -19,7 +20,12 @@ def enrich(job: dict) -> dict:
     ats = job["ats"]
 
     # --- Description extraction ---
-    if ats in ("greenhouse", "ashby"):
+    if ats == "greenhouse":
+        # Greenhouse's boards API returns `content` HTML-entity-escaped
+        # (&lt;div&gt;...) — unescape first or BeautifulSoup sees one text node
+        # and the "stripped" description is raw tag soup.
+        description = _html_to_text(html.unescape(job.get("description_html", "")))
+    elif ats == "ashby":
         description = _html_to_text(job.get("description_html", ""))
     elif ats == "jobright":
         # Jobright has no full JD — use qualifications as the description
@@ -28,8 +34,8 @@ def enrich(job: dict) -> dict:
         description = job.get("description_plain", "")
     else:
         # simplify, custom — try html first, fall back to plain
-        html = job.get("description_html", "")
-        description = _html_to_text(html) if html else job.get("description_plain", "")
+        raw_html = job.get("description_html", "")
+        description = _html_to_text(raw_html) if raw_html else job.get("description_plain", "")
 
     # Collapse excessive whitespace
     description = re.sub(r"\n{3,}", "\n\n", description).strip()
