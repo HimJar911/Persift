@@ -4,7 +4,8 @@
 > - **This file (CLAUDE.md)** — stable: identity, codebase map, how to operate, how to run. Rarely changes.
 > - **`ARCHITECTURE.md`** — the coupling map: what depends on what. **Read before changing any status string, API shape, DB column, config constant, or the extension↔API contract.**
 > - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Read when you need current state; don't trust its dates blindly.
-> - **`LAUNCH_PLAN.md`** (parent dir) — day-by-day build plan. Hard launch July 15, 2026; tech-week pitch July 27, 2026.
+> - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts.
+> - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date; soft launch ~July 22.
 > - **`CatchUpDocs/`** (parent dir) — session summaries.
 
 Persift is the outcome data layer for early-career hiring. Students get autonomous job applications and automatic tracking (free). Career centers get live visibility into student job searches and outcomes without self-reporting (paid — the revenue side). Outcome capture = apply-through exhaust + Gmail signal parsing (interview vs. not).
