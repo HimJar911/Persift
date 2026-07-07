@@ -15,11 +15,23 @@ const DEFAULT_STATE = {
   auto_submit: false,
   needs_sponsorship: false,
   pending_review: null,    // { job_id, job_ats, apply_url, company_name, title, reason } | null
+  pending_submission: null, // { tab_id, job_id, job_ats, url_at_submit, started_at } | null
 };
 
 // awaiting_review is not lease-tracked server-side (the human decides when to
 // submit), but an abandoned tab shouldn't hold a phantom claim forever.
 const REVIEW_TIMEOUT_MS = 30 * 60 * 1000;
+
+// A content script's JS context (including any in-page success poll) is
+// destroyed the instant the tab navigates — confirmed by live testing
+// against Greenhouse: a real submit click navigated to the confirmation
+// page, but the in-page poll never got another tick to observe it, so
+// 'success' was never sent. tabs.onUpdated lives in the service worker,
+// which survives that navigation, so it's the only reliable place to catch
+// a submission that results in a full page navigation (as opposed to an
+// SPA-style same-page "thank you" render, which the content script's own
+// detection already handles fine).
+const SUBMISSION_VERIFY_TIMEOUT_MS = 30 * 1000;
 
 async function getState() {
   const stored = await chrome.storage.local.get(Object.keys(DEFAULT_STATE));
@@ -39,6 +51,37 @@ async function resetToIdle(extra = {}) {
 async function closeTab(tabId) {
   if (!tabId) return;
   try { await chrome.tabs.remove(tabId); } catch { /* already closed */ }
+}
+
+// Two independent paths can report a submission (the content script's own
+// in-page detection, and the background's post-navigation verifier below) —
+// idempotent so it doesn't matter which one wins or if both fire.
+async function completeSubmission(job, snapshots) {
+  const state = await getState();
+  if (state.phase === 'post_submit_wait') return; // already handled
+
+  if (job) {
+    await markSubmitted(job.job_id, job.job_ats, snapshots);
+  }
+  await chrome.storage.local.set({
+    phase: 'post_submit_wait',
+    pending_review: null,
+    pending_submission: null,
+  });
+  const delayMin = 0.5 + Math.random() * 1;
+  await chrome.alarms.create('next_job_alarm', { delayInMinutes: delayMin });
+  // DEBUG: tab left open
+  // await closeTab(job's tab id);
+}
+
+// Runs inside the freshly-navigated page (injected, not a content script) to
+// check whether it looks like a submission confirmation. Kept deliberately
+// generic (not ATS-specific) — scoped to the one bug this fixes: Greenhouse
+// navigating to a static "thank you" page that the original content script
+// could never observe because its JS context died with the old page.
+function verifySubmissionPage() {
+  const text = document.body ? document.body.innerText : '';
+  return /thank you|application received|successfully submitted/i.test(text);
 }
 
 // Stale detection — called on every alarm before anything else.
@@ -134,11 +177,42 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Tab updated: when our tab finishes loading during tab_open, advance phase to filling.
 // Content script initiates the handshake — we don't message it here.
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
+
   const state = await getState();
-  if (tabId !== state.current_tab_id || state.phase !== 'tab_open') return;
-  await chrome.storage.local.set({ phase: 'filling' });
+
+  if (tabId === state.current_tab_id && state.phase === 'tab_open') {
+    await chrome.storage.local.set({ phase: 'filling' });
+  }
+
+  // Post-submit-click navigation check (see pending_submission comment above
+  // DEFAULT_STATE). Only fires if a click was tracked for this exact tab and
+  // the page actually changed — a same-page DOM update (SPA confirmation)
+  // won't trigger onUpdated at all, which is fine: the content script's own
+  // MutationObserver/poll already covers that case.
+  const pending = state.pending_submission;
+  if (!pending || pending.tab_id !== tabId) return;
+
+  if (Date.now() - pending.started_at > SUBMISSION_VERIFY_TIMEOUT_MS) {
+    await chrome.storage.local.set({ pending_submission: null });
+    return;
+  }
+  if (!tab.url || tab.url === pending.url_at_submit) return; // didn't actually navigate
+
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: verifySubmissionPage,
+    });
+    if (result) {
+      await completeSubmission({ job_id: pending.job_id, job_ats: pending.job_ats });
+    }
+  } catch (err) {
+    // Page may be a chrome:// URL, cross-origin restricted, or the tab
+    // closed mid-check — nothing to do, the timeout above cleans this up.
+    console.log('Persift: submission verifier injection failed —', err && err.message);
+  }
 });
 
 // Tab removed: if user closes the active tab mid-fill, mark failed and reset.
@@ -175,7 +249,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // fixed earlier tonight: content scripts now stay alive up to 30 min
 // (awaiting_review), so an old tab surviving past its job's end is the
 // normal case, not a rare race.
-const TAB_SCOPED_MESSAGES = new Set(['success', 'failed', 'needs_review', 'heartbeat']);
+const TAB_SCOPED_MESSAGES = new Set(['success', 'failed', 'needs_review', 'heartbeat', 'submit_clicked']);
 
 async function handleMessage(message, sender, sendResponse) {
   const state = await getState();
@@ -199,6 +273,20 @@ async function handleMessage(message, sender, sendResponse) {
   }
 
   switch (message.type) {
+    case 'debug_log': {
+      // Content-script console output dies with the tab on navigation (e.g.
+      // Greenhouse's post-submit redirect) before it can be read. Relay into
+      // the service worker's console (survives tab navigation/closure) and
+      // into storage so it can be dumped after the fact via
+      // chrome.storage.local.get('debug_log', console.log).
+      console.log('[content]', message.text);
+      const { debug_log = [] } = await chrome.storage.local.get('debug_log');
+      debug_log.push({ t: Date.now(), text: message.text });
+      await chrome.storage.local.set({ debug_log: debug_log.slice(-200) });
+      sendResponse({ ok: true });
+      break;
+    }
+
     case 'ready': {
       // Only the tab we actually opened for current_job gets fed job data.
       // Content scripts auto-inject into ANY matching Greenhouse/Ashby URL
@@ -223,20 +311,29 @@ async function handleMessage(message, sender, sendResponse) {
       break;
     }
 
+    case 'submit_clicked': {
+      // Content script's own detectSuccess() poll only catches SPA-style
+      // same-page confirmations. If the click causes a full navigation, that
+      // poll's JS context dies with the page before it can observe the
+      // result — so we also track the click here, where tabs.onUpdated can
+      // catch the navigation regardless of what happens to the content
+      // script that started it.
+      if (!sender.tab) { sendResponse({ ok: false }); break; }
+      await chrome.storage.local.set({
+        pending_submission: {
+          tab_id: sender.tab.id,
+          job_id: message.job_id,
+          job_ats: message.job_ats,
+          url_at_submit: message.url_at_submit,
+          started_at: Date.now(),
+        },
+      });
+      sendResponse({ ok: true });
+      break;
+    }
+
     case 'success': {
-      if (state.current_job) {
-        // message.snapshots ({filled, submitted}) present only when review was on.
-        await markSubmitted(
-          state.current_job.job_id,
-          state.current_job.job_ats,
-          message.snapshots,
-        );
-      }
-      await chrome.storage.local.set({ phase: 'post_submit_wait', pending_review: null });
-      const delayMin = 0.5 + Math.random() * 1;
-      await chrome.alarms.create('next_job_alarm', { delayInMinutes: delayMin });
-      // DEBUG: tab left open
-      // await closeTab(state.current_tab_id);
+      await completeSubmission(state.current_job, message.snapshots);
       sendResponse({ ok: true });
       break;
     }

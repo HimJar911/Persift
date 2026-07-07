@@ -4,6 +4,18 @@
 (async function () {
   'use strict';
 
+  // Relay every console.log to the service worker's console too — this
+  // tab's own console output is lost if Ashby navigates/unmounts on submit,
+  // right when the log we care about most (detectSuccess firing) would
+  // print. The service worker persists across that navigation.
+  const _origLog = console.log.bind(console);
+  console.log = (...args) => {
+    _origLog(...args);
+    try {
+      chrome.runtime.sendMessage({ type: 'debug_log', text: args.map(String).join(' ') });
+    } catch { /* extension context may be gone */ }
+  };
+
   // ── Heartbeat ──────────────────────────────────────────────────────────────
   const heartbeatTimer = setInterval(() => {
     chrome.runtime.sendMessage({ type: 'heartbeat' });
@@ -352,35 +364,69 @@
     // auto-submit path below. Matches background.js's REVIEW_TIMEOUT_MS.
     console.log('ashby: awaiting user submit — watching for click');
     const REVIEW_WAIT_MS = 30 * 60 * 1000;
-    const clicked = await new Promise(resolve => {
-      const timer = setTimeout(() => resolve(false), REVIEW_WAIT_MS);
-      submitBtn.addEventListener('click', () => {
-        clearTimeout(timer);
-        resolve(true);
-      }, { once: true });
-    });
+    const reviewDeadline = Date.now() + REVIEW_WAIT_MS;
 
-    if (clicked) {
+    // A click can be blocked client-side (e.g. a required field left empty)
+    // with no confirmation text, and the user then fixes the form and clicks
+    // again. A single { once: true } listener would already be consumed by
+    // the first (failed) click and miss the real one, so this loops: re-find
+    // the submit button (React may swap the node on re-render) and re-arm a
+    // fresh listener after every non-confirmed click, until success or the
+    // review window expires.
+    while (Date.now() < reviewDeadline) {
+      const btn =
+        form.querySelector('button[type="submit"]') ||
+        form.querySelector('input[type="submit"]') ||
+        Array.from(form.querySelectorAll('button')).find(b => /submit/i.test(b.textContent)) ||
+        submitBtn;
+      if (!btn) break;
+
+      const clicked = await new Promise(resolve => {
+        const timer = setTimeout(() => resolve(false), reviewDeadline - Date.now());
+        btn.addEventListener('click', () => {
+          clearTimeout(timer);
+          resolve(true);
+        }, { once: true });
+      });
+
+      if (!clicked) break; // review window expired without a click
+
       console.log('ashby: user clicked submit — waiting for confirmation');
+      // Ashby is normally a same-page SPA confirmation, but if some form
+      // variant navigates instead, this poll's JS context would die with the
+      // page before seeing it — background.js tracks the click independently
+      // via tabs.onUpdated as a backstop (see greenhouse.js for the bug this
+      // covers).
+      send({ type: 'submit_clicked', url_at_submit: location.href });
       const confirmed = await pollFor(detectSuccess, 10000);
       if (confirmed) {
         send({ type: 'success' });
+        break;
       }
-      // Ambiguous (clicked, no confirmation yet): don't send failed/released
-      // out from under a submit the user just made. 30-min review timeout
-      // upstream is the backstop.
+      // Not confirmed: don't send failed/released out from under a submit
+      // the user just made — loop back and re-arm for another attempt
+      // (e.g. they still need to fix a validation error).
+      console.log('ashby: click did not confirm — re-arming for another attempt');
     }
     return exit();
   }
 
+  const urlAtSubmit = location.href;
   await clickElement(submitBtn);
+  send({ type: 'submit_clicked', url_at_submit: urlAtSubmit });
 
   const confirmed = await pollFor(detectSuccess, 10000);
 
   if (confirmed) {
     send({ type: 'success' });
   } else {
-    send({ type: 'failed', reason: 'submit_timeout' });
+    // Ambiguous, not failed: if this click navigated instead of rendering an
+    // in-place confirmation, this poll's context died before it could see
+    // the result — background.js's independent tabs.onUpdated check is the
+    // backstop (see greenhouse.js for the bug this covers). Reporting
+    // 'failed' here would release a claim out from under a submit that may
+    // have actually succeeded.
+    console.log('ashby: no in-page confirmation — deferring to background nav check');
   }
 
   exit();

@@ -3,7 +3,7 @@
   "name": "Persift",
   "version": "0.1.0",
   "description": "Autonomous internship auto-apply extension",
-  "permissions": ["storage", "alarms", "tabs", "webNavigation", "activeTab"],
+  "permissions": ["storage", "alarms", "tabs", "webNavigation", "activeTab", "scripting"],
   "host_permissions": [
     "http://localhost:8000/*",
     "https://*.greenhouse.io/*",

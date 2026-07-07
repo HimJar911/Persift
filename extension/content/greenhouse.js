@@ -6,6 +6,19 @@ console.log('greenhouse.js injected');
 (async function () {
   'use strict';
 
+  // Relay every console.log to the service worker's console too — this
+  // tab's own console output is lost the instant Greenhouse navigates to its
+  // post-submit confirmation page, right when the log we care about most
+  // (detectSuccess firing) would print. The service worker persists across
+  // that navigation.
+  const _origLog = console.log.bind(console);
+  console.log = (...args) => {
+    _origLog(...args);
+    try {
+      chrome.runtime.sendMessage({ type: 'debug_log', text: args.map(String).join(' ') });
+    } catch { /* extension context may be gone */ }
+  };
+
   // ── Heartbeat ──────────────────────────────────────────────────────────────
   const heartbeatTimer = setInterval(() => {
     chrome.runtime.sendMessage({ type: 'heartbeat' });
@@ -134,9 +147,18 @@ console.log('greenhouse.js injected');
       form.querySelector('button[type="submit"]') ||
       form.querySelector('input[type="submit"]') ||
       document.querySelector('#submit_app'),
+    // urlAtSubmit is stamped immediately before the submit click (both the
+    // auto-submit and review-click paths below) so "success" means the URL
+    // actually changed FROM that baseline — not an absolute substring test.
+    // The old absolute check (!href.includes('/application')) was true from
+    // page load on job-boards.greenhouse.io/* and boards.greenhouse.io/*/jobs/*
+    // (neither ever contains "/application"), so detectSuccess() could return
+    // true on the very first poll after a click that did nothing (validation
+    // error, disabled button, network fail) — a fabricated applied_confirmed.
+    urlAtSubmit: null,
     detectSuccess: () => {
       const successText = /thank you|application received|successfully submitted/i;
-      const urlChanged = !location.href.includes('/application');
+      const urlChanged = atsConfig.urlAtSubmit !== null && location.href !== atsConfig.urlAtSubmit;
       return successText.test(document.body.textContent) || urlChanged;
     },
   };
@@ -168,32 +190,51 @@ console.log('greenhouse.js injected');
     // for confirmation exactly like the auto-submit path does below.
     console.log('greenhouse: awaiting user submit — watching for click');
     const REVIEW_WAIT_MS = 30 * 60 * 1000; // matches background.js REVIEW_TIMEOUT_MS
-    const submitBtn = atsConfig.findSubmitButton();
+    const reviewDeadline = Date.now() + REVIEW_WAIT_MS;
 
-    if (submitBtn) {
+    // A click can be blocked client-side (e.g. a required field left empty)
+    // with no navigation and no confirmation text — the user then fixes the
+    // form and clicks again. A single { once: true } listener would already
+    // be consumed by the first (failed) click and miss the real one, so this
+    // loops: re-find the submit button and re-arm a fresh listener after
+    // every non-confirmed click, until success or the review window expires.
+    while (Date.now() < reviewDeadline) {
+      const submitBtn = atsConfig.findSubmitButton();
+      if (!submitBtn) {
+        console.log('greenhouse: submit button not found — nothing to watch');
+        break;
+      }
+
       const clicked = await new Promise(resolve => {
-        const timer = setTimeout(() => resolve(false), REVIEW_WAIT_MS);
+        const timer = setTimeout(() => resolve(false), reviewDeadline - Date.now());
         submitBtn.addEventListener('click', () => {
+          atsConfig.urlAtSubmit = location.href;
           clearTimeout(timer);
           resolve(true);
         }, { once: true });
       });
 
-      if (clicked) {
-        console.log('greenhouse: user clicked submit — waiting for confirmation');
-        const confirmed = await waitFor(atsConfig.detectSuccess, 10000);
-        if (confirmed) {
-          console.log('greenhouse: submission confirmed');
-          send({ type: 'success' });
-        }
-        // Ambiguous (clicked but no confirmation): leave it to the user —
-        // don't send failed/released out from under a submit they just made.
-        // The 30-min review timeout is the backstop if something's truly stuck.
+      if (!clicked) break; // review window expired without a click
+
+      console.log('greenhouse: user clicked submit — waiting for confirmation');
+      // This in-page poll only ever observes a same-page (SPA-style)
+      // confirmation — if the click navigates the page instead, this whole
+      // script's JS context (including this poll) is destroyed before it can
+      // see the result. submit_clicked lets background.js catch that case
+      // independently via tabs.onUpdated, which survives the navigation.
+      send({ type: 'submit_clicked', url_at_submit: atsConfig.urlAtSubmit });
+      const confirmed = await waitFor(atsConfig.detectSuccess, 10000);
+      if (confirmed) {
+        console.log('greenhouse: submission confirmed');
+        send({ type: 'success' });
+        break;
       }
-      // Not clicked within the window: say nothing: background.js's own
-      // review timeout (same duration) will release the claim.
-    } else {
-      console.log('greenhouse: submit button not found — nothing to watch');
+      // Not confirmed: don't send failed/released out from under a submit
+      // the user just made — loop back and re-arm for another attempt
+      // (e.g. they still need to fix a validation error). If the click
+      // actually navigated, background.js's independent check will resolve
+      // this via pending_submission regardless of what happens here.
+      console.log('greenhouse: click did not confirm — re-arming for another attempt');
     }
     return exit();
   }
@@ -206,8 +247,14 @@ console.log('greenhouse.js injected');
     return exit();
   }
 
+  atsConfig.urlAtSubmit = location.href;
   await clickElement(submitBtn);
   console.log('greenhouse: submit clicked — waiting for confirmation');
+  // See the review-path comment above: this poll can only see a same-page
+  // confirmation. A navigating submit destroys this script's context before
+  // the poll's next tick, so background.js also tracks the click via
+  // tabs.onUpdated and can resolve success independently of this result.
+  send({ type: 'submit_clicked', url_at_submit: atsConfig.urlAtSubmit });
 
   const confirmed = await waitFor(atsConfig.detectSuccess, 10000);
   console.log('greenhouse: confirmation —', confirmed);
@@ -215,7 +262,14 @@ console.log('greenhouse.js injected');
   if (confirmed) {
     send({ type: 'success' });
   } else {
-    send({ type: 'failed', reason: 'submit_timeout' });
+    // Ambiguous, not necessarily failed: a navigating submit would also land
+    // here (this poll can't see past the navigation). Don't report failed —
+    // that would release a claim out from under a submission that may have
+    // actually succeeded. background.js's pending_submission check is the
+    // backstop; if the page truly didn't navigate and truly has no
+    // confirmation text, the job simply stays in 'submitting' until the
+    // server's lease-expiry sweep reclaims it.
+    console.log('greenhouse: no in-page confirmation — deferring to background nav check');
   }
 
   exit();
