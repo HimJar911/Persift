@@ -212,8 +212,16 @@
       });
     }
     if (isFilledReview) {
-      document.getElementById('confirm-btn').addEventListener('click', async () => {
-        await chrome.runtime.sendMessage({ type: 'manual_submit_confirm' });
+      document.getElementById('confirm-btn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.textContent = 'Confirming…';
+        const resp = await chrome.runtime.sendMessage({ type: 'manual_submit_confirm' });
+        if (resp && resp.ok === false) {
+          btn.disabled = false;
+          btn.textContent = 'Couldn’t confirm — try again';
+          return;
+        }
         await render();
       });
     }

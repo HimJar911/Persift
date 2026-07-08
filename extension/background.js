@@ -56,12 +56,27 @@ async function closeTab(tabId) {
 // Two independent paths can report a submission (the content script's own
 // in-page detection, and the background's post-navigation verifier below) —
 // idempotent so it doesn't matter which one wins or if both fire.
+//
+// markSubmitted already retries internally; if it still comes back false,
+// the server never got confirmation for a job that (from the user's
+// perspective) really was submitted. We must NOT advance to
+// post_submit_wait / clear the claim in that case — doing so would let the
+// lease expire, get reaped as abandoned, and get auto-retried into a real
+// duplicate application. Instead we leave state as-is (heartbeat keeps the
+// lease alive) and let the caller decide whether to surface/retry later.
 async function completeSubmission(job, snapshots) {
   const state = await getState();
   if (state.phase === 'post_submit_wait') return; // already handled
 
   if (job) {
-    await markSubmitted(job.job_id, job.job_ats, snapshots);
+    const confirmed = await markSubmitted(job.job_id, job.job_ats, snapshots);
+    if (!confirmed) {
+      console.error(
+        'Persift: markSubmitted did not confirm after retries — leaving job claimed, not advancing',
+        job.job_id, job.job_ats
+      );
+      return;
+    }
   }
   await chrome.storage.local.set({
     phase: 'post_submit_wait',
@@ -437,8 +452,20 @@ async function handleMessage(message, sender, sendResponse) {
     // can't fire 'success' itself. User self-attests they submitted on the
     // real page. No snapshots (that requires DOM access we no longer have).
     case 'manual_submit_confirm': {
+      let confirmed = true;
       if (state.pending_review) {
-        await markSubmitted(state.pending_review.job_id, state.pending_review.job_ats);
+        confirmed = await markSubmitted(state.pending_review.job_id, state.pending_review.job_ats);
+      }
+      if (!confirmed) {
+        // Don't clear the claim or close the tab — the server never
+        // acknowledged the submit, so releasing here risks the same
+        // reap-and-retry double-apply. Let the user retry the button.
+        console.error(
+          'Persift: manual_submit_confirm — markSubmitted did not confirm after retries',
+          state.pending_review && state.pending_review.job_id
+        );
+        sendResponse({ ok: false });
+        break;
       }
       await closeTab(state.current_tab_id);
       await resetToIdle({ pending_review: null });

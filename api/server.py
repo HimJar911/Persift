@@ -328,6 +328,20 @@ async def mark_submitted(job_id: str, body: _SubmittedReq):
                 body.user_id, job_id, body.job_ats,
             )
             if user_job_id is None:
+                # Retry after a first call that actually succeeded server-side
+                # but whose response never reached the client (network blip) —
+                # a retry against an already-submitted row is a safe no-op,
+                # not a failure. Any other status means something else already
+                # moved this row (reaped, etc.) and is a genuine error.
+                already_status = await conn.fetchval(
+                    """
+                    SELECT status FROM user_jobs
+                    WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
+                    """,
+                    body.user_id, job_id, body.job_ats,
+                )
+                if already_status == 'submitted':
+                    return {"ok": True, "already_submitted": True}
                 raise HTTPException(
                     status_code=404,
                     detail="user_job not found or not in submitting/awaiting_review state",
