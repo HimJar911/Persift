@@ -59,7 +59,6 @@ Find the 3-5 weakest bullets. A weak bullet is one that:
 Rewrite each identified bullet to:
 - Mirror the JD's terminology and priorities
 - Incorporate missing keywords naturally where relevant: {missing_str}
-- Add plausible metrics where context implies them (e.g. "large dataset" → "10M+ record dataset")
 - Keep approximately the same length as the original
 
 Return ONLY a JSON object in this exact format:

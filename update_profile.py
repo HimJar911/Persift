@@ -13,12 +13,6 @@ async def run():
         raw = row["application_settings"]
         existing = json.loads(raw) if isinstance(raw, str) else dict(raw)
 
-    # Add/update only the fields we're changing today
-    existing.update({
-        "visa_type": "F1",
-        "needs_sponsorship": True,
-    })
-
     # Add/update immigration support answer in custom_answers list
     custom_answers = existing.get("custom_answers", [])
     if isinstance(custom_answers, str):
@@ -31,6 +25,12 @@ async def run():
     await conn.execute(
         "UPDATE users SET application_settings = $1::jsonb WHERE tier = $2",
         json.dumps(existing), "pro",
+    )
+
+    # visa_type/needs_sponsorship are COLUMNS (migration 016), not JSONB keys
+    await conn.execute(
+        "UPDATE users SET visa_type = $1, needs_sponsorship = $2 WHERE tier = $3",
+        "F1", True, "pro",
     )
     print("Done — visa_type=F1, needs_sponsorship=True, immigration support answer added")
     await conn.close()

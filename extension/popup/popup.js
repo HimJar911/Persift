@@ -37,6 +37,15 @@
     return name ? name.charAt(0).toUpperCase() : '?';
   }
 
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // ── HTML shell ────────────────────────────────────────────────────────────
 
   function buildShell({ dot, dotClass, statusText, body, buttons, queueLabel, autoSubmit, amber }) {
@@ -74,10 +83,10 @@
     const bg    = iconColor(name);
     return { name, title, html: `
       <div class="company-row">
-        <div class="company-icon" style="background:${bg}">${iconLetter(name)}</div>
-        <span class="company-name">${name}</span>
+        <div class="company-icon" style="background:${bg}">${escapeHtml(iconLetter(name))}</div>
+        <span class="company-name">${escapeHtml(name)}</span>
       </div>
-      <div class="job-title">${title}</div>` };
+      <div class="job-title">${escapeHtml(title)}</div>` };
   }
 
   // ── State 0 — no user ID ─────────────────────────────────────────────────
@@ -183,7 +192,7 @@
 
   function renderPendingReview(pending, q, as) {
     const { html }   = companyBlock(pending);
-    const reasonText = _REASON_LABELS[pending?.reason] || (pending?.reason || 'Unknown reason');
+    const reasonText = _REASON_LABELS[pending?.reason] || escapeHtml(pending?.reason || 'Unknown reason');
     const applyUrl   = pending?.apply_url || '';
     // The extension normally detects the human's own Submit click on the page
     // itself and reports it automatically. These buttons are the fallback for
