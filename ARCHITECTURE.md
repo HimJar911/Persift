@@ -116,14 +116,16 @@ tailor_worker.run_tailor_cycle()
 |---|---|---|
 | poll_cycle | `POLL_INTERVAL_MINUTES` (10) | `run_pipeline` — poll all ATS, detect new |
 | jobright_cycle | 60 min | `run_jobright_cycle` |
-| matching_cycle | 6 min | `run_matching_cycle` — **note: matcher's `_fetch_recent_jobs` looks back exactly 6 min** (`first_seen_at > NOW() - 6 min`). If you change this cadence, change the lookback window in matcher.py:36 to match or jobs slip through unmatched. |
+| matching_cycle | 6 min | `run_matching_cycle` — job selection uses a durable watermark (`jobs.matcher_checked_at IS NULL`, migration 019), **not** a wall-clock lookback tied to this cadence. A job stays eligible across any number of skipped/delayed/crashed cycles until some cycle actually marks it checked (only after its matches are durably written — see matcher.py `_mark_jobs_checked`). Changing this cadence no longer requires any matcher.py change. |
 | tailor_cycle | 10 min | `run_tailor_cycle` |
 | discovery_cycle | 90 min | `run_discovery_cycle` (Worker A) |
 | cleanup_job | daily 03:00 | `run_cleanup_job` |
 
-**Coupling:** matching cadence (6 min) and the matcher's hardcoded `INTERVAL '6 minutes'` lookback (matcher.py:36) are the same number for a reason. They must stay equal.
+**Coupling REMOVED (migration 019, P0.5):** matcher.py no longer has a wall-clock lookback, so the 6-min cadence above is a pure scheduling knob — free to change without touching matcher.py.
 
 **Note:** `discovery_runner.py` is the slim Render deployment that runs ONLY jobright poll + Worker A as pure asyncio loops (no APScheduler). It duplicates a subset of `main.py`'s scheduling. Two entry points, overlapping responsibility — keep in sync.
+
+**Latent landmine, currently dormant (fable_audit Area 4):** `main.py`'s `run_jobright_cycle` and `discovery_runner.py`'s `run_jobright_cycle` are two different functions that both read/write the SAME `poller_state WHERE poller='jobright'` cursor row. As of Jul 2026 this is safe ONLY because they point at different databases (`main.py` → local Docker Postgres; `discovery_runner.py` → Supabase, per STATE.md). If they are ever pointed at the same `DATABASE_URL`, whichever cycle runs second will see the cursor already advanced by the other and silently skip jobs it never actually processed — `discovery_runner.py` only stages to `discovery_staging`, never to `jobs`, so main.py's Jobright→jobs→matcher path would go silently blind. Not fixed; not urgent while the DBs stay separate — flagging so this isn't mistaken for a live bug or re-discovered as a surprise later.
 
 ---
 

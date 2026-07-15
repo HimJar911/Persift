@@ -4,7 +4,9 @@ Hard filters run in Python against in-memory user list (6 checks, O(jobs × user
 Scoring runs in a thread pool so torch inference doesn't block the event loop.
 
 Single public function: run_matching_cycle()
-Intended cadence: every 6 minutes via APScheduler.
+Intended cadence: every 6 minutes via APScheduler. Job selection uses a
+durable per-job watermark (jobs.matcher_checked_at IS NULL), not a wall-clock
+lookback tied to that cadence — see migration 019 / ARCHITECTURE.md.
 """
 
 import asyncio
@@ -27,16 +29,41 @@ _JD_SEMAPHORE_SIZE = 5
 
 
 async def _fetch_recent_jobs(conn) -> list[dict]:
+    """Fetch jobs the matcher has never checked (durable watermark, not a
+    wall-clock window — see migration 019 / fable_audit Area 4). A job stays
+    eligible across any number of skipped/delayed/crashed cycles until some
+    cycle actually marks it checked.
+    """
     rows = await conn.fetch(
         """
         SELECT job_id, ats, company_slug, company_name, title,
                description, categories, work_model, h1b_sponsored,
                experience_level, location, apply_url, posted_at
         FROM jobs
-        WHERE first_seen_at > NOW() - INTERVAL '6 minutes'
+        WHERE matcher_checked_at IS NULL
         """
     )
     return [dict(r) for r in rows]
+
+
+async def _mark_jobs_checked(conn, jobs: list[dict]) -> None:
+    """Stamp matcher_checked_at on every job this cycle considered.
+
+    Called only after a job's full user-matching loop has completed, so a
+    mid-cycle crash leaves those rows NULL and the next cycle retries them —
+    no separate cursor to advance, nothing to get wrong on partial failure.
+    """
+    if not jobs:
+        return
+    await conn.execute(
+        """
+        UPDATE jobs AS j SET matcher_checked_at = NOW()
+        FROM (SELECT unnest($1::text[]) AS job_id, unnest($2::text[]) AS ats) AS c
+        WHERE j.job_id = c.job_id AND j.ats = c.ats
+        """,
+        [j["job_id"] for j in jobs],
+        [j["ats"] for j in jobs],
+    )
 
 
 async def _fetch_active_users(conn) -> list[dict]:
@@ -264,7 +291,7 @@ async def run_matching_cycle() -> None:
         users = await _fetch_active_users(conn)
 
     if not jobs:
-        logger.info("Matching cycle: no new jobs in last 6 minutes")
+        logger.info("Matching cycle: no unchecked jobs")
         return
 
     # Lazily fetch JDs for Jobright jobs that have no description in DB
@@ -379,6 +406,10 @@ async def run_matching_cycle() -> None:
             await _insert_queued_match_with_prediction(conn, m)
         if notify_matches:
             await _bulk_insert_matches(conn, notify_matches, "notified")
+        # Mark checked only after every resulting match is durably written —
+        # marking earlier risks a crash between scoring and insert silently
+        # losing a match forever (the exact failure mode this replaces).
+        await _mark_jobs_checked(conn, jobs)
 
     for nm in notify_matches:
         try:
@@ -401,13 +432,16 @@ if __name__ == "__main__":
         "--window",
         default="24 hours",
         metavar="INTERVAL",
-        help="SQL interval for job lookback (default: '24 hours'). Normal cadence is '6 minutes'.",
+        help=(
+            "Manual testing override: match jobs by first_seen_at lookback "
+            "instead of the live matcher_checked_at watermark (default: '24 hours')."
+        ),
     )
     ap.add_argument(
         "--all",
         action="store_true",
         dest="match_all",
-        help="Match against ALL jobs in the DB — no first_seen_at filter. Local testing only.",
+        help="Match against ALL jobs in the DB — no filter at all. Local testing only.",
     )
     _cli = ap.parse_args()
 
