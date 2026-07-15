@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-url = os.environ["RENDER_DATABASE_URL"]
+url = os.environ["DATABASE_URL"]
 conn = psycopg2.connect(url)
 cur = conn.cursor()
 
@@ -35,7 +35,7 @@ jobright_jobs_count = cur.fetchone()[0]
 cur.close()
 conn.close()
 
-print("=== Persift Render DB Stats ===\n")
+print("=== Persift Discovery DB Stats ===\n")
 
 print(f"1. Companies with discovered_via='fingerprint': {fingerprint_count}")
 
