@@ -151,9 +151,11 @@ db.increment_consecutive_failures()  → is_active=FALSE after 5 consecutive fai
 ```
 background.js (state machine)
         ↓ opens apply_url in background tab, phase → 'filling'
-content/{greenhouse,ashby}.js  → resume upload + ATS-specific config
+content/greenhouse.js  → resume upload + ATS-specific config
         ↓ delegates ALL field filling to:
 filler_utils.js  runFillerLoop(profile, context, atsConfig)
+
+content/ashby.js  → fully hand-rolled, NOT yet on filler_utils (see invariants below)
 ```
 
 **Invariants:**

@@ -119,7 +119,7 @@ docker compose up -d   # Postgres
 Get-Content .env | ForEach-Object { if ($_ -match '^([^=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2]) } }
 
 python update_profile.py            # merge profile fields (safe to re-run)
-python main.py --no-discover        # full pipeline; populates job descriptions
+python main.py --no-discover        # full pipeline (descriptions already populate at ingestion, P0.2 — this flag just skips company discovery)
 uvicorn api.server:app --reload     # API
 
 python -m pipeline.matcher --all    # run one matcher cycle against ALL jobs (local test)
