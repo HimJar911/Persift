@@ -21,16 +21,20 @@ api/server.py      →  POST /jobs/claim: 'ready' → 'submitting'  (atomic, sta
                       POST /jobs/{id}/heartbeat:    'submitting' → 'submitting' (lease renew)
                       reads 'ready' in: /jobs/queue/count; 'ready'|'submitting' in /jobs/{id}/resume
 extension          →  drives claim → submitted | awaiting_review | released (NEVER writes abandoned)
-main.py cleanup    →  'submitting' → 'abandoned'  (lease expired — SOLE writer of this edge)
-                      'abandoned' → 'ready'        (retry under cap)
+main.py run_lease_sweep (every 5 min) →
+                      'preparing' → 'matched'      (stale >10 min — tailor process died, crash recovery)
+                      'submitting' → 'abandoned'   (lease expired — SOLE writer of this edge)
+main.py run_cleanup_job (daily 3am) →
+                      'abandoned' → 'matched'      (retry under cap, failure_reason LIKE 'tailor_error:%' — no valid artifact, must re-tailor)
+                      'abandoned' → 'ready'         (retry under cap, all other mechanical reasons — artifact still good)
                       DELETEs terminal rows ('submitted'/'abandoned') older than 90d
 ```
 
 Three custodial spans: **System** (`matched`,`preparing`,`ready`) → **Client** (`submitting`,`awaiting_review`) → **World** (`submitted`). Axis A (phase) = `status`; axis B (employer outcome) = `application_outcomes`/`current_stage`; axis C (failure cause) = `failure_reason`. Never conflate them.
 
 **Invariants:**
-- Claim is atomic (`UPDATE...RETURNING FOR UPDATE SKIP LOCKED`). The old read-then-act `GET /jobs/queue` gap (double-apply) is gone. `/jobs/claim` is a POST, not a GET.
-- Only the CLIENT span uses the lease (`lease_expires_at`, 10 min, renewed by `/heartbeat`). Backend failures are synchronous/self-reported (no lease). **Cleanup is the SOLE writer of `submitting → abandoned`;** the extension never self-abandons.
+- Claim is atomic (`UPDATE...RETURNING FOR UPDATE SKIP LOCKED`), and — since P0.6 (Jul 16, 2026) — the claim UPDATE and the job/profile detail SELECT share ONE transaction in `claim_job`, so a process death between them rolls back the claim instead of leaving a `submitting` row nobody was told about. The old read-then-act `GET /jobs/queue` gap (double-apply) is gone. `/jobs/claim` is a POST, not a GET.
+- Only the CLIENT span uses the lease (`lease_expires_at`, 10 min, renewed by `/heartbeat`). Backend failures are synchronous/self-reported (no lease) — **except** a hard process kill mid-`preparing`, which `run_lease_sweep`'s staleness check now catches (P0.6; previously unreachable — see `DESIGN_NOTES.md` §Mechanism 2 for the original self-report-only design). **`run_lease_sweep` is the SOLE writer of `submitting → abandoned`;** the extension never self-abandons.
 - `extension_detected` may write ONLY `applied_confirmed` (source→type CHECK on `application_outcomes`). A mechanical failure can never write a fake employer outcome (bug #3, structurally impossible).
 - `GET /jobs/{id}/resume` 404s unless status is `ready` or `submitting`.
 - Adding/renaming a status requires a migration to `user_jobs_status_check` (currently: matched/preparing/ready/submitting/awaiting_review/submitted/abandoned/notified).
@@ -119,7 +123,8 @@ tailor_worker.run_tailor_cycle()
 | matching_cycle | 6 min | `run_matching_cycle` — job selection uses a durable watermark (`jobs.matcher_checked_at IS NULL`, migration 019), **not** a wall-clock lookback tied to this cadence. A job stays eligible across any number of skipped/delayed/crashed cycles until some cycle actually marks it checked (only after its matches are durably written — see matcher.py `_mark_jobs_checked`). Changing this cadence no longer requires any matcher.py change. |
 | tailor_cycle | 10 min | `run_tailor_cycle` |
 | discovery_cycle | 90 min | `run_discovery_cycle` (Worker A) |
-| cleanup_job | daily 03:00 | `run_cleanup_job` |
+| lease_sweep | 5 min | `run_lease_sweep` (P0.6, Jul 16) — time-sensitive: `preparing`/`submitting` crash recovery |
+| cleanup_job | daily 03:00 | `run_cleanup_job` — not time-sensitive: abandoned-row retry, 90-day terminal deletion |
 
 **Coupling REMOVED (migration 019, P0.5):** matcher.py no longer has a wall-clock lookback, so the 6-min cadence above is a pure scheduling knob — free to change without touching matcher.py.
 

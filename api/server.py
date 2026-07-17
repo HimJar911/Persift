@@ -220,45 +220,50 @@ async def claim_job(body: _ClaimReq):
     """
     pool = get_pool()
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            UPDATE user_jobs uj
-            SET status = 'submitting',
-                lease_expires_at = NOW() + ($2 || ' minutes')::interval,
-                updated_at = NOW()
-            WHERE uj.id = (
-                SELECT id FROM user_jobs
-                WHERE user_id = $1::uuid AND status = 'ready'
-                ORDER BY created_at ASC
-                FOR UPDATE SKIP LOCKED
-                LIMIT 1
+        async with conn.transaction():
+            # Claim + detail fetch share ONE transaction: if the process dies
+            # between them, the whole claim rolls back and the row stays
+            # `ready` for the next caller — no dangling `submitting` row that
+            # nobody was ever told about (previously a two-transaction gap,
+            # only caught late by the lease-expiry sweep).
+            row = await conn.fetchrow(
+                """
+                UPDATE user_jobs uj
+                SET status = 'submitting',
+                    lease_expires_at = NOW() + ($2 || ' minutes')::interval,
+                    updated_at = NOW()
+                WHERE uj.id = (
+                    SELECT id FROM user_jobs
+                    WHERE user_id = $1::uuid AND status = 'ready'
+                    ORDER BY created_at ASC
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                )
+                RETURNING uj.id, uj.job_id, uj.job_ats
+                """,
+                body.user_id, str(_LEASE_MINUTES),
             )
-            RETURNING uj.id, uj.job_id, uj.job_ats
-            """,
-            body.user_id, str(_LEASE_MINUTES),
-        )
 
-    if row is None:
-        return {"job": None}
+            if row is None:
+                return {"job": None}
 
-    # Second read joins job + profile carry-along for the extension to fill with.
-    async with pool.acquire() as conn:
-        detail = await conn.fetchrow(
-            """
-            SELECT
-                j.job_id, j.ats AS job_ats, j.apply_url, j.company_name, j.title,
-                u.email,
-                COALESCE(u.application_settings->>'first_name', '') AS first_name,
-                COALESCE(u.application_settings->>'last_name',  '') AS last_name,
-                COALESCE(u.application_settings->>'phone',       '') AS phone,
-                COALESCE(u.application_settings->>'linkedin_url','') AS linkedin_url,
-                u.location_city
-            FROM jobs  j
-            JOIN users u ON u.id = $1::uuid
-            WHERE j.job_id = $2 AND j.ats = $3
-            """,
-            body.user_id, row["job_id"], row["job_ats"],
-        )
+            # Joins job + profile carry-along for the extension to fill with.
+            detail = await conn.fetchrow(
+                """
+                SELECT
+                    j.job_id, j.ats AS job_ats, j.apply_url, j.company_name, j.title,
+                    u.email,
+                    COALESCE(u.application_settings->>'first_name', '') AS first_name,
+                    COALESCE(u.application_settings->>'last_name',  '') AS last_name,
+                    COALESCE(u.application_settings->>'phone',       '') AS phone,
+                    COALESCE(u.application_settings->>'linkedin_url','') AS linkedin_url,
+                    u.location_city
+                FROM jobs  j
+                JOIN users u ON u.id = $1::uuid
+                WHERE j.job_id = $2 AND j.ats = $3
+                """,
+                body.user_id, row["job_id"], row["job_ats"],
+            )
     return {"job": dict(detail) if detail else None}
 
 

@@ -283,21 +283,37 @@ async def run_jobright_cycle() -> None:
 
 
 _RETRY_CAP = 2  # shared with api/server.py /released (lifecycle §Mechanism 3)
+_PREPARING_STALE_MINUTES = 10  # in-process tailoring shouldn't take longer than this
 
 
-async def run_cleanup_job() -> None:
-    """Nightly cleanup — target-architecture lifecycle (DESIGN_NOTES.md).
+async def run_lease_sweep() -> None:
+    """Frequent crash-recovery sweep — runs every few minutes (not daily), since a
+    dead lease/stuck-preparing row is invisible to the user until this runs.
 
-    Cleanup is the SOLE writer of `submitting → abandoned` (client-span deaths
-    are reaped here, not self-reported — see lifecycle §Mechanism 2). Order:
-    reap dead leases first, then retry the mechanical ones, then delete old
-    terminal rows.
+    Two independent crash-recovery edges, both time-based staleness checks:
+    1. `preparing` → `matched`: the tailor worker crashed mid-tailor (process
+       killed, not just an in-process exception — those self-report via the
+       `except` in tailor_worker._process_row). No lease exists for this span
+       (backend-only, synchronous per DESIGN_NOTES.md §Mechanism 2), so staleness
+       is the only signal. Safe to re-run: `matched` is "never started."
+    2. `submitting` → `abandoned`: lease expired (extension died / tab closed /
+       network gone). Cleanup is the SOLE writer of this edge — the extension
+       never self-abandons (lifecycle spine, ARCHITECTURE.md).
     """
     pool = get_pool()
     async with pool.acquire() as conn:
-        # 1. Lease-expiry reap: a `submitting` row whose lease is past is dead
-        #    (extension died / tab closed / network gone). Collapses the old
-        #    48h/1h expired+failed_stale sweeps into ONE. Reason recorded on the row.
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs
+            SET status = 'matched', updated_at = NOW()
+            WHERE status = 'preparing'
+              AND updated_at < NOW() - ($1 || ' minutes')::interval
+            """,
+            str(_PREPARING_STALE_MINUTES),
+        )
+        logger.info("Lease sweep: recovered %d stale preparing jobs -> matched",
+                    int(tag.split()[-1]))
+
         tag = await conn.execute(
             """
             UPDATE user_jobs
@@ -311,11 +327,37 @@ async def run_cleanup_job() -> None:
               AND lease_expires_at < NOW()
             """
         )
-        logger.info("Cleanup: reaped %d lease-expired submitting jobs -> abandoned",
+        logger.info("Lease sweep: reaped %d lease-expired submitting jobs -> abandoned",
                     int(tag.split()[-1]))
 
-        # 2. Retry: mechanical abandons under the cap go back to `ready` (artifact
-        #    still good, no re-tailor). At/over cap they stay abandoned = terminal.
+
+async def run_cleanup_job() -> None:
+    """Nightly cleanup — target-architecture lifecycle (DESIGN_NOTES.md).
+
+    Not time-sensitive (unlike run_lease_sweep), so this stays on the daily
+    cadence: retry mechanical abandons, then delete old terminal rows.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        # 1a. Tailor-originated abandons have no valid artifact on disk — retry
+        #     to `matched` so they re-enter tailoring, not `ready` (which would
+        #     silently serve base_resume.pdf on the next claim).
+        tag = await conn.execute(
+            """
+            UPDATE user_jobs
+            SET status = 'matched', updated_at = NOW()
+            WHERE status = 'abandoned'
+              AND retry_count <= $1
+              AND failure_reason LIKE 'tailor_error:%'
+            """,
+            _RETRY_CAP,
+        )
+        logger.info("Cleanup: retried %d tailor-failed jobs -> matched (under cap)",
+                    int(tag.split()[-1]))
+
+        # 1b. Everything else mechanical (lease-expiry, client /released reasons)
+        #     under the cap goes back to `ready` (artifact still good, no re-tailor).
+        #     At/over cap, or `posting_gone`, stays abandoned = terminal.
         tag = await conn.execute(
             """
             UPDATE user_jobs
@@ -323,13 +365,14 @@ async def run_cleanup_job() -> None:
             WHERE status = 'abandoned'
               AND retry_count <= $1
               AND failure_reason IS DISTINCT FROM 'posting_gone'
+              AND failure_reason NOT LIKE 'tailor_error:%'
             """,
             _RETRY_CAP,
         )
         logger.info("Cleanup: retried %d abandoned jobs -> ready (under cap)",
                     int(tag.split()[-1]))
 
-        # 3. Delete old terminal rows (new lifecycle names).
+        # 2. Delete old terminal rows (new lifecycle names).
         tag = await conn.execute(
             """
             DELETE FROM user_jobs
@@ -464,6 +507,13 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
             max_instances=1,
         )
         scheduler.add_job(
+            run_lease_sweep,
+            "interval",
+            minutes=5,
+            id="lease_sweep",
+            max_instances=1,
+        )
+        scheduler.add_job(
             run_cleanup_job,
             CronTrigger(hour=3, minute=0),
             id="cleanup_job",
@@ -473,7 +523,7 @@ async def main(seed: bool = False, discover: bool = False, no_discover: bool = F
         logger.info(
             "Scheduler started — Tier 1 every %d min, Jobright every 60 min, "
             "matching every 6 min, tailor every 10 min, "
-            "discovery every 90 min, cleanup daily at 03:00",
+            "discovery every 90 min, lease sweep every 5 min, cleanup daily at 03:00",
             POLL_INTERVAL_MINUTES,
         )
 
