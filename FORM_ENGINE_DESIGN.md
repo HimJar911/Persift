@@ -117,6 +117,36 @@ Skips (`UNKNOWN`), fills, and verify-failures all emit. `field_corrections` (two
 - **Replay:** CLI loads stored serialized Fields, runs the interpreter, reports per-category coverage %. Every parser change answers one question: *did UNKNOWN go down without hurting the others?*
 - **Later — confidence calibration:** verification + corrections provide ground truth ("said 0.95 — was it right?"). Once calibrated, confidence gates routing: high → auto-fill, mid → LLM, low → leave blank. A query over telemetry, not a new subsystem.
 
+#### 3.6a Corpus harvester — detailed design (locked Jul 17, 2026)
+
+**Origin of this design:** P1.1 (rich extraction) shipped Jul 17 with `section` verified live against exactly one posting (ACLU/Greenhouse) — a debug session started hand-tuning `getFieldSection()` against individual forms to fix bad output, which is precisely the form-by-form-optimization anti-pattern standing rule §1 forbids. Caught mid-session; the fix was to stop hand-tuning and defer real validation to the corpus/replay system instead of continuing to eyeball single forms. This section is the design for that system, converged Claude ↔ ChatGPT ↔ founder (same discussion-first process as the original engine design).
+
+**Founding principle:** the harvester must NOT reuse `enrichField()`/`collectFields()` as-is. That code encodes assumptions we already made by staring at 2-3 forms (label-first discovery, a specific `section` heuristic, etc.) — running it to build the corpus would just collect more instances of the same blind spots, not reveal new ones. The harvester needs a wider, independent capture pass; P1.4's interpreter gets *designed from* what the corpus reveals, not the other way around. "Here's 1000 real forms, deeply analyzed, THEN build the autofill around that" — not "extend the autofill we already guessed at."
+
+**Field discovery — exhaustive, not label-first.** Enumerate every `input`, `select`, `textarea`, and `[role="combobox"|"radio"|"checkbox"]` on the page directly, independent of whether a label can be found. Today's `collectFields()` is label-first and structurally cannot discover "a category of fields with no detectable label" — it never sees them in the first place. For each element: attempt label detection via the existing 5-strategy `getLabelForEl` logic (reuse fine here — it's a best-effort *attempt*, not a filter), and record `labelFound: false` explicitly, plus which of the 5 strategies matched when one did (label-strategy provenance).
+
+**Identity vs. semantics split (converged with ChatGPT, Jul 17):**
+- `field_id_hash` — stable dedup/replay identity, hashed from only the structurally stable DOM attributes: `tag + htmlType + name + id + autocomplete + role`. Deliberately excludes anything interpretive.
+- `field_semantics` — everything contextual/interpretive, stored but never used for identity: `label` (+ which strategy found it), `section`, `ancestorClasses` (full chain, array), `nearbyText`, `options`, `description`, plus everything `enrichField()` already captures (placeholder, ariaLabel, ariaLabelledByText, inputMode, pattern, maxLength, containerHTML).
+  - Why the split: `section`/`ancestorClasses`/label text are exactly the shaky, single-form-verified heuristics from P1.1. If they were hash inputs, "the same field becomes a different field" the moment page structure shifts slightly — the hash must be identity, not evidence.
+
+**Per-field state (new, not in P1.1's `enrichField`):** `visible` (`offsetParent !== null`), `disabled`, `readOnly`, `hidden` (self or any ancestor `display:none`/`[hidden]`/`aria-hidden`/collapsed-looking). Matters for replay — a field's reachability (e.g. "only appears after selecting X elsewhere") is itself a signal.
+
+**Radio/checkbox — two-layer record.** One group-level record (label, section, etc. — group semantics) plus per-option sub-records (each option's own label/value text). Not collapsed into a single `options: string[]` the way `enrichField()` does today — a lot of Greenhouse questions are group-level semantic objects where each option's own text matters for later interpretation.
+
+**Page-level record:**
+- `job_id`, `ats`, `company_name`, `url`, `crawl_started_at`, `crawl_finished_at`
+- `apply_click_needed: boolean` — some Greenhouse postings gate the real form behind an "Apply" click (§0); recording this separates "0 fields because no form exists" from "0 fields because we didn't know to click Apply"
+- `extraction_status`: `ok | partial | no_form_found | apply_button_clicked_no_form | shadow_dom_unhandled | iframe_unhandled | error` — without this, a failed/partial crawl looks identical to "a form with genuinely 0 interesting fields," silently corrupting P1.3's coverage %.
+- `page_html_path` — pointer to a sidecar file (see storage below), not inlined
+- Array of field records (each with `field_id_hash` + `field_semantics` + state)
+
+**Snapshot timing:** post-render, post-Apply-click (if needed), pre-fill. Never touches values (same A/B-only PII discipline as `field_corrections`, migration 015 — standing rule §1.4).
+
+**Storage:** JSONL manifest (one line per page — metadata + field array), NOT inlining full page HTML (would make the manifest unwieldy to load/grep/replay at 500+ forms). Full-page HTML/DOM snapshot saved as a separate gzipped sidecar file per page (named by page hash or `job_id`), referenced from the manifest by path. The full-page snapshot is a safety net — if P1.3 later reveals a signal we didn't think to extract per-field, it can be mined from the saved page without re-crawling (the live posting may be gone/changed by then).
+
+**Crawl mechanics:** Playwright headless Chromium (forms are React-rendered, sometimes behind an Apply click — a real browser engine is required, not an HTTP fetch). Source: `jobs` table `WHERE ats='greenhouse'` (Greenhouse first, matches P1.6–P1.8 adapter build order). Rate-limited + jittered delay between requests, daily cap. Read-only throughout — no profile, no API, no claim, no submission. Target 500+ forms before P1.4 gets written.
+
 ### 3.7 ATS adapters
 
 Adapters (`content/greenhouse.js`, `ashby.js`, upcoming `lever.js`, `smartrecruiters.js`) own **lifecycle only**: handshake, form detection, resume-upload-first (uploads reveal fields), submit flow, success detection, review handoff. Zero interpretation logic. Ashby migrates onto the engine; Lever/SR are built on it from the start (LAUNCH_PLAN P1.6–P1.8).
