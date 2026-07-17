@@ -4,7 +4,7 @@
 > - **This file (CLAUDE.md)** — stable: identity, codebase map, how to operate, how to run. Rarely changes.
 > - **`ARCHITECTURE.md`** — the coupling map: what depends on what. **Read before changing any status string, API shape, DB column, config constant, or the extension↔API contract.**
 > - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Read when you need current state; don't trust its dates blindly.
-> - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts.
+> - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts. **§3.6a is the full corpus-harvester spec (P1.2, locked Jul 17, not yet built) — read it before writing any harvester code; it deliberately does NOT reuse filler_utils.js's extraction logic (see §3.6a's founding principle).**
 > - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date; soft launch ~July 22.
 > - **`CatchUpDocs/`** (parent dir) — session summaries.
 
