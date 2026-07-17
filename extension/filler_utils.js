@@ -368,6 +368,164 @@ function getInputType(el) {
   return 'text';
 }
 
+// ── P1.1: Rich extraction (FORM_ENGINE_DESIGN.md §3.1) ─────────────────────────
+// Extraction is the ONLY layer allowed to read the DOM for meaning (standing
+// rule §1.2). These helpers assemble the fuller Field object; nothing
+// downstream should re-derive signals from field.el — if a signal is
+// missing, the fix belongs here, not in fill/verify.
+
+// Visible option texts for selects/radio/checkbox groups. Used by the
+// interpreter (P1.4) to disambiguate fields whose label alone is ambiguous
+// (e.g. a Yes/No combobox reused for several different questions).
+function getFieldOptions(el, groupEls) {
+  if (groupEls) {
+    return groupEls
+      .map(input => getLabelForEl(input) || input.value || '')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  if (el.tagName === 'SELECT') {
+    return Array.from(el.options)
+      .map(o => o.textContent.trim())
+      .filter(Boolean);
+  }
+  if (el.getAttribute('role') === 'combobox') {
+    // React comboboxes render their option list into a detached/portal node
+    // referenced by aria-controls; only populated once the control is open,
+    // so this is best-effort at collection time (may be empty pre-interaction).
+    const listId = el.getAttribute('aria-controls');
+    const list = listId ? document.getElementById(listId) : null;
+    if (list) {
+      return Array.from(list.querySelectorAll('[role="option"]'))
+        .map(o => o.textContent.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
+// Nearest enclosing section title — gives the interpreter context (e.g.
+// distinguishing an EEO-block combobox from a general one with the same
+// label). Real heading tags (h1-h4/legend) are checked first. Confirmed live
+// (Greenhouse/ACLU EEO block) that no semantic heading exists there at all —
+// the title ("Voluntary Self-Identification") is the first text-only child
+// of a wrapper div (class containing "container"/"section"/"block"), sitting
+// BEFORE the field's own question-wrapper sibling, not immediately adjacent
+// to the field. An earlier version walked ALL preceding siblings at every
+// ancestor level and picked up the field's own label/placeholder/already-
+// filled value as "section" (e.g. "First Name*", "+1", a school name typed
+// into the field one pass later) — live-caught via a debug log showing those
+// exact false positives. This version only considers a wrapper's FIRST
+// element child as a candidate title, and requires it look like a real
+// multi-word title (no form controls anywhere inside it, 2+ words, under 80
+// chars) — deliberately conservative: returning '' is safer than a wrong
+// section for a pure interpretation signal.
+function getFieldSection(el) {
+  let node = el;
+  for (let i = 0; i < 10 && node; i++) {
+    const heading = node.matches?.('h1, h2, h3, h4, legend')
+      ? node
+      : node.querySelector?.(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > legend');
+    if (heading) {
+      const t = heading.innerText.trim();
+      if (t) return t;
+    }
+
+    const wrapper = node.closest('[class*="container" i], [class*="section" i], [class*="block" i], fieldset');
+    if (wrapper) {
+      const firstChild = wrapper.firstElementChild;
+      if (firstChild && !firstChild.contains(node) &&
+          !firstChild.querySelector('input, select, textarea, button, [role="combobox"]')) {
+        const text = firstChild.innerText?.trim();
+        if (text) {
+          const firstLine = text.split('\n')[0].trim();
+          if (firstLine && firstLine.length < 80 && firstLine.split(/\s+/).length >= 2) {
+            return firstLine;
+          }
+        }
+      }
+    }
+    node = node.parentElement;
+  }
+  return '';
+}
+
+// Surrounding paragraph/help text tied to the field — consent language and
+// compensation ranges live here, not in the label. Restricted to visible
+// elements: React widgets (e.g. the phone country-code combobox's dial-code
+// listbox) commonly keep their full option list in the DOM but hidden until
+// opened — confirmed live (a closed phone field's hidden listbox leaked
+// "244 results found...Afghanistan+93..." into this signal before offsetParent
+// filtering was added).
+function getNearbyText(el, groupEls) {
+  const anchor = groupEls ? groupEls[0] : el;
+  const container = anchor.closest('fieldset, div, li') || anchor.parentElement;
+  if (!container) return '';
+  const ownLabel = anchor.closest('label');
+  return Array.from(container.querySelectorAll('p, span, small, div'))
+    .filter(n => !ownLabel || !ownLabel.contains(n))
+    .filter(n => n.offsetParent !== null)
+    .map(n => n.innerText?.trim())
+    .filter(t => t && t.length > 10)
+    .slice(0, 3)
+    .join(' ')
+    .slice(0, 500);
+}
+
+// Sanitized container HTML, captured PRE-fill with value attributes stripped
+// (same A/B-only PII discipline as field_corrections, migration 015 —
+// standing rule §1.4: telemetry never captures filled values).
+function getContainerHTML(el, groupEls) {
+  const anchor = groupEls ? groupEls[0] : el;
+  const container = anchor.closest('fieldset, div, li') || anchor.parentElement;
+  if (!container) return '';
+  const clone = container.cloneNode(true);
+  clone.querySelectorAll('input, textarea, select').forEach(n => {
+    n.removeAttribute('value');
+    n.textContent = '';
+  });
+  return clone.outerHTML.slice(0, 2000);
+}
+
+// Assembles the rich Field object for one element (FORM_ENGINE_DESIGN.md
+// §3.1). `element`/`groupEls` are carried live for fill/verify only and are
+// stripped before this is ever sent anywhere (telemetry, corpus, replay).
+function enrichField(el, groupEls) {
+  return {
+    placeholder: el.getAttribute('placeholder') || '',
+    name: el.name || '',
+    id: el.id || '',
+    autocomplete: el.getAttribute('autocomplete') || '',
+    ariaLabel: el.getAttribute('aria-label') || '',
+    ariaLabelledByText: (() => {
+      const ids = el.getAttribute('aria-labelledby');
+      if (!ids) return '';
+      return ids.split(' ')
+        .map(id => document.getElementById(id)?.innerText?.trim())
+        .filter(Boolean)
+        .join(' ');
+    })(),
+    role: el.getAttribute('role') || '',
+    htmlType: el.type || el.tagName.toLowerCase(),
+    inputMode: el.getAttribute('inputmode') || '',
+    pattern: el.getAttribute('pattern') || '',
+    maxLength: el.maxLength > 0 ? el.maxLength : null,
+    required: el.required || el.getAttribute('aria-required') === 'true' || false,
+    options: getFieldOptions(el, groupEls),
+    section: getFieldSection(groupEls ? groupEls[0] : el),
+    description: (() => {
+      const describedBy = el.getAttribute('aria-describedby');
+      if (!describedBy) return '';
+      return describedBy.split(' ')
+        .map(id => document.getElementById(id)?.innerText?.trim())
+        .filter(Boolean)
+        .join(' ');
+    })(),
+    nearbyText: getNearbyText(el, groupEls),
+    containerHTML: getContainerHTML(el, groupEls),
+  };
+}
+
 // Classifies a field — returns "category__inputType" or null
 function classifyField(label, inputType) {
   if (!label || !inputType) return null;
@@ -408,7 +566,13 @@ function collectFields() {
     const key = groupEls ? groupEls[0] : el;
     if (seen.has(key)) return;
     seen.add(key);
-    fields.push({ label: label.trim(), inputType, el, groupEls: groupEls || null });
+    fields.push({
+      label: label.trim(),
+      inputType,
+      el,
+      groupEls: groupEls || null,
+      ...enrichField(el, groupEls),
+    });
   }
 
   // Strategy 1: labels with `for` attr → find their input
