@@ -63,6 +63,7 @@ This codebase has more coupling than its size suggests — a status string, an A
 | `extension/content/greenhouse.js` | Greenhouse: resume upload + ATS config; delegates filling to filler_utils. |
 | `extension/content/ashby.js` | Ashby filler. Not yet on filler_utils; not confirmed e2e. |
 | `extension/popup/` | Popup HTML/JS/CSS. |
+| `extension/TEST_COMMANDS.md` | **How to run a real end-to-end extension test.** This is always a manual, hands-on-Chrome process the user drives (reload extension, service-worker console commands, watch it fill/submit a real form) — not something to automate or script. Read this before proposing or attempting any extension test; pick an untouched job first (check `applied_at`/`application_outcomes`/`application_attempts` are empty — never risk a double-apply to a real employer). |
 | **landing-page/** | Next/Vite React marketing site. Largely independent of backend. |
 | **resume/ats_prompts/** | Per-ATS prompt text files (greenhouse, ashby, lever, smartrecruiters, workday, custom). |
 | **scripts/** | db_stats.py, seed_companies.py. |
