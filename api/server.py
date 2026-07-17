@@ -325,7 +325,7 @@ async def mark_submitted(job_id: str, body: _SubmittedReq):
         async with conn.transaction():
             user_job_id = await conn.fetchval(
                 """
-                UPDATE user_jobs SET status = 'submitted', updated_at = NOW()
+                UPDATE user_jobs SET status = 'submitted', applied_at = NOW(), updated_at = NOW()
                 WHERE user_id = $1::uuid AND job_id = $2 AND job_ats = $3
                   AND status IN ('submitting', 'awaiting_review')
                 RETURNING id
