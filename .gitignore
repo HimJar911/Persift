@@ -11,6 +11,9 @@ simplify_listings.json
 outputs/*
 !outputs/.gitkeep
 
+# Corpus harvester output (P1.2) — generated crawl data, not source
+corpus/
+
 # Resume files (personal — not for repo)
 resume/base_resume.pdf
 resume/base_resume.txt

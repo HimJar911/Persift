@@ -10,3 +10,4 @@ fastapi
 uvicorn
 pdfplumber
 sentence-transformers
+playwright
