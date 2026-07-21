@@ -1,0 +1,392 @@
+{
+  "auto_match": [
+    {
+      "company": "alxafrica",
+      "job_id": "7749354",
+      "ci": 6,
+      "fi": 13,
+      "label_text": "How did you hear about the role?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "astranis",
+      "job_id": "4614379006",
+      "ci": 10,
+      "fi": 31,
+      "label_text": "How did you hear about Astranis?",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "astspacemobile",
+      "job_id": "4687905005",
+      "ci": 11,
+      "fi": 25,
+      "label_text": "Are you legally authorized to work in the United States for any employer? *",
+      "suggested_category": "work_authorized",
+      "match_score": 0.83
+    },
+    {
+      "company": "astspacemobile",
+      "job_id": "4687905005",
+      "ci": 11,
+      "fi": 27,
+      "label_text": "Will you now or in the future require employment visa sponsorship?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.86
+    },
+    {
+      "company": "astspacemobile",
+      "job_id": "4687905005",
+      "ci": 11,
+      "fi": 36,
+      "label_text": "How did you hear about the position?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "benesch",
+      "job_id": "4469881007",
+      "ci": 12,
+      "fi": 3,
+      "label_text": "Preferred First Name",
+      "suggested_category": "preferred_first_name",
+      "match_score": 1.0
+    },
+    {
+      "company": "benesch",
+      "job_id": "4469881007",
+      "ci": 12,
+      "fi": 11,
+      "label_text": "Are you lawfully authorized to work in the United States?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.67
+    },
+    {
+      "company": "benesch",
+      "job_id": "4469881007",
+      "ci": 12,
+      "fi": 12,
+      "label_text": "How did you hear about Benesch?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "celonis",
+      "job_id": "7712052003",
+      "ci": 17,
+      "fi": 23,
+      "label_text": "Will you now or in the future require immigration sponsorship for employment visa status?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.88
+    },
+    {
+      "company": "cypresscreekrenewables",
+      "job_id": "7659795",
+      "ci": 25,
+      "fi": 27,
+      "label_text": "Will you now or in the future require visa sponsorship for employment at Cypress Creek Energy?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.6
+    },
+    {
+      "company": "dvtrading",
+      "job_id": "4691295005",
+      "ci": 30,
+      "fi": 41,
+      "label_text": "How did you hear about DV Trading?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "globalrelay",
+      "job_id": "5645073004",
+      "ci": 39,
+      "fi": 20,
+      "label_text": "How did you hear about Global Relay?",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.6
+    },
+    {
+      "company": "impact",
+      "job_id": "7819642002",
+      "ci": 48,
+      "fi": 8,
+      "label_text": "What are your annual salary expectations?",
+      "suggested_category": "salary_expectation",
+      "match_score": 0.75
+    },
+    {
+      "company": "interstates",
+      "job_id": "4009874009",
+      "ci": 52,
+      "fi": 16,
+      "label_text": "How did you hear about this role?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "interstates",
+      "job_id": "4009874009",
+      "ci": 52,
+      "fi": 23,
+      "label_text": "Are you legally authorized to work in the US? *",
+      "suggested_category": "work_authorized",
+      "match_score": 0.6
+    },
+    {
+      "company": "lockwood",
+      "job_id": "5059699007",
+      "ci": 58,
+      "fi": 11,
+      "label_text": "Are you authorized to work in the United States?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.8
+    },
+    {
+      "company": "lucidsoftware",
+      "job_id": "5633294004",
+      "ci": 59,
+      "fi": 25,
+      "label_text": "Will you now or in the future require visa sponsorship to work in the United States?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.62
+    },
+    {
+      "company": "moloco",
+      "job_id": "7635045003",
+      "ci": 62,
+      "fi": 12,
+      "label_text": "Preferred First Name (English)",
+      "suggested_category": "preferred_first_name",
+      "match_score": 0.75
+    },
+    {
+      "company": "neuralink",
+      "job_id": "5469305003",
+      "ci": 64,
+      "fi": 27,
+      "label_text": "Are you currently authorized to work in the United States?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.67
+    },
+    {
+      "company": "neuralink",
+      "job_id": "5469305003",
+      "ci": 64,
+      "fi": 44,
+      "label_text": "How did you hear about us? *",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 1.0
+    },
+    {
+      "company": "panthalassa",
+      "job_id": "5688235004",
+      "ci": 73,
+      "fi": 18,
+      "label_text": "Do you now, or will you in the future, require visa sponsorship to work in the United States?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.62
+    },
+    {
+      "company": "panthalassa",
+      "job_id": "5688235004",
+      "ci": 73,
+      "fi": 23,
+      "label_text": "How did you hear about Panthalassa? *",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "pathai",
+      "job_id": "8202342002",
+      "ci": 74,
+      "fi": 25,
+      "label_text": "Are you legally authorized to work in the United States for our company?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.83
+    },
+    {
+      "company": "powerdigitalmarketing",
+      "job_id": "4345830007",
+      "ci": 78,
+      "fi": 24,
+      "label_text": "Please drop a link to your LinkedIn profile.",
+      "suggested_category": "linkedin_url",
+      "match_score": 0.75
+    },
+    {
+      "company": "psiquantum",
+      "job_id": "6536805003",
+      "ci": 80,
+      "fi": 18,
+      "label_text": "Will you now or in the future require sponsorship for employment visa status (e.g., H-1B, etc.)? *",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.88
+    },
+    {
+      "company": "redventures",
+      "job_id": "7733251",
+      "ci": 82,
+      "fi": 37,
+      "label_text": "Are you currently legally authorized to work in the United States? Please select any that apply: *",
+      "suggested_category": "work_authorized",
+      "match_score": 0.71
+    },
+    {
+      "company": "rocketlab",
+      "job_id": "7725243003",
+      "ci": 84,
+      "fi": 30,
+      "label_text": "How did you hear about this opportunity?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "rocketlab",
+      "job_id": "7725243003",
+      "ci": 84,
+      "fi": 32,
+      "label_text": "Other: How did you hear about this opportunity?",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.6
+    },
+    {
+      "company": "samsungresearchamericainternship",
+      "job_id": "8438402002",
+      "ci": 86,
+      "fi": 20,
+      "label_text": "Are you legally authorized to work in United States of America for Samsung Research America?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.62
+    },
+    {
+      "company": "sharkninjaoperatingllc",
+      "job_id": "4669676006",
+      "ci": 95,
+      "fi": 16,
+      "label_text": "Will you now or in the future require sponsorship for employment visa status (e.g., H-1B visa status, current F-1 visa)?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.88
+    },
+    {
+      "company": "shift5",
+      "job_id": "5990678004",
+      "ci": 96,
+      "fi": 9,
+      "label_text": "Are you legally authorized to work in the United States on a full-time basis?*",
+      "suggested_category": "work_authorized",
+      "match_score": 0.62
+    },
+    {
+      "company": "shift5",
+      "job_id": "5990678004",
+      "ci": 96,
+      "fi": 11,
+      "label_text": "Will you now or in the future require sponsorship for employment visa status?*",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 1.0
+    },
+    {
+      "company": "spacex",
+      "job_id": "8403219002",
+      "ci": 99,
+      "fi": 36,
+      "label_text": "How much experience in Java programming language do you have?*",
+      "suggested_category": "skill_experience_years",
+      "match_score": 0.83
+    },
+    {
+      "company": "spacex",
+      "job_id": "8403219002",
+      "ci": 99,
+      "fi": 38,
+      "label_text": "How much experience in JavaScript (JS) programming language do you have? *",
+      "suggested_category": "skill_experience_years",
+      "match_score": 0.83
+    },
+    {
+      "company": "spacex",
+      "job_id": "8403219002",
+      "ci": 99,
+      "fi": 40,
+      "label_text": "How much experience in Python programming language do you have? *",
+      "suggested_category": "skill_experience_years",
+      "match_score": 0.83
+    },
+    {
+      "company": "stokespacetechnologies",
+      "job_id": "5983960004",
+      "ci": 101,
+      "fi": 21,
+      "label_text": "Expected Graduation Date",
+      "suggested_category": "graduation_date",
+      "match_score": 0.75
+    },
+    {
+      "company": "towerresearchcapital",
+      "job_id": "7789933",
+      "ci": 107,
+      "fi": 23,
+      "label_text": "Will you now or in the future require sponsorship for employment? *",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.71
+    },
+    {
+      "company": "vardaspace",
+      "job_id": "7676465003",
+      "ci": 109,
+      "fi": 24,
+      "label_text": "How did you hear about Varda? *",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.75
+    },
+    {
+      "company": "verkada",
+      "job_id": "5017082007",
+      "ci": 111,
+      "fi": 17,
+      "label_text": "What is your expected graduation date? (Month and Year)",
+      "suggested_category": "graduation_date",
+      "match_score": 0.67
+    },
+    {
+      "company": "woolpert",
+      "job_id": "4028247009",
+      "ci": 113,
+      "fi": 28,
+      "label_text": "Do you now or will you at any time in the future require sponsorship? *",
+      "suggested_category": "needs_sponsorship",
+      "match_score": 0.67
+    },
+    {
+      "company": "woolpert",
+      "job_id": "4028247009",
+      "ci": 113,
+      "fi": 34,
+      "label_text": "What is your expected year of graduation?*",
+      "suggested_category": "graduation_date",
+      "match_score": 0.6
+    },
+    {
+      "company": "woolpert",
+      "job_id": "4028247009",
+      "ci": 113,
+      "fi": 40,
+      "label_text": "What are your salary expectations for this particular role?",
+      "suggested_category": "salary_expectation",
+      "match_score": 0.6
+    },
+    {
+      "company": "zscaler",
+      "job_id": "5100618007",
+      "ci": 115,
+      "fi": 11,
+      "label_text": "How did you learn about this job?*",
+      "suggested_category": "how_heard_about_role",
+      "match_score": 0.6
+    }
+  ],
+  "needs_review": []
+}

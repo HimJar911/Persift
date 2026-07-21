@@ -1,0 +1,982 @@
+[
+  {
+    "ci": 7,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: part of the 'open-roles__filters' / aria-label='Open Roles Filters' job-board widget (DEPARTMENT/LOCATION/EMPLOYMENT TYPE dropdown toggle buttons and their internal controls) \u2014 same rejected widget as fi 14-121. NOT the real application form's name/email/LinkedIn fields (those are at fi 6-9, confirmed separately)."
+  },
+  {
+    "ci": 7,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: part of the 'open-roles__filters' / aria-label='Open Roles Filters' job-board widget (DEPARTMENT/LOCATION/EMPLOYMENT TYPE dropdown toggle buttons and their internal controls) \u2014 same rejected widget as fi 14-121. NOT the real application form's name/email/LinkedIn fields (those are at fi 6-9, confirmed separately)."
+  },
+  {
+    "ci": 7,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: part of the 'open-roles__filters' / aria-label='Open Roles Filters' job-board widget (DEPARTMENT/LOCATION/EMPLOYMENT TYPE dropdown toggle buttons and their internal controls) \u2014 same rejected widget as fi 14-121. NOT the real application form's name/email/LinkedIn fields (those are at fi 6-9, confirmed separately)."
+  },
+  {
+    "ci": 7,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: part of the 'open-roles__filters' / aria-label='Open Roles Filters' job-board widget (DEPARTMENT/LOCATION/EMPLOYMENT TYPE dropdown toggle buttons and their internal controls) \u2014 same rejected widget as fi 14-121. NOT the real application form's name/email/LinkedIn fields (those are at fi 6-9, confirmed separately)."
+  },
+  {
+    "ci": 7,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: part of the 'open-roles__filters' / aria-label='Open Roles Filters' job-board widget (DEPARTMENT/LOCATION/EMPLOYMENT TYPE dropdown toggle buttons and their internal controls) \u2014 same rejected widget as fi 14-121. NOT the real application form's name/email/LinkedIn fields (those are at fi 6-9, confirmed separately)."
+  },
+  {
+    "ci": 7,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: class='search', inside open-roles__search-container \u2014 job-board search box."
+  },
+  {
+    "ci": 7,
+    "fi": 6,
+    "action": "confirm",
+    "category": "first_name",
+    "note": "Confirmed via raw HTML: <label class='required'>First Name</label>, type=text, name='First Name'."
+  },
+  {
+    "ci": 7,
+    "fi": 7,
+    "action": "confirm",
+    "category": "last_name",
+    "note": "Confirmed via raw HTML: <label class='required'>Last Name</label>."
+  },
+  {
+    "ci": 7,
+    "fi": 8,
+    "action": "confirm",
+    "category": "email",
+    "note": "Confirmed via raw HTML: <label class='required'>Email Address</label>, type=email."
+  },
+  {
+    "ci": 7,
+    "fi": 9,
+    "action": "confirm",
+    "category": "linkedin_url",
+    "note": "Confirmed via raw HTML: <label>LinkedIn URL</label>, type=url."
+  },
+  {
+    "ci": 7,
+    "fi": 12,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Confirmed via raw HTML: label text is placeholder ('Type here') but the REAL <label> reads \"By submitting you agree to Gem's terms and privacy policy.\" (this site runs on the Gem ATS platform, gem.com) \u2014 a required consent checkbox, not the 'Any additional information' field the label position first suggested."
+  },
+  {
+    "ci": 7,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: group-level wrapper for the DEPARTMENT filter widget (same as fi 0-4, fi 14-121) \u2014 heading literally 'DEPARTMENT'."
+  },
+  {
+    "ci": 26,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7875384.html.gz): name='filter-group-1_N' job-board filter widget (department/employment-type/location options) \u2014 same widget already confirmed fake for 'Marketing'/'Finance'/'Sales'/'No Department' etc. in the department_interest/location_preference correction."
+  },
+  {
+    "ci": 26,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7875384.html.gz): name='filter-group-1_N' job-board filter widget (department/employment-type/location options) \u2014 same widget already confirmed fake for 'Marketing'/'Finance'/'Sales'/'No Department' etc. in the department_interest/location_preference correction."
+  },
+  {
+    "ci": 26,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7875384.html.gz): name='filter-group-1_N' job-board filter widget (department/employment-type/location options) \u2014 same widget already confirmed fake for 'Marketing'/'Finance'/'Sales'/'No Department' etc. in the department_interest/location_preference correction."
+  },
+  {
+    "ci": 26,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7875384.html.gz): name='filter-group-1_N' job-board filter widget (department/employment-type/location options) \u2014 same widget already confirmed fake for 'Marketing'/'Finance'/'Sales'/'No Department' etc. in the department_interest/location_preference correction."
+  },
+  {
+    "ci": 26,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7875384.html.gz): name='filter-group-1_N' job-board filter widget (department/employment-type/location options) \u2014 same widget already confirmed fake for 'Marketing'/'Finance'/'Sales'/'No Department' etc. in the department_interest/location_preference correction."
+  },
+  {
+    "ci": 47,
+    "fi": 28,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "\"Have you completed your Bachelor's degree?\" \u2014 degree-completion status."
+  },
+  {
+    "ci": 47,
+    "fi": 30,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "'Do you hold an OPT VISA?' \u2014 visa-status question, same sponsorship-adjacent category."
+  },
+  {
+    "ci": 48,
+    "fi": 9,
+    "action": "confirm",
+    "category": "notice_period",
+    "note": "'current notice period/when are you available to start a new position' \u2014 combined notice-period + availability question, closer to notice_period given the framing leads with notice period."
+  },
+  {
+    "ci": 49,
+    "fi": 11,
+    "action": "confirm",
+    "category": "current_salary",
+    "note": "'current Stiphend' (stipend) \u2014 same category as current_salary."
+  },
+  {
+    "ci": 49,
+    "fi": 12,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'expected Stiphend'."
+  },
+  {
+    "ci": 49,
+    "fi": 13,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'comfortable working from Bangalore office for 5 days'."
+  },
+  {
+    "ci": 49,
+    "fi": 15,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'How soon can you join us?'"
+  },
+  {
+    "ci": 50,
+    "fi": 12,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 51,
+    "fi": 4,
+    "action": "confirm",
+    "category": "phone",
+    "note": "section='Telefone' (Portuguese for 'Phone') \u2014 same phone concept, different language."
+  },
+  {
+    "ci": 51,
+    "fi": 17,
+    "action": "confirm",
+    "category": "national_id_number",
+    "note": "New category \u2014 'CPF' is Brazil's national taxpayer ID number, same family as celonis's Spanish NIE (current_country_id_number) but this is common/structural enough (every Brazilian form will ask for CPF) to warrant its own clearer name."
+  },
+  {
+    "ci": 51,
+    "fi": 18,
+    "action": "confirm",
+    "category": "current_employee_of_company",
+    "note": "'Voc\u00ea trabalha atualmente no Inter?' = 'Do you currently work at Inter?'"
+  },
+  {
+    "ci": 51,
+    "fi": 20,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "'em qual ou quais escrit\u00f3rios voc\u00ea tem interesse em atuar?' = 'which office(s) are you interested in working at?' \u2014 genuine application-form multi-select (id='question_8440646005[]', standard Greenhouse question format, NOT a job-board filter \u2014 verified by id pattern matching the confirmed-real question_NNNNN family, distinct from today's filter-widget corrections which all had non-question_ ids)."
+  },
+  {
+    "ci": 51,
+    "fi": 22,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": "'Voc\u00ea conhece algu\u00e9m que trabalha no Inter?' = 'Do you know someone who works at Inter?'"
+  },
+  {
+    "ci": 51,
+    "fi": 24,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Follow-up: 'If yes to the previous question, what is the full name of the employee?'"
+  },
+  {
+    "ci": 51,
+    "fi": 25,
+    "action": "confirm",
+    "category": "certifications",
+    "note": "'Voc\u00ea possui alguma certifica\u00e7\u00e3o?' = 'Do you have any certification?'"
+  },
+  {
+    "ci": 51,
+    "fi": 27,
+    "action": "confirm",
+    "category": "resume_upload",
+    "note": "'Anexar' = 'Attach', itype=file \u2014 same attach-resume pattern confirmed earlier for English-language forms."
+  },
+  {
+    "ci": 51,
+    "fi": 28,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Long LGPD (Brazilian data protection law) privacy-policy consent paragraph."
+  },
+  {
+    "ci": 51,
+    "fi": 30,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "'n\u00edvel de flu\u00eancia na l\u00edngua inglesa' = English fluency level."
+  },
+  {
+    "ci": 51,
+    "fi": 32,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Spanish fluency level."
+  },
+  {
+    "ci": 51,
+    "fi": 34,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "'Voc\u00ea possui curso superior completo?' = 'Do you have a completed higher-education degree?'"
+  },
+  {
+    "ci": 51,
+    "fi": 36,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Conditional follow-up: 'If yes to the previous question, what course did you graduate in? If no, fill NA.'"
+  },
+  {
+    "ci": 51,
+    "fi": 38,
+    "action": "confirm",
+    "category": "current_salary",
+    "note": "'Informe seu sal\u00e1rio atual/\u00faltimo' = 'State your current/last salary'."
+  },
+  {
+    "ci": 51,
+    "fi": 39,
+    "action": "confirm",
+    "category": "current_benefits",
+    "note": "New category \u2014 'Informe seus Benef\u00edcios atuais/\u00faltimos' = 'State your current/last benefits' \u2014 distinct from salary."
+  },
+  {
+    "ci": 51,
+    "fi": 40,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Long AI-interview-transcription consent paragraph (LGPD-compliant)."
+  },
+  {
+    "ci": 52,
+    "fi": 18,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Event, Employee, or Other, please specify below'."
+  },
+  {
+    "ci": 52,
+    "fi": 19,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 52,
+    "fi": 21,
+    "action": "confirm",
+    "category": "age_18_or_older",
+    "note": ""
+  },
+  {
+    "ci": 52,
+    "fi": 25,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 52,
+    "fi": 27,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'understand the job requirements... able to perform essential job functions' \u2014 ADA-related work-capability attestation, same general-consent family."
+  },
+  {
+    "ci": 52,
+    "fi": 29,
+    "action": "confirm",
+    "category": "consent_sms_communication",
+    "note": "New category \u2014 explicit SMS/texting consent for application-process communications (distinct from general privacy/data consent), names a specific third-party vendor (Grayscale Labs)."
+  },
+  {
+    "ci": 54,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Empty label/section/id/context \u2014 cannot classify with any confidence. Sits among page-chrome fields (fi 4-5 confirmed newsletter signup) on this company's general contact page, not a job application."
+  },
+  {
+    "ci": 54,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Empty select with no context, same page-chrome region as fi 0."
+  },
+  {
+    "ci": 54,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "'ALL LOCATIONSMountain View, CaliforniaMunich, GermanySingapore' \u2014 concatenated option text of an office-location FILTER dropdown (option text run together with no separators is a giveaway of a generic multi-option select, consistent with other job-board filters found this session), not an application field."
+  },
+  {
+    "ci": 54,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "section='Subscribe for occasional news and updates' \u2014 newsletter signup, not the application form."
+  },
+  {
+    "ci": 54,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Same newsletter-signup section as fi=4; hidden field carrying the privacy-policy disclaimer text for that signup form."
+  },
+  {
+    "ci": 55,
+    "fi": 17,
+    "action": "confirm",
+    "category": "notice_period",
+    "note": "'Non-compete/Notice period comments'."
+  },
+  {
+    "ci": 55,
+    "fi": 18,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 55,
+    "fi": 20,
+    "action": "confirm",
+    "category": "education_school",
+    "note": ""
+  },
+  {
+    "ci": 55,
+    "fi": 22,
+    "action": "confirm",
+    "category": "education_discipline",
+    "note": "'What degree are you currently pursuing?' \u2014 maps to discipline/degree-in-progress, same family as education_discipline."
+  },
+  {
+    "ci": 55,
+    "fi": 26,
+    "action": "confirm",
+    "category": "competing_offers_disclosure",
+    "note": "New category \u2014 'Do you currently have any offers from other firms or deadlines we should be aware of?'"
+  },
+  {
+    "ci": 55,
+    "fi": 28,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Follow-up: 'please tell us about your offers and deadlines'."
+  },
+  {
+    "ci": 55,
+    "fi": 30,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Other above, please specify'."
+  },
+  {
+    "ci": 55,
+    "fi": 32,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback 'Notice at Collection' GDPR/CCPA-style data-processing notice."
+  },
+  {
+    "ci": 55,
+    "fi": 33,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "Section-fallback 'which other locations are you interested in relocating to' \u2014 genuine relocation-preference question (id-less section-fallback field, but content matches the confirmed category, not a filter widget \u2014 this form has no job-board filter chrome elsewhere on the page)."
+  },
+  {
+    "ci": 56,
+    "fi": 19,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Do you have open source contribution? Please paste a link and explain briefly what you did' \u2014 open-ended with a link+explanation ask, essay-shaped."
+  },
+  {
+    "ci": 57,
+    "fi": 4,
+    "action": "confirm",
+    "category": "phone",
+    "note": "section='\uc804\ud654' (Korean for 'Phone')."
+  },
+  {
+    "ci": 57,
+    "fi": 11,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Precautions for submitting a resume' acknowledgment (bilingual Korean/English)."
+  },
+  {
+    "ci": 57,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "label='\uc120\ud0dd...' (Korean for 'Select...') \u2014 same generic combobox-placeholder pattern already confirmed as noise (matches the earlier 'Select...' reject), this is just the Korean-language version of the same fallback string."
+  },
+  {
+    "ci": 57,
+    "fi": 13,
+    "action": "confirm",
+    "category": "resume_upload",
+    "note": "'\ud30c\uc77c \ucca8\ubd80' = 'File attachment', itype=file, tied to the resume-submission question."
+  },
+  {
+    "ci": 57,
+    "fi": 14,
+    "action": "confirm",
+    "category": "personal_website",
+    "note": "'Portfolio (Paste link)' \u2014 bilingual, matches personal_website/portfolio category."
+  },
+  {
+    "ci": 57,
+    "fi": 15,
+    "action": "confirm",
+    "category": "resume_upload",
+    "note": "Second 'File attachment' field \u2014 a portfolio file upload, same resume_upload category (file attachment mechanism, distinct question but same field TYPE)."
+  },
+  {
+    "ci": 57,
+    "fi": 16,
+    "action": "confirm",
+    "category": "military_branch",
+    "note": "'Please indicate whether you are currently subject to one of the following types of military service' \u2014 South Korea has mandatory military service disclosure on job applications, same military_branch/service-status family."
+  },
+  {
+    "ci": 57,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "Korean 'Select...' placeholder, same as fi=12."
+  },
+  {
+    "ci": 57,
+    "fi": 18,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Notice on the Collection and Use of Personal Information' \u2014 Korean PIPA (privacy law) consent."
+  },
+  {
+    "ci": 57,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Korean 'Select...' placeholder."
+  },
+  {
+    "ci": 57,
+    "fi": 20,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Notice on the Collection and Use of Sensitive Information' \u2014 related PIPA consent, sensitive-data variant."
+  },
+  {
+    "ci": 57,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Korean 'Select...' placeholder."
+  },
+  {
+    "ci": 57,
+    "fi": 22,
+    "action": "confirm",
+    "category": "eeo_veteran_status",
+    "note": "'Please indicate whether you are eligible for a veteran service' \u2014 Korean veteran-preference disclosure, same eeo_veteran_status family (Korea has legally mandated veteran hiring preference disclosure, similar EEO purpose to the US veteran-status question)."
+  },
+  {
+    "ci": 57,
+    "fi": 23,
+    "action": "reject",
+    "category": null,
+    "note": "Korean 'Select...' placeholder."
+  },
+  {
+    "ci": 57,
+    "fi": 24,
+    "action": "confirm",
+    "category": "eeo_disability_status",
+    "note": "'Please indicate whether you are a registered person with disabilities' \u2014 same eeo_disability_status family."
+  },
+  {
+    "ci": 57,
+    "fi": 25,
+    "action": "reject",
+    "category": null,
+    "note": "Korean 'Select...' placeholder."
+  },
+  {
+    "ci": 58,
+    "fi": 13,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "'highest level of education'."
+  },
+  {
+    "ci": 58,
+    "fi": 15,
+    "action": "confirm",
+    "category": "relevant_industry_experience",
+    "note": "'years of office experience' \u2014 role-relevant-experience question, same family as dvtrading's relevant_industry_experience."
+  },
+  {
+    "ci": 58,
+    "fi": 16,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'fully in-office... willing to commute'."
+  },
+  {
+    "ci": 59,
+    "fi": 19,
+    "action": "confirm",
+    "category": "state",
+    "note": ""
+  },
+  {
+    "ci": 59,
+    "fi": 21,
+    "action": "confirm",
+    "category": "current_school_year",
+    "note": ""
+  },
+  {
+    "ci": 59,
+    "fi": 22,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'most recent cumulative GPA' \u2014 same academic_grade category (grade/GPA), broader than just 'average grade'."
+  },
+  {
+    "ci": 59,
+    "fi": 23,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": ""
+  },
+  {
+    "ci": 59,
+    "fi": 27,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'desired compensation (hourly rate)'."
+  },
+  {
+    "ci": 60,
+    "fi": 10,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'available to work full-time for the entire duration of the internship'."
+  },
+  {
+    "ci": 60,
+    "fi": 12,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'earliest possible start date'."
+  },
+  {
+    "ci": 60,
+    "fi": 14,
+    "action": "confirm",
+    "category": "availability_hours_per_week",
+    "note": "'How long would you be available for the internship?' \u2014 duration question, same family (availability_hours_per_week already covers combined hours+duration per gensyn's earlier confirm)."
+  },
+  {
+    "ci": 60,
+    "fi": 16,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'currently enrolled as a student... mandatory part of your study program'."
+  },
+  {
+    "ci": 60,
+    "fi": 18,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Detailed hands-on-experience question requesting explanation."
+  },
+  {
+    "ci": 60,
+    "fi": 19,
+    "action": "confirm",
+    "category": "mailing_address",
+    "note": "'current address'."
+  },
+  {
+    "ci": 60,
+    "fi": 20,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 60,
+    "fi": 22,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "German proficiency."
+  },
+  {
+    "ci": 61,
+    "fi": 16,
+    "action": "confirm",
+    "category": "military_branch",
+    "note": ""
+  },
+  {
+    "ci": 61,
+    "fi": 17,
+    "action": "confirm",
+    "category": "military_specialty_code",
+    "note": "New category \u2014 'AFSC / MOS' (Air Force Specialty Code / Military Occupational Specialty) is a specific military job-classification code, distinct from military_branch."
+  },
+  {
+    "ci": 61,
+    "fi": 18,
+    "action": "confirm",
+    "category": "current_job_title",
+    "note": ""
+  },
+  {
+    "ci": 61,
+    "fi": 19,
+    "action": "confirm",
+    "category": "military_rank",
+    "note": "New category \u2014 'Rank'."
+  },
+  {
+    "ci": 61,
+    "fi": 20,
+    "action": "confirm",
+    "category": "military_time_in_service",
+    "note": "New category \u2014 'Time in Service'."
+  },
+  {
+    "ci": 61,
+    "fi": 21,
+    "action": "confirm",
+    "category": "military_separation_date",
+    "note": "'Date of Separation/Retirement' \u2014 same category as defenseunicorns' military_separation_date."
+  },
+  {
+    "ci": 61,
+    "fi": 22,
+    "action": "confirm",
+    "category": "skillbridge_eligibility_date",
+    "note": "'Skill bridge Start Date' \u2014 same category as defenseunicorns' skillbridge_eligibility_date."
+  },
+  {
+    "ci": 61,
+    "fi": 23,
+    "action": "confirm",
+    "category": "contract_length",
+    "note": "'Desired Duration'."
+  },
+  {
+    "ci": 61,
+    "fi": 24,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "'Desired Position' \u2014 role/department preference, same family as department_interest."
+  },
+  {
+    "ci": 62,
+    "fi": 13,
+    "action": "confirm",
+    "category": "first_name",
+    "note": "'Legal First Name (English)' \u2014 same first_name category, with a legal-name qualifier (common on forms targeting international/bilingual-name candidates)."
+  },
+  {
+    "ci": 62,
+    "fi": 14,
+    "action": "confirm",
+    "category": "last_name",
+    "note": "'Legal Last Name (English)'."
+  },
+  {
+    "ci": 62,
+    "fi": 16,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 62,
+    "fi": 18,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 62,
+    "fi": 20,
+    "action": "confirm",
+    "category": "military_branch",
+    "note": "'(Korean male only) Please share your military status' \u2014 same Korea-specific mandatory-service disclosure family as krafton's military_branch."
+  },
+  {
+    "ci": 62,
+    "fi": 21,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "'speak both English and Korean'."
+  },
+  {
+    "ci": 62,
+    "fi": 23,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": ""
+  },
+  {
+    "ci": 62,
+    "fi": 24,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'available date of joining for the internship'."
+  },
+  {
+    "ci": 62,
+    "fi": 25,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'available to work for 3 months as a full-time'."
+  },
+  {
+    "ci": 62,
+    "fi": 27,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What interests you about MOLOCO? Please provide 2-3 sentences.'"
+  },
+  {
+    "ci": 64,
+    "fi": 17,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'exceptional ability' STAR-format essay question, 'First example:' \u2014 part of a 3-part essay series."
+  },
+  {
+    "ci": 64,
+    "fi": 18,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Second example:' \u2014 same essay series as fi=17."
+  },
+  {
+    "ci": 64,
+    "fi": 19,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Third example:' \u2014 same essay series."
+  },
+  {
+    "ci": 64,
+    "fi": 20,
+    "action": "confirm",
+    "category": "relevant_industry_experience",
+    "note": "'prior internship or co-op experience'."
+  },
+  {
+    "ci": 64,
+    "fi": 22,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": ""
+  },
+  {
+    "ci": 64,
+    "fi": 25,
+    "action": "confirm",
+    "category": "personal_website",
+    "note": "'Additional Link' \u2014 portfolio/personal-link category, generic enough to fold into personal_website rather than invent a narrower category."
+  },
+  {
+    "ci": 64,
+    "fi": 29,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 64,
+    "fi": 31,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'willing and able to work entirely on-site'."
+  },
+  {
+    "ci": 64,
+    "fi": 33,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'no relocation assistance... able to relocate on your own'."
+  },
+  {
+    "ci": 64,
+    "fi": 35,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'What internship season are you interested in?'"
+  },
+  {
+    "ci": 64,
+    "fi": 37,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Ideal start date in office'."
+  },
+  {
+    "ci": 64,
+    "fi": 39,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "'Which onsite location would you like to apply to?'"
+  },
+  {
+    "ci": 65,
+    "fi": 9,
+    "action": "confirm",
+    "category": "nepotism_disclosure",
+    "note": "'first-degree relatives... currently employed by NICE'."
+  },
+  {
+    "ci": 65,
+    "fi": 11,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 65,
+    "fi": 13,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "'need a visa / work permit'."
+  },
+  {
+    "ci": 67,
+    "fi": 13,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 67,
+    "fi": 15,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 67,
+    "fi": 17,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Specific hybrid-schedule commitment question."
+  },
+  {
+    "ci": 68,
+    "fi": 10,
+    "action": "confirm",
+    "category": "how_heard_about_role",
+    "note": ""
+  },
+  {
+    "ci": 68,
+    "fi": 11,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'located in the Seattle/Bellevue area for the duration of the internship'."
+  },
+  {
+    "ci": 68,
+    "fi": 13,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 68,
+    "fi": 15,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "'need any immigration support' with a details request \u2014 sponsorship-adjacent, folded into needs_sponsorship rather than treated as a separate essay since the core ask is a sponsorship yes/no+details."
+  },
+  {
+    "ci": 68,
+    "fi": 16,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'Expected Compensation?'"
+  },
+  {
+    "ci": 69,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden field, empty everything, no readable content \u2014 cannot classify."
+  },
+  {
+    "ci": 69,
+    "fi": 3,
+    "action": "confirm",
+    "category": "current_job_title",
+    "note": "'Job Title', required \u2014 same current_job_title category (this is on Ogilvy's general talent-network 'Contact Us' form, but the field itself asks the same underlying fact as work_history_title/current_job_title)."
+  },
+  {
+    "ci": 69,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden field, empty everything, no readable content."
+  },
+  {
+    "ci": 69,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden field, empty everything, no readable content."
+  }
+]

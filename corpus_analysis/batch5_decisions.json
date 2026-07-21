@@ -1,0 +1,1507 @@
+[
+  {
+    "ci": 99,
+    "fi": 54,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'Other Student Group(s)' \u2014 follow-up to the student-groups question."
+  },
+  {
+    "ci": 99,
+    "fi": 55,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": "'SpaceX, xAI & X Employment History'."
+  },
+  {
+    "ci": 99,
+    "fi": 65,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Can you perform all essential functions with or without reasonable accommodations?' \u2014 ADA-related attestation."
+  },
+  {
+    "ci": 99,
+    "fi": 72,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "Section-fallback 'Preferred Internship Location(s)'."
+  },
+  {
+    "ci": 99,
+    "fi": 73,
+    "action": "confirm",
+    "category": "student_org_involvement",
+    "note": "Section-fallback 'Are you a member of any of the following student groups?'"
+  },
+  {
+    "ci": 100,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "section='Strictly Necessary Cookies', label='Always Active' \u2014 cookie-consent banner."
+  },
+  {
+    "ci": 100,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "id='storage-access-group' \u2014 cookie-consent banner toggle."
+  },
+  {
+    "ci": 102,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "name='jobsQueryInput', placeholder='Search for a job' \u2014 job-board search box."
+  },
+  {
+    "ci": 102,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 20,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 22,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 23,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 25,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 27,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 28,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 29,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 30,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 32,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 33,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 34,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 35,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 36,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 37,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 38,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 39,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 40,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 41,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 42,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 43,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 44,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 45,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 46,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 47,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 48,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 49,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 50,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 51,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 52,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 53,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 54,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 55,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 56,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 57,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 58,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 59,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 60,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 61,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 62,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 63,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 64,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 65,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 66,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 67,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 68,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 69,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 70,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 71,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 72,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 73,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 74,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 75,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 76,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 77,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 78,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 80,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 81,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 82,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 83,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 84,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 85,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 86,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 87,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 89,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 90,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 91,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 92,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 93,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 94,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 95,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 96,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 97,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 98,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 99,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 100,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 101,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 102,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 103,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 104,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 105,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 106,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 107,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 108,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 110,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 111,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 112,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 113,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 114,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 115,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 116,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 117,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 118,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 121,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 102,
+    "fi": 123,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/7236933.html.gz): class='ControlledFilterSelect', id='jobsTeamsFilter-list', header 'Teams' \u2014 same job-board filter widget already confirmed fake for this company's Marketing/Finance/Sales/etc. fields."
+  },
+  {
+    "ci": 101,
+    "fi": 16,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 101,
+    "fi": 18,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 101,
+    "fi": 20,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "Combined city/state/ZIP field."
+  },
+  {
+    "ci": 101,
+    "fi": 22,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'commit to a Spring internship from January - April 2027'."
+  },
+  {
+    "ci": 101,
+    "fi": 24,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": ""
+  },
+  {
+    "ci": 101,
+    "fi": 26,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "'Team Preference (select #1 choice)'."
+  },
+  {
+    "ci": 101,
+    "fi": 28,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "'Team Preference (select #2 choice)' \u2014 ranked alternative, same category."
+  },
+  {
+    "ci": 101,
+    "fi": 30,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What motivates you?'"
+  },
+  {
+    "ci": 101,
+    "fi": 31,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Skills-learned-outside-classroom open-ended question."
+  },
+  {
+    "ci": 101,
+    "fi": 33,
+    "action": "confirm",
+    "category": "how_heard_about_role",
+    "note": "Combines how-heard + referral name; leaning toward the primary ask."
+  },
+  {
+    "ci": 104,
+    "fi": 7,
+    "action": "confirm",
+    "category": "age_18_or_older",
+    "note": ""
+  },
+  {
+    "ci": 104,
+    "fi": 9,
+    "action": "confirm",
+    "category": "travel_willingness",
+    "note": "'willing and able to travel to a Studs Flagship location for 6 weeks of training'."
+  },
+  {
+    "ci": 104,
+    "fi": 11,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Why did you choose to apply to Studs' apprenticeship program?'"
+  },
+  {
+    "ci": 104,
+    "fi": 12,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": "Combines current+past employment; leaning toward the broader concept."
+  },
+  {
+    "ci": 104,
+    "fi": 14,
+    "action": "confirm",
+    "category": "location_city",
+    "note": ""
+  },
+  {
+    "ci": 104,
+    "fi": 15,
+    "action": "confirm",
+    "category": "employment_type",
+    "note": "'Part Time position or a Full Time position'."
+  },
+  {
+    "ci": 104,
+    "fi": 17,
+    "action": "confirm",
+    "category": "availability_hours_per_week",
+    "note": ""
+  },
+  {
+    "ci": 104,
+    "fi": 18,
+    "action": "confirm",
+    "category": "availability_days",
+    "note": "New category. 'Which days of the week are you available to work?' \u2014 distinct from hours-per-week."
+  },
+  {
+    "ci": 104,
+    "fi": 19,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Bloodborne-pathogen occupational-exposure acknowledgment."
+  },
+  {
+    "ci": 104,
+    "fi": 21,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "ADA-related job-duties acknowledgment."
+  },
+  {
+    "ci": 104,
+    "fi": 30,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "Section-fallback studio-location preference."
+  },
+  {
+    "ci": 106,
+    "fi": 9,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 106,
+    "fi": 11,
+    "action": "confirm",
+    "category": "employment_type",
+    "note": "'What type of contract are you looking for?'"
+  },
+  {
+    "ci": 106,
+    "fi": 13,
+    "action": "confirm",
+    "category": "contract_length",
+    "note": "'What is the duration?'"
+  },
+  {
+    "ci": 106,
+    "fi": 15,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": ""
+  },
+  {
+    "ci": 106,
+    "fi": 17,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": ""
+  },
+  {
+    "ci": 106,
+    "fi": 19,
+    "action": "confirm",
+    "category": "marketing_communications_optin",
+    "note": "'happy for Teads to contact me about future job opportunities'."
+  },
+  {
+    "ci": 106,
+    "fi": 21,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": ""
+  },
+  {
+    "ci": 107,
+    "fi": 25,
+    "action": "confirm",
+    "category": "pep_disclosure",
+    "note": "New category. 'Are you or have you been entrusted with a position or function in any government, international organization... or state-owned enterprise?' \u2014 politically-exposed-person (PEP) regulatory disclosure."
+  },
+  {
+    "ci": 107,
+    "fi": 27,
+    "action": "confirm",
+    "category": "pep_disclosure",
+    "note": "'immediate family member of someone holding such a position' \u2014 extension of the PEP disclosure."
+  },
+  {
+    "ci": 107,
+    "fi": 29,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 107,
+    "fi": 31,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": ""
+  },
+  {
+    "ci": 108,
+    "fi": 4,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "Verified via raw HTML: placeholder='Are you available and in Berlin between 15 July and 15 Oct 2026?' \u2014 real question hidden in placeholder text, label field was empty (extraction gap, same pattern as Anduril's 'Type here')."
+  },
+  {
+    "ci": 108,
+    "fi": 5,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Verified via raw HTML: placeholder='Are you proficient in Microsoft Excel and experienced in using AI tools to optimize your workflow?' \u2014 skills self-assessment, open response."
+  },
+  {
+    "ci": 108,
+    "fi": 6,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Verified via raw HTML: placeholder='Do you have a solid academic or practical background in taxation or experience with Tax Technology tools?'"
+  },
+  {
+    "ci": 108,
+    "fi": 7,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Verified via raw HTML: placeholder='What is your comfort level with German language?'"
+  },
+  {
+    "ci": 108,
+    "fi": 11,
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "note": "'What is your gender identity?'"
+  },
+  {
+    "ci": 108,
+    "fi": 12,
+    "action": "confirm",
+    "category": "cover_letter_upload",
+    "note": ""
+  },
+  {
+    "ci": 109,
+    "fi": 9,
+    "action": "confirm",
+    "category": "citizenship_status",
+    "note": "ITAR-specific U.S. citizen/lawful-permanent-resident/protected-individual eligibility check."
+  },
+  {
+    "ci": 109,
+    "fi": 11,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'seeking a Fall internship'."
+  },
+  {
+    "ci": 109,
+    "fi": 15,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Full-time on-site at El Segundo, CA."
+  },
+  {
+    "ci": 109,
+    "fi": 17,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 110,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Empty search box \u2014 job-board search."
+  },
+  {
+    "ci": 110,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "'Office' (id='offices', select) \u2014 job-board office-filter, same pattern as opswat's officeId."
+  },
+  {
+    "ci": 111,
+    "fi": 12,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'current GPA'."
+  },
+  {
+    "ci": 111,
+    "fi": 13,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Onsite HQ commute/relocate question."
+  },
+  {
+    "ci": 111,
+    "fi": 15,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "Specific weekday/hours schedule commitment, same family as studsinc's schedule questions."
+  },
+  {
+    "ci": 112,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: Wix site-builder page (comp-* id naming convention), same job-board filter widget family as JOB TYPE/STATE-PROVINCE fields on this page \u2014 no real form content found near these ids."
+  },
+  {
+    "ci": 112,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "'JOB TYPE' \u2014 Wix job-board filter widget."
+  },
+  {
+    "ci": 112,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "'STATE / PROVINCE' \u2014 Wix job-board filter widget."
+  },
+  {
+    "ci": 112,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML: Wix site-builder page (comp-* id naming convention), same job-board filter widget family as JOB TYPE/STATE-PROVINCE fields on this page \u2014 no real form content found near these ids. label='1' has no real readable content."
+  },
+  {
+    "ci": 112,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "'Non-Essential Cookies' \u2014 cookie-consent banner."
+  },
+  {
+    "ci": 112,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "Section-fallback 'Manage Cookie Preferences' \u2014 cookie-consent banner."
+  },
+  {
+    "ci": 113,
+    "fi": 26,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 113,
+    "fi": 30,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "'highest level of education you've completed'."
+  },
+  {
+    "ci": 113,
+    "fi": 32,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": ""
+  },
+  {
+    "ci": 113,
+    "fi": 33,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'current location'."
+  },
+  {
+    "ci": 113,
+    "fi": 36,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Can you tell me a little bit about yourself?'"
+  },
+  {
+    "ci": 113,
+    "fi": 37,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What are you studying, and how did you choose that major?'"
+  },
+  {
+    "ci": 113,
+    "fi": 38,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'How does this internship align with your career goals?'"
+  },
+  {
+    "ci": 113,
+    "fi": 39,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Software/tools familiarity, open-ended."
+  },
+  {
+    "ci": 113,
+    "fi": 41,
+    "action": "confirm",
+    "category": "competing_offers_disclosure",
+    "note": "'Are you in any other interview processes at the moment?' \u2014 same category as the offers/deadlines disclosure (competing-process concept)."
+  },
+  {
+    "ci": 113,
+    "fi": 48,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback 'Privacy Acknowledgement'."
+  },
+  {
+    "ci": 114,
+    "fi": 0,
+    "action": "confirm",
+    "category": "email",
+    "note": "name='email', placeholder='Enter email' \u2014 real field, label missing (same extraction gap as other placeholder-only fields found this session)."
+  },
+  {
+    "ci": 114,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Marketing-attribution/analytics tracking parameter (UTM source/medium/campaign/content/term, reference value, GA client id) \u2014 not user-facing."
+  },
+  {
+    "ci": 114,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "section='Sound Exciting?', placeholder='Find a role' \u2014 job-board search box."
+  },
+  {
+    "ci": 115,
+    "fi": 13,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Other please tell us how you learned about this job.'"
+  },
+  {
+    "ci": 115,
+    "fi": 14,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 115,
+    "fi": 16,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 115,
+    "fi": 18,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If yes, please advise what support is needed:'"
+  },
+  {
+    "ci": 115,
+    "fi": 19,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": ""
+  },
+  {
+    "ci": 115,
+    "fi": 21,
+    "action": "confirm",
+    "category": "education_discipline",
+    "note": "'What is your major?'"
+  },
+  {
+    "ci": 115,
+    "fi": 22,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "Expected graduation month."
+  },
+  {
+    "ci": 115,
+    "fi": 23,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "Expected graduation year \u2014 paired field, same category."
+  },
+  {
+    "ci": 115,
+    "fi": 24,
+    "action": "confirm",
+    "category": "technical_skills",
+    "note": "New category. 'In which coding languages are you proficient?' \u2014 defined checklist-style technical-skill self-report, distinct from open-ended essay."
+  },
+  {
+    "ci": 115,
+    "fi": 26,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "'Which area(s) are you interested in pursuing?'"
+  },
+  {
+    "ci": 115,
+    "fi": 28,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Other to the preceding question...'"
+  },
+  {
+    "ci": 115,
+    "fi": 29,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 115,
+    "fi": 31,
+    "action": "confirm",
+    "category": "pep_disclosure",
+    "note": "'procurement or contract award activities involving Zscaler as a government employee or official' \u2014 same PEP/conflict-of-interest family as Tower Research's question."
+  },
+  {
+    "ci": 115,
+    "fi": 33,
+    "action": "confirm",
+    "category": "military_time_in_service",
+    "note": "'at least six months remaining on active duty, national guard or reserves' \u2014 same category as MKS2 Technologies' military_time_in_service."
+  },
+  {
+    "ci": 115,
+    "fi": 35,
+    "action": "confirm",
+    "category": "mailing_address",
+    "note": "'Home Address'."
+  },
+  {
+    "ci": 115,
+    "fi": 36,
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "note": "section='Voluntary Self Identification', 'Sex*'."
+  },
+  {
+    "ci": 115,
+    "fi": 39,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback 'Zscaler Confidential Information'."
+  },
+  {
+    "ci": 115,
+    "fi": 40,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback 'Zscaler Privacy Policy'."
+  }
+]

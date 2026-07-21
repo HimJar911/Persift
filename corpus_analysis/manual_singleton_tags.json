@@ -1,0 +1,66 @@
+[
+  {
+    "ci": 0,
+    "fi": 11,
+    "company": "617mediagroup",
+    "category": "preferred_pronouns",
+    "note": "Same concept as the confirmed preferred_pronouns category, shorter phrasing.",
+    "label_text": "Pronouns"
+  },
+  {
+    "ci": 0,
+    "fi": 17,
+    "company": "617mediagroup",
+    "category": "personal_website",
+    "note": "NOT linkedin_url (the weak auto-guess was wrong) \u2014 same category as the confirmed 'Website' cluster. Also carries a resolution-layer rule, not just a label: if profile has no website AND this field is required, abort the application rather than submit incomplete or guess \u2014 see FORM_ENGINE_DESIGN.md \u00a77.",
+    "label_text": "Personal or Professional Website (Optional)"
+  },
+  {
+    "ci": 0,
+    "fi": 19,
+    "company": "617mediagroup",
+    "category": "how_heard_about_role",
+    "note": "Same concept as the confirmed how_heard_about_role category, longer phrasing.",
+    "label_text": "Where did you hear about this job opening?"
+  },
+  {
+    "ci": 0,
+    "fi": 20,
+    "company": "617mediagroup",
+    "category": "education_school",
+    "note": "Free-text variant of the confirmed education_school category (which is dropdown-based, id=school--0). Same underlying fact, different field SHAPE (text vs dropdown) \u2014 flagged for the interpreter to potentially need shape-aware handling, not assumed identical to the dropdown case.",
+    "label_text": "College(s) attended, trade/vocational schools attended, university/universities attended, and/or other multi-year post-high school degree or certificate programs attended (if applicable)"
+  },
+  {
+    "ci": 0,
+    "fi": 21,
+    "company": "617mediagroup",
+    "category": "education_degree",
+    "note": "Free-text variant of the confirmed education_degree category, same shape caveat as education_school above.",
+    "label_text": "Degree(s) or certification(s) achieved as part of multi-year, post-high school program (if applicable)"
+  },
+  {
+    "ci": 0,
+    "fi": 22,
+    "company": "617mediagroup",
+    "category": "availability_start_date",
+    "note": "Same concept as the confirmed availability_start_date category.",
+    "label_text": "What date are you available to start your internship?"
+  },
+  {
+    "ci": 0,
+    "fi": 23,
+    "company": "617mediagroup",
+    "category": "availability_hours_per_week",
+    "note": "NEW category \u2014 confirmed as real and distinct during this session, no existing match. First instance found; not yet validated against a second occurrence elsewhere in the corpus.",
+    "label_text": "How many hours per week are you available?"
+  },
+  {
+    "ci": 0,
+    "fi": 29,
+    "company": "617mediagroup",
+    "category": "location_preference",
+    "note": "Section-fallback field (empty label, section='Please indicate which locations you are able work in...'). Same concept as the confirmed location_preference category \u2014 NOT work_authorized (the weak auto-guess was wrong).",
+    "label_text": "Please indicate which locations you are able work in \u2013 or willing to relocate to \u2013 if an employment offer were contingent upon location. Please check ALL that apply. If you are not able or willing to work in a particular location, leave that location UNCHECKED. If you are not able or willing to work in any of the particular locations below but are still interested in applying, leave all locations UNCHECKED. While we are prioritizing hiring in the locations below, our agency is growing rapidly and is considering resumes from candidates based in nearly all geographic locations, including many not listed below."
+  }
+]

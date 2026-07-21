@@ -1,0 +1,1409 @@
+[
+  {
+    "ci": 7,
+    "fi": 10,
+    "action": "confirm",
+    "category": "resume_upload",
+    "note": "<label>Resume</label>, type=file \u2014 real application field."
+  },
+  {
+    "ci": 7,
+    "fi": 11,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Combobox version of 'Which type of role are you interested in?' \u2014 same 9 options (Design/Engineering/Finance/Marketing/Operations/People/Product/Sales/University) as the already-confirmed checkbox version at fi 122-130."
+  },
+  {
+    "ci": 26,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Same name='filter-group-1_N' job-board filter widget already confirmed fake for this company."
+  },
+  {
+    "ci": 26,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 20,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 22,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 26,
+    "fi": 24,
+    "action": "reject",
+    "category": null,
+    "note": "Same filter-group-1_N job-board location-filter widget already confirmed fake for this company's department options."
+  },
+  {
+    "ci": 69,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 20,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 22,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 23,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 24,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Drupal Webform-to-CRM plumbing field (field_source_group_c, field_campaign_id, field_assigned_user_id, field_redirect_url, etc.) \u2014 marketing-automation config, not user-facing."
+  },
+  {
+    "ci": 69,
+    "fi": 25,
+    "action": "reject",
+    "category": null,
+    "note": "Submit button (id='edit-send'), not a question."
+  },
+  {
+    "ci": 69,
+    "fi": 30,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 31,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 32,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 33,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 34,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 35,
+    "action": "reject",
+    "category": null,
+    "note": "Part of Ogilvy's general 'Contact Us'/talent-network form (verified: has contact_email + Interest dropdown with Employment Verification/Media Inquiries/New Business options) \u2014 not tied to a specific job application."
+  },
+  {
+    "ci": 69,
+    "fi": 40,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: name='area_of_interest[...]', sits inside the same general Contact-Us form as fi 30-35, not a job-specific department question."
+  },
+  {
+    "ci": 69,
+    "fi": 42,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: name='area_of_interest[...]', sits inside the same general Contact-Us form as fi 30-35, not a job-specific department question."
+  },
+  {
+    "ci": 69,
+    "fi": 43,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: name='area_of_interest[...]', sits inside the same general Contact-Us form as fi 30-35, not a job-specific department question."
+  },
+  {
+    "ci": 69,
+    "fi": 44,
+    "action": "reject",
+    "category": null,
+    "note": "'Necessary cookies' \u2014 cookie-consent banner."
+  },
+  {
+    "ci": 69,
+    "fi": 45,
+    "action": "reject",
+    "category": null,
+    "note": "'Drop-Down Menu' (id='menu-toggle') \u2014 site nav menu toggle, page chrome."
+  },
+  {
+    "ci": 70,
+    "fi": 3,
+    "action": "confirm",
+    "category": "agency_preference",
+    "note": "New category. Verified Greenhouse custom field (id='custom-field-7329304008', section='A healthy career starts here') \u2014 media-holding-company concept (which agency within the network), same real pattern as this company's already-confirmed Department field."
+  },
+  {
+    "ci": 70,
+    "fi": 5,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "Verified Greenhouse custom field (id='custom-field-6375233008')."
+  },
+  {
+    "ci": 71,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "'E-mail', section='Join our careers mailing list' \u2014 newsletter signup, not the application form."
+  },
+  {
+    "ci": 71,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-header-menu__item-link' \u2014 literally the site's main navigation menu (dropdown of country career pages), not form checkboxes at all."
+  },
+  {
+    "ci": 71,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-filter__item', name='field_career_level_target_id[...]' \u2014 same job-board filter widget already confirmed fake for this company's location fields."
+  },
+  {
+    "ci": 71,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-filter__item', name='field_career_level_target_id[...]' \u2014 same job-board filter widget already confirmed fake for this company's location fields."
+  },
+  {
+    "ci": 71,
+    "fi": 20,
+    "action": "reject",
+    "category": null,
+    "note": "Verified via raw HTML: class='c-filter__item', name='field_career_level_target_id[...]' \u2014 same job-board filter widget already confirmed fake for this company's location fields."
+  },
+  {
+    "ci": 72,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "itype=search, id='jobTitle', placeholder='Job Title' \u2014 job-board search box."
+  },
+  {
+    "ci": 72,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "name='officeId', options include 'All Locations' + dozens of cities/countries \u2014 office-location filter dropdown, job-board chrome."
+  },
+  {
+    "ci": 72,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "name='q', placeholder='Keyword...' \u2014 second search box, same job-board chrome family as fi=2."
+  },
+  {
+    "ci": 73,
+    "fi": 20,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'Where are you currently located?'"
+  },
+  {
+    "ci": 73,
+    "fi": 21,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'full-time on-site at our Portland, Oregon offices, or... only seeking remote opportunities'."
+  },
+  {
+    "ci": 73,
+    "fi": 25,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": ""
+  },
+  {
+    "ci": 73,
+    "fi": 26,
+    "action": "confirm",
+    "category": "linkedin_url",
+    "note": ""
+  },
+  {
+    "ci": 73,
+    "fi": 27,
+    "action": "confirm",
+    "category": "personal_website",
+    "note": ""
+  },
+  {
+    "ci": 73,
+    "fi": 28,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What else would you like to tell us about yourself or your application? (optional)'"
+  },
+  {
+    "ci": 73,
+    "fi": 30,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Section-fallback 'specify your area of expertise and any other areas you are interested in'."
+  },
+  {
+    "ci": 74,
+    "fi": 20,
+    "action": "confirm",
+    "category": "preferred_pronouns",
+    "note": "'Preferred name & pronouns:' combines two concepts; pronouns is the more specific/actionable half."
+  },
+  {
+    "ci": 74,
+    "fi": 21,
+    "action": "confirm",
+    "category": "nepotism_disclosure",
+    "note": ""
+  },
+  {
+    "ci": 74,
+    "fi": 23,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you do have any relatives currently employed by PathAI, please list them here'."
+  },
+  {
+    "ci": 74,
+    "fi": 24,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": ""
+  },
+  {
+    "ci": 74,
+    "fi": 27,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 74,
+    "fi": 34,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "Section-fallback 'For which term are you looking for an internship?'"
+  },
+  {
+    "ci": 75,
+    "fi": 5,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Required Acknowledgment *'"
+  },
+  {
+    "ci": 76,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "'Keywords:' search box \u2014 job-board search."
+  },
+  {
+    "ci": 76,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "'Location:' select \u2014 job-board filter."
+  },
+  {
+    "ci": 76,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "'Remote work only', section='Filter jobs'."
+  },
+  {
+    "ci": 76,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Empty checkbox_group, section='Filter jobs' \u2014 same filter section as fi=9."
+  },
+  {
+    "ci": 77,
+    "fi": 22,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'current cumulative GPA'."
+  },
+  {
+    "ci": 77,
+    "fi": 24,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'GPA scale at your institution' \u2014 context needed to interpret the GPA answer, same category."
+  },
+  {
+    "ci": 77,
+    "fi": 26,
+    "action": "confirm",
+    "category": "standardized_test_score",
+    "note": "New category. 'SAT or ACT score' \u2014 distinct from academic_grade since it's a different metric shape."
+  },
+  {
+    "ci": 77,
+    "fi": 28,
+    "action": "confirm",
+    "category": "how_heard_about_role",
+    "note": ""
+  },
+  {
+    "ci": 77,
+    "fi": 30,
+    "action": "confirm",
+    "category": "previously_applied_here",
+    "note": "New category. 'Have you previously applied to work at Point72?' \u2014 distinct from previously_employed_here."
+  },
+  {
+    "ci": 77,
+    "fi": 32,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'provide the date(s) and role(s) to which you have applied'."
+  },
+  {
+    "ci": 77,
+    "fi": 33,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "Japan-specific visa sponsorship."
+  },
+  {
+    "ci": 77,
+    "fi": 35,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": ""
+  },
+  {
+    "ci": 77,
+    "fi": 36,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "'Will you graduate between December 2027 and July 2028?'"
+  },
+  {
+    "ci": 77,
+    "fi": 38,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'available to intern in person between June and August 2027'."
+  },
+  {
+    "ci": 77,
+    "fi": 40,
+    "action": "confirm",
+    "category": "essay",
+    "note": ""
+  },
+  {
+    "ci": 77,
+    "fi": 41,
+    "action": "confirm",
+    "category": "essay",
+    "note": ""
+  },
+  {
+    "ci": 77,
+    "fi": 42,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "Region-specific application-routing confirmation (Japan office)."
+  },
+  {
+    "ci": 77,
+    "fi": 43,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Privacy *'"
+  },
+  {
+    "ci": 77,
+    "fi": 45,
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "note": "section='Diversity', 'I identify as'."
+  },
+  {
+    "ci": 77,
+    "fi": 46,
+    "action": "confirm",
+    "category": "eeo_hispanic_latino",
+    "note": ""
+  },
+  {
+    "ci": 77,
+    "fi": 47,
+    "action": "confirm",
+    "category": "eeo_race_ethnicity",
+    "note": "'Ethnicity/Race'."
+  },
+  {
+    "ci": 77,
+    "fi": 49,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Section-fallback 'written Japanese proficiency'."
+  },
+  {
+    "ci": 77,
+    "fi": 50,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Section-fallback 'spoken Japanese proficiency'."
+  },
+  {
+    "ci": 78,
+    "fi": 25,
+    "action": "confirm",
+    "category": "personal_website",
+    "note": ""
+  },
+  {
+    "ci": 78,
+    "fi": 26,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'comfortable working in a remote setting'."
+  },
+  {
+    "ci": 78,
+    "fi": 28,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": ""
+  },
+  {
+    "ci": 78,
+    "fi": 30,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Unpaid-internship/course-credit-approval acknowledgment."
+  },
+  {
+    "ci": 78,
+    "fi": 32,
+    "action": "confirm",
+    "category": "previously_applied_here",
+    "note": "'interviewed with Power Digital in the past 3 years'."
+  },
+  {
+    "ci": 78,
+    "fi": 34,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'able to intern with us from September to December 2026'."
+  },
+  {
+    "ci": 78,
+    "fi": 36,
+    "action": "confirm",
+    "category": "ai_tool_usage_disclosure",
+    "note": "New category. 'Have you used AI tools (ChatGPT, Gemini, Perplexity...) to assist with tasks like research, writing, or automation?'"
+  },
+  {
+    "ci": 79,
+    "fi": 8,
+    "action": "confirm",
+    "category": "nationality_check",
+    "note": "'Are you native Danish?'"
+  },
+  {
+    "ci": 79,
+    "fi": 10,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'Are you currently studying?'"
+  },
+  {
+    "ci": 79,
+    "fi": 13,
+    "action": "confirm",
+    "category": "linkedin_url",
+    "note": ""
+  },
+  {
+    "ci": 80,
+    "fi": 14,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'Do you have a Ph.D. or currently enrolled in a Ph.D. program?'"
+  },
+  {
+    "ci": 80,
+    "fi": 16,
+    "action": "confirm",
+    "category": "name_pronunciation",
+    "note": "New category. 'Phonetic pronunciation of your name'."
+  },
+  {
+    "ci": 80,
+    "fi": 20,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 80,
+    "fi": 22,
+    "action": "confirm",
+    "category": "nepotism_disclosure",
+    "note": "'friends or relatives with any current employees'."
+  },
+  {
+    "ci": 80,
+    "fi": 25,
+    "action": "confirm",
+    "category": "attention_check",
+    "note": "New category. 'Please include the word \"purple\" in the cover letter submitted.' \u2014 classic instruction-following screening trick."
+  },
+  {
+    "ci": 81,
+    "fi": 9,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Other in the textbox above, please specify which internship discipline'."
+  },
+  {
+    "ci": 81,
+    "fi": 11,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What specifically appeals to you about Recursion, and why do you feel drawn to be a part of it?'"
+  },
+  {
+    "ci": 81,
+    "fi": 12,
+    "action": "confirm",
+    "category": "eeo_race_ethnicity",
+    "note": "section='Equal Opportunity Employment Information', 'I identify my ethnicity as:'"
+  },
+  {
+    "ci": 81,
+    "fi": 14,
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "note": "'I identify my gender as:'"
+  },
+  {
+    "ci": 81,
+    "fi": 16,
+    "action": "confirm",
+    "category": "eeo_transgender",
+    "note": "'I identify as transgender:'"
+  },
+  {
+    "ci": 81,
+    "fi": 18,
+    "action": "confirm",
+    "category": "eeo_sexual_orientation",
+    "note": "'I identify my sexual orientation as:'"
+  },
+  {
+    "ci": 81,
+    "fi": 22,
+    "action": "confirm",
+    "category": "eeo_disability_status",
+    "note": "'I have a physical disability'."
+  },
+  {
+    "ci": 81,
+    "fi": 25,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Section-fallback 'which internship(s) disciplines you're most interested in'."
+  },
+  {
+    "ci": 82,
+    "fi": 22,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": ""
+  },
+  {
+    "ci": 82,
+    "fi": 24,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'What is your GPA? (to the nearest tenth)'"
+  },
+  {
+    "ci": 82,
+    "fi": 26,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Full-time hybrid-onboarding-cohort acknowledgment."
+  },
+  {
+    "ci": 82,
+    "fi": 30,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you heard about us at a career fair... please specify which event'."
+  },
+  {
+    "ci": 82,
+    "fi": 31,
+    "action": "confirm",
+    "category": "state",
+    "note": "'State of Residence*'"
+  },
+  {
+    "ci": 82,
+    "fi": 33,
+    "action": "confirm",
+    "category": "zip_code",
+    "note": "'Zip / Postal'."
+  },
+  {
+    "ci": 82,
+    "fi": 34,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 84,
+    "fi": 9,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'Undergrad GPA'."
+  },
+  {
+    "ci": 84,
+    "fi": 11,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'Masters GPA'."
+  },
+  {
+    "ci": 84,
+    "fi": 13,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'Doctorate GPA'."
+  },
+  {
+    "ci": 84,
+    "fi": 15,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "'anticipated bachelor's degree graduation date'."
+  },
+  {
+    "ci": 84,
+    "fi": 17,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "'anticipated master's degree graduation date'."
+  },
+  {
+    "ci": 84,
+    "fi": 19,
+    "action": "confirm",
+    "category": "qualifications_confirmation",
+    "note": "New category. 'Do you meet all the essential qualifications... under You'll Bring These Qualifications?' \u2014 self-assessed role-fit, distinct from a generic attestation."
+  },
+  {
+    "ci": 84,
+    "fi": 21,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'what amount of software engineering experience do you have?...' open-ended."
+  },
+  {
+    "ci": 84,
+    "fi": 23,
+    "action": "confirm",
+    "category": "student_org_involvement",
+    "note": "New category. 'Engineering Organization Involvement: ... active participant in any of the following engineering student groups or competitions'."
+  },
+  {
+    "ci": 84,
+    "fi": 25,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'Other Engineering Organization Involvement:'"
+  },
+  {
+    "ci": 84,
+    "fi": 26,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Preferred Internship/Co-Op Start Date'."
+  },
+  {
+    "ci": 84,
+    "fi": 28,
+    "action": "confirm",
+    "category": "contract_length",
+    "note": "'Preferred Internship/Co-Op Duration... consecutive weeks'."
+  },
+  {
+    "ci": 84,
+    "fi": 33,
+    "action": "confirm",
+    "category": "previously_applied_here",
+    "note": "'Have you previously interviewed at Rocket Lab?'"
+  },
+  {
+    "ci": 84,
+    "fi": 35,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'Are you willing to work onsite?'"
+  },
+  {
+    "ci": 84,
+    "fi": 39,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If Citizenship Status Other, please explain:'"
+  },
+  {
+    "ci": 84,
+    "fi": 40,
+    "action": "confirm",
+    "category": "consent_background_check",
+    "note": "Criminal background check / drug screen / reference check consent."
+  },
+  {
+    "ci": 84,
+    "fi": 48,
+    "action": "confirm",
+    "category": "scholarship_program_affiliation",
+    "note": "New category. Section-fallback 'Are you a participant of the following scholarship, fellowships, or initiatives we support?'"
+  },
+  {
+    "ci": 84,
+    "fi": 49,
+    "action": "confirm",
+    "category": "security_clearance",
+    "note": "Section-fallback 'Active Security Clearance(s)'."
+  },
+  {
+    "ci": 85,
+    "fi": 17,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Can you start by end of Apr, 2026?'"
+  },
+  {
+    "ci": 85,
+    "fi": 19,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'Can you commit 6 months intern?'"
+  },
+  {
+    "ci": 85,
+    "fi": 21,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'Are you still in school or graduated?'"
+  },
+  {
+    "ci": 85,
+    "fi": 23,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'Where do you live?'"
+  },
+  {
+    "ci": 85,
+    "fi": 24,
+    "action": "confirm",
+    "category": "currently_employed_elsewhere",
+    "note": "New category. 'Are you currently working in a full time position?' \u2014 asks about employment at a DIFFERENT (unspecified) employer, distinct from current_employee_of_company (which asks specifically about the hiring company)."
+  },
+  {
+    "ci": 85,
+    "fi": 26,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 85,
+    "fi": 28,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 85,
+    "fi": 31,
+    "action": "confirm",
+    "category": "github_url",
+    "note": ""
+  },
+  {
+    "ci": 86,
+    "fi": 17,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'Please specify details from your answer above (job board name, employee referrer's name, etc.)'"
+  },
+  {
+    "ci": 86,
+    "fi": 18,
+    "action": "confirm",
+    "category": "ccpa_california_disclosure",
+    "note": "New category. 'Additional Information for California Residents:' \u2014 distinct from the generic consent_ccpa_share_sale checkbox, this is a disclosure-notice acknowledgment."
+  },
+  {
+    "ci": 86,
+    "fi": 22,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 86,
+    "fi": 24,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "'Degree Status - highest degree received or in progress'."
+  },
+  {
+    "ci": 86,
+    "fi": 31,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "Section-fallback 'target internship dates'."
+  },
+  {
+    "ci": 87,
+    "fi": 11,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 87,
+    "fi": 14,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected Other for competition experience, please list it here'."
+  },
+  {
+    "ci": 87,
+    "fi": 15,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'Please confirm if you will be available to start' at the stated Jan 2026 date."
+  },
+  {
+    "ci": 87,
+    "fi": 16,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": ""
+  },
+  {
+    "ci": 87,
+    "fi": 22,
+    "action": "confirm",
+    "category": "competition_participation",
+    "note": "New category. Section-fallback 'Please select any competitions you have participated in below.'"
+  },
+  {
+    "ci": 88,
+    "fi": 15,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'able to attend our Tampere office every week... hybrid way of working'."
+  },
+  {
+    "ci": 89,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "'Sign me up for company updates' (id='signUpCompanyUpdates') \u2014 newsletter signup."
+  },
+  {
+    "ci": 91,
+    "fi": 13,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'Location (city):'"
+  },
+  {
+    "ci": 91,
+    "fi": 17,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Redondo Beach/Orange County commute-timeline question."
+  },
+  {
+    "ci": 91,
+    "fi": 19,
+    "action": "confirm",
+    "category": "compensation_range_acknowledgment",
+    "note": "New category. 'Are you open to the compensation range in the job description?' \u2014 acceptance of a STATED range, distinct from salary_expectation (stating your own number)."
+  },
+  {
+    "ci": 91,
+    "fi": 21,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'When is your ideal start date?'"
+  },
+  {
+    "ci": 91,
+    "fi": 22,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Why do you want to work at Senra Systems?'"
+  },
+  {
+    "ci": 91,
+    "fi": 23,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Why do you think you're a great fit for this position?'"
+  },
+  {
+    "ci": 91,
+    "fi": 24,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'hands-on experience inspecting electromechanical components?' open-ended."
+  },
+  {
+    "ci": 92,
+    "fi": 11,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'GDPR*'"
+  },
+  {
+    "ci": 94,
+    "fi": 14,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": "'authorized to work in China'."
+  },
+  {
+    "ci": 94,
+    "fi": 16,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'currently in PhD or have PhD degree'."
+  },
+  {
+    "ci": 94,
+    "fi": 25,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Section-fallback 'native-level proficiency in Mandarin and professional-level fluency in English'."
+  },
+  {
+    "ci": 95,
+    "fi": 18,
+    "action": "confirm",
+    "category": "education_school",
+    "note": "'Which college did you attend?'"
+  },
+  {
+    "ci": 95,
+    "fi": 20,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If you selected other, please specify which one'."
+  },
+  {
+    "ci": 95,
+    "fi": 21,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "'What degree level are you currently pursuing, or have you most recently completed?'"
+  },
+  {
+    "ci": 95,
+    "fi": 23,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": ""
+  },
+  {
+    "ci": 95,
+    "fi": 25,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 95,
+    "fi": 27,
+    "action": "confirm",
+    "category": "location_preference",
+    "note": "'Which office are you interested in doing your co-op in?'"
+  },
+  {
+    "ci": 95,
+    "fi": 29,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'able to work onsite at the location specified'."
+  },
+  {
+    "ci": 95,
+    "fi": 31,
+    "action": "confirm",
+    "category": "essay",
+    "note": "AI/LLM experience open-ended question."
+  },
+  {
+    "ci": 95,
+    "fi": 33,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Data-visualization-tools experience open-ended question."
+  },
+  {
+    "ci": 95,
+    "fi": 37,
+    "action": "confirm",
+    "category": "marketing_communications_optin",
+    "note": "New category. Recruitment marketing-email opt-in \u2014 distinct from general application-processing consent."
+  },
+  {
+    "ci": 96,
+    "fi": 13,
+    "action": "confirm",
+    "category": "travel_willingness",
+    "note": "New category. 'Are you willing to travel ~50% of the time?'"
+  },
+  {
+    "ci": 97,
+    "fi": 22,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 97,
+    "fi": 26,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'available between June-December 2026'."
+  },
+  {
+    "ci": 97,
+    "fi": 28,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'Are you currently a student?'"
+  },
+  {
+    "ci": 97,
+    "fi": 30,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'able to relocate to the SF Bay Area'."
+  },
+  {
+    "ci": 98,
+    "fi": 14,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Why do you want to work at Skild AI?'"
+  },
+  {
+    "ci": 98,
+    "fi": 15,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Tell us about two to three projects or accomplishments you're most proud of!'"
+  },
+  {
+    "ci": 99,
+    "fi": 23,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'top two exceptional academic and/or professional accomplishments' summary."
+  },
+  {
+    "ci": 99,
+    "fi": 26,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'Please select your enrollment status:'"
+  },
+  {
+    "ci": 99,
+    "fi": 28,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'the month you will be able to start your internship'."
+  },
+  {
+    "ci": 99,
+    "fi": 42,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'GPA (Undergraduate)'."
+  },
+  {
+    "ci": 99,
+    "fi": 44,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'GPA (Graduate)'."
+  },
+  {
+    "ci": 99,
+    "fi": 46,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "'GPA (Doctorate)'."
+  },
+  {
+    "ci": 99,
+    "fi": 48,
+    "action": "confirm",
+    "category": "standardized_test_score",
+    "note": "'SAT Score'."
+  },
+  {
+    "ci": 99,
+    "fi": 50,
+    "action": "confirm",
+    "category": "standardized_test_score",
+    "note": "'ACT Score'."
+  },
+  {
+    "ci": 99,
+    "fi": 52,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "'#1 SpaceX Program Preference'."
+  }
+]

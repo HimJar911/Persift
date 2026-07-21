@@ -1,0 +1,310 @@
+[
+  {
+    "ci": 7,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 23,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 27,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 46,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 48,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 67,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 76,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 107,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 123,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 124,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 125,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 7,
+    "fi": 129,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 26,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 32,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 42,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 12,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 15,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 26,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 26,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 26,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 26,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 24,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 26,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 31,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 109,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 120,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 79,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 88,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 119,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 102,
+    "fi": 122,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 41,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 41,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 69,
+    "fi": 41,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 69,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 69,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 71,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 71,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 110,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "CORRECTION (this session): originally merged into department_interest/location_preference by label-text match, but raw-HTML verification proved this specific field is job-board filter chrome or a cookie-consent toggle, not a real application-form field. See scratchpad/correction_department_location.py for the full per-company verification trail."
+  },
+  {
+    "ci": 70,
+    "fi": 4,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Verified real via raw HTML: id='custom-field-6364019008-label', a genuine Greenhouse embedded-form <label>Department</label> \u2014 unlike vast's same-named field (job-board filter, rejected separately)."
+  }
+]

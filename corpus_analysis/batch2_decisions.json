@@ -1,0 +1,898 @@
+[
+  {
+    "ci": 17,
+    "fi": 48,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 27,
+    "fi": 28,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 27,
+    "fi": 29,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 27,
+    "fi": 30,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 34,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 35,
+    "fi": 13,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 38,
+    "fi": 27,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 51,
+    "fi": 43,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 60,
+    "fi": 25,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 60,
+    "fi": 26,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 71,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 115,
+    "fi": 41,
+    "action": "reject",
+    "category": null,
+    "note": "Malformed extraction artifact: tag=None, every attribute null/empty, field_id_hash='709446a2' repeats identically across 12 pages/companies \u2014 a systemic harvester bug (trailing empty checkbox_group record appended per page), not real DOM content. Nothing to read/classify."
+  },
+  {
+    "ci": 2,
+    "fi": 13,
+    "action": "confirm",
+    "category": "writing_sample_request",
+    "note": "New category \u2014 requests a document/link submission, distinct from essay (free-text response) since it's asking for an attached work sample."
+  },
+  {
+    "ci": 3,
+    "fi": 11,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 4,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "label='en-us12' \u2014 looks like a locale/config code artifact, not a real question. No section/nearby context to read any real meaning from."
+  },
+  {
+    "ci": 6,
+    "fi": 10,
+    "action": "confirm",
+    "category": "essay",
+    "note": ""
+  },
+  {
+    "ci": 6,
+    "fi": 12,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": ""
+  },
+  {
+    "ci": 6,
+    "fi": 15,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Follow-up to a preceding 'Other, ALX staff or Media' choice \u2014 same other_followup family as 'please specify'."
+  },
+  {
+    "ci": 6,
+    "fi": 16,
+    "action": "confirm",
+    "category": "country_of_origin",
+    "note": "New category."
+  },
+  {
+    "ci": 6,
+    "fi": 17,
+    "action": "confirm",
+    "category": "country_of_residence",
+    "note": "New category."
+  },
+  {
+    "ci": 6,
+    "fi": 18,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": "'right to work in current country of residence without sponsorship' \u2014 work-authorization concept."
+  },
+  {
+    "ci": 25,
+    "fi": 31,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Free-text follow-up to fi=29's nepotism_disclosure question (asks to name the relatives once fi=29 is answered yes)."
+  },
+  {
+    "ci": 25,
+    "fi": 32,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'within commuting distance of Durham, NC' \u2014 same concept as astspacemobile's Midland/Odessa relocation question."
+  },
+  {
+    "ci": 25,
+    "fi": 35,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Section-fallback SCADA-monitoring technical scenario question \u2014 same family as Astranis's physics/propulsion technical essays."
+  },
+  {
+    "ci": 26,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "label='search filter label text' \u2014 literal placeholder-looking job-board search field."
+  },
+  {
+    "ci": 26,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "'High Contrast' \u2014 accessibility display toggle, page chrome not a form field."
+  },
+  {
+    "ci": 27,
+    "fi": 12,
+    "action": "confirm",
+    "category": "current_employee_of_company",
+    "note": "New category \u2014 'Are you currently an employee at Dataiku?', present-tense status check, distinct from previously_employed_here."
+  },
+  {
+    "ci": 27,
+    "fi": 14,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 27,
+    "fi": 17,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": ""
+  },
+  {
+    "ci": 27,
+    "fi": 18,
+    "action": "confirm",
+    "category": "how_heard_about_role",
+    "note": ""
+  },
+  {
+    "ci": 27,
+    "fi": 22,
+    "action": "confirm",
+    "category": "github_url",
+    "note": ""
+  },
+  {
+    "ci": 27,
+    "fi": 23,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "'available for a 6-month full-time internship' \u2014 commitment confirmation, same family as celonis's 40h/week confirmation."
+  },
+  {
+    "ci": 28,
+    "fi": 13,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "'currently on a work visa (H1B, TN, OPT, etc.)' \u2014 current visa-status question, same underlying sponsorship concept."
+  },
+  {
+    "ci": 28,
+    "fi": 15,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'100% onsite in San Diego, CA' work-arrangement commitment."
+  },
+  {
+    "ci": 29,
+    "fi": 8,
+    "action": "confirm",
+    "category": "military_branch",
+    "note": "New category \u2014 defense-sector specific, 'What branch of the US DoD are you currently with?'"
+  },
+  {
+    "ci": 29,
+    "fi": 10,
+    "action": "confirm",
+    "category": "skillbridge_eligibility_date",
+    "note": "New category \u2014 DoD SkillBridge program eligibility date, very specific to defense-sector hiring but real and distinct."
+  },
+  {
+    "ci": 29,
+    "fi": 11,
+    "action": "confirm",
+    "category": "military_separation_date",
+    "note": "New category \u2014 'estimated separation date' from military service."
+  },
+  {
+    "ci": 29,
+    "fi": 15,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": ""
+  },
+  {
+    "ci": 29,
+    "fi": 16,
+    "action": "confirm",
+    "category": "event_attendance",
+    "note": "New category \u2014 'Did you meet with or see Defense Unicorns at an event or conference (e.g. Kubecon)?'"
+  },
+  {
+    "ci": 29,
+    "fi": 18,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If yes, what event?' \u2014 follow-up to fi=16."
+  },
+  {
+    "ci": 29,
+    "fi": 19,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": ""
+  },
+  {
+    "ci": 29,
+    "fi": 20,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 29,
+    "fi": 22,
+    "action": "confirm",
+    "category": "security_clearance",
+    "note": ""
+  },
+  {
+    "ci": 29,
+    "fi": 24,
+    "action": "confirm",
+    "category": "consent_ccpa_share_sale",
+    "note": "CCPA disclosure acknowledgment \u2014 same category as the already-confirmed 'share or sale of personal data' checkbox (Intrinsic Robotics/Motional/Scopely/SendBird), this is the disclosure-acknowledgment variant."
+  },
+  {
+    "ci": 30,
+    "fi": 23,
+    "action": "confirm",
+    "category": "education_school",
+    "note": "'re-confirm the university you currently attend'"
+  },
+  {
+    "ci": 30,
+    "fi": 27,
+    "action": "confirm",
+    "category": "relevant_industry_experience",
+    "note": "New category \u2014 'relevant internship experience at a proprietary trading firm', industry-specific experience check."
+  },
+  {
+    "ci": 30,
+    "fi": 29,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "Conditional follow-up to fi=27."
+  },
+  {
+    "ci": 30,
+    "fi": 30,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If other, please specify'."
+  },
+  {
+    "ci": 30,
+    "fi": 31,
+    "action": "confirm",
+    "category": "country_of_residence",
+    "note": ""
+  },
+  {
+    "ci": 30,
+    "fi": 33,
+    "action": "confirm",
+    "category": "state",
+    "note": ""
+  },
+  {
+    "ci": 30,
+    "fi": 34,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 30,
+    "fi": 36,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 30,
+    "fi": 38,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If yes, please provide your visa type and expiration date' \u2014 conditional follow-up."
+  },
+  {
+    "ci": 30,
+    "fi": 39,
+    "action": "confirm",
+    "category": "preferred_pronouns",
+    "note": ""
+  },
+  {
+    "ci": 30,
+    "fi": 43,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If other, please explain'."
+  },
+  {
+    "ci": 30,
+    "fi": 44,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'Terms & Conditions'."
+  },
+  {
+    "ci": 32,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden Salesforce-style CRM tracking field (name='Subscription_Insights__c_contact' \u2014 the '__c' suffix is Salesforce's custom-field naming convention), backend marketing/subscription tracking, not user-facing."
+  },
+  {
+    "ci": 34,
+    "fi": 10,
+    "action": "confirm",
+    "category": "currently_based_in_country",
+    "note": "New category \u2014 'currently based in the United States?' is a present-location yes/no check, distinct from work_authorized (legal ability to work) and willing_to_relocate (open to moving)."
+  },
+  {
+    "ci": 34,
+    "fi": 12,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "Specific-hours/specific-duration commitment confirmation."
+  },
+  {
+    "ci": 34,
+    "fi": 14,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Mandarin Chinese proficiency."
+  },
+  {
+    "ci": 36,
+    "fi": 15,
+    "action": "confirm",
+    "category": "field_of_study_relevance",
+    "note": "New category \u2014 'Are you an Engineer or similar background (Maths, Physics, Statistics)?' asks about field-of-study RELEVANCE to the role, not the literal degree/discipline (education_discipline)."
+  },
+  {
+    "ci": 36,
+    "fi": 17,
+    "action": "confirm",
+    "category": "academic_grade",
+    "note": "New category \u2014 'average grade in university'."
+  },
+  {
+    "ci": 36,
+    "fi": 18,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "Spanish proficiency."
+  },
+  {
+    "ci": 36,
+    "fi": 20,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "English proficiency."
+  },
+  {
+    "ci": 36,
+    "fi": 22,
+    "action": "confirm",
+    "category": "internship_agreement_confirmation",
+    "note": "New category \u2014 'able to sign an internship agreement with your University/Study Center' is specifically about a university-side paperwork requirement, distinct from consent_attestation_general."
+  },
+  {
+    "ci": 36,
+    "fi": 24,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'What is your availability?'"
+  },
+  {
+    "ci": 36,
+    "fi": 26,
+    "action": "confirm",
+    "category": "contract_length",
+    "note": "New category \u2014 'potential length of your contract'."
+  },
+  {
+    "ci": 36,
+    "fi": 28,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'currently living in Madrid or willing to move to Madrid'."
+  },
+  {
+    "ci": 36,
+    "fi": 30,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 36,
+    "fi": 32,
+    "action": "confirm",
+    "category": "how_heard_about_role",
+    "note": ""
+  },
+  {
+    "ci": 36,
+    "fi": 34,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "Long immigration-support/sponsorship question."
+  },
+  {
+    "ci": 36,
+    "fi": 36,
+    "action": "confirm",
+    "category": "preferred_pronouns",
+    "note": ""
+  },
+  {
+    "ci": 36,
+    "fi": 37,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Data-processing authorization paragraph."
+  },
+  {
+    "ci": 36,
+    "fi": 39,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": "New category \u2014 'Have you previously been employed by this company?', distinct from current_employee_of_company (present tense)."
+  },
+  {
+    "ci": 36,
+    "fi": 42,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "Section-fallback 'When would you be able to start your internship?'"
+  },
+  {
+    "ci": 37,
+    "fi": 14,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "New category \u2014 'currently enrolled in a bachelor's/associate's/master's degree program?' is an enrollment-STATUS check, distinct from education_school/education_degree (which/what) and graduation_date (when)."
+  },
+  {
+    "ci": 37,
+    "fi": 16,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Please share 3-5 sentences explaining your interest in the Blockchain/Web3 industry.'"
+  },
+  {
+    "ci": 37,
+    "fi": 21,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 37,
+    "fi": 23,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'open to relocating if not currently based near NYC'."
+  },
+  {
+    "ci": 37,
+    "fi": 26,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback 'Applicant Privacy Statement'."
+  },
+  {
+    "ci": 38,
+    "fi": 16,
+    "action": "confirm",
+    "category": "publication_list",
+    "note": "New category \u2014 'Publication List (linking to Google Scholar or similar is sufficient)', academic/research-specific."
+  },
+  {
+    "ci": 38,
+    "fi": 17,
+    "action": "confirm",
+    "category": "github_url",
+    "note": ""
+  },
+  {
+    "ci": 38,
+    "fi": 18,
+    "action": "confirm",
+    "category": "currently_enrolled_status",
+    "note": "'currently enrolled in a PhD program?'"
+  },
+  {
+    "ci": 38,
+    "fi": 20,
+    "action": "confirm",
+    "category": "availability_hours_per_week",
+    "note": "'How many hours per week would you be able to work and for what duration of time?' \u2014 combined hours+duration question, close enough to the existing category to merge rather than split further."
+  },
+  {
+    "ci": 38,
+    "fi": 21,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'What is your potential start date?'"
+  },
+  {
+    "ci": 38,
+    "fi": 22,
+    "action": "confirm",
+    "category": "intended_work_country",
+    "note": "New category \u2014 'What country do you intend to work from?', distinct from country_of_residence (asks intent/plan, not current location)."
+  },
+  {
+    "ci": 38,
+    "fi": 23,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 38,
+    "fi": 25,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What makes you a good fit for this role?'"
+  },
+  {
+    "ci": 39,
+    "fi": 21,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": "'legally authorized to work in Canada'."
+  },
+  {
+    "ci": 39,
+    "fi": 23,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'comfortable with a hybrid work environment'."
+  },
+  {
+    "ci": 39,
+    "fi": 25,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'GDPR Notice'."
+  },
+  {
+    "ci": 39,
+    "fi": 28,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Section-fallback field. VERIFIED via raw HTML (corpus/pages/5645073004.html.gz): real Greenhouse fieldset id='question_14158675004[]', genuine <legend> with the actual question text, required=true \u2014 NOT a job-board filter (checked explicitly after today's department_interest/location_preference correction, to avoid repeating that mistake)."
+  },
+  {
+    "ci": 40,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "Hidden CMS pagination/state field (block_uid, page_row_uid, location_uids, sort, etc.) \u2014 internal page-rendering state, not a form field."
+  },
+  {
+    "ci": 40,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search box ('Search by job title, location, department, category, etc.')."
+  },
+  {
+    "ci": 41,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed Cookiebot cookie-consent widget (id='CybotCookiebotDialogBodyContentCheckboxPersonalInformation'), same vendor prefix as previously-rejected cookie fields on this and other companies' pages."
+  },
+  {
+    "ci": 42,
+    "fi": 10,
+    "action": "confirm",
+    "category": "nepotism_disclosure",
+    "note": "'relative/family member working currently in Groww'."
+  },
+  {
+    "ci": 42,
+    "fi": 12,
+    "action": "confirm",
+    "category": "previously_employed_here",
+    "note": ""
+  },
+  {
+    "ci": 42,
+    "fi": 14,
+    "action": "confirm",
+    "category": "consent_background_check",
+    "note": "New category \u2014 'consent for us to conduct your background verification (BGV) and reference checks', distinct from consent_ccpa_share_sale (data-privacy) and consent_attestation_general (information-accuracy)."
+  },
+  {
+    "ci": 42,
+    "fi": 16,
+    "action": "confirm",
+    "category": "personal_website",
+    "note": "'Please share your Portfolio here'."
+  },
+  {
+    "ci": 43,
+    "fi": 21,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'What is your desired compensation?'"
+  },
+  {
+    "ci": 43,
+    "fi": 22,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": "'right to work in the EU'."
+  },
+  {
+    "ci": 43,
+    "fi": 24,
+    "action": "confirm",
+    "category": "preferred_contact_method",
+    "note": "New category \u2014 'preferred way of communication to contact you? e.g., email, phone'."
+  },
+  {
+    "ci": 43,
+    "fi": 25,
+    "action": "confirm",
+    "category": "courses_remaining",
+    "note": "New category \u2014 'how many courses do you have left until graduation'."
+  },
+  {
+    "ci": 43,
+    "fi": 27,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "'comfortable completing the interview process in English'."
+  },
+  {
+    "ci": 43,
+    "fi": 29,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "'able to work from Athens in line with this arrangement'."
+  },
+  {
+    "ci": 43,
+    "fi": 32,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "Section-fallback visa/permit question."
+  },
+  {
+    "ci": 43,
+    "fi": 33,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Section-fallback general information-accuracy attestation."
+  },
+  {
+    "ci": 45,
+    "fi": 10,
+    "action": "confirm",
+    "category": "current_salary",
+    "note": "New category \u2014 'What is your current salary?', distinct from salary_expectation (future/desired)."
+  },
+  {
+    "ci": 45,
+    "fi": 11,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'What is your expected salary?'"
+  },
+  {
+    "ci": 45,
+    "fi": 12,
+    "action": "confirm",
+    "category": "nationality_check",
+    "note": "New category \u2014 'Are you Saudi?' is a specific country-nationality eligibility check, distinct from general work_authorized."
+  },
+  {
+    "ci": 45,
+    "fi": 14,
+    "action": "confirm",
+    "category": "nationality",
+    "note": "New category \u2014 'What is your nationality?'"
+  },
+  {
+    "ci": 45,
+    "fi": 16,
+    "action": "confirm",
+    "category": "notice_period",
+    "note": "New category \u2014 'What is your notice period?'"
+  },
+  {
+    "ci": 45,
+    "fi": 18,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "'Are you living in Riyadh?' \u2014 location/relocation check."
+  },
+  {
+    "ci": 45,
+    "fi": 20,
+    "action": "confirm",
+    "category": "interview_availability",
+    "note": "New category \u2014 'When is your available times for an interview?', distinct from availability_start_date (start-of-employment date)."
+  },
+  {
+    "ci": 45,
+    "fi": 22,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What do you know about Hala? And why you want to work for Hala?'"
+  },
+  {
+    "ci": 45,
+    "fi": 23,
+    "action": "confirm",
+    "category": "certifications",
+    "note": "New category \u2014 'Kindly, write down professional certificates you have'."
+  },
+  {
+    "ci": 47,
+    "fi": 17,
+    "action": "confirm",
+    "category": "criminal_background_disclosure",
+    "note": "New category \u2014 'Have you ever been convicted of a crime?'"
+  },
+  {
+    "ci": 47,
+    "fi": 19,
+    "action": "confirm",
+    "category": "other_followup",
+    "note": "'If convicted, please explain' \u2014 follow-up to fi=17."
+  },
+  {
+    "ci": 47,
+    "fi": 20,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Do you want to tell us anything else about yourself?'"
+  },
+  {
+    "ci": 47,
+    "fi": 21,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "Long immigration-support question."
+  },
+  {
+    "ci": 47,
+    "fi": 23,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'AI Policy for Hiring and Recruitment' agreement."
+  }
+]

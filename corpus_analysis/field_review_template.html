@@ -1,0 +1,1421 @@
+<title>Field Open-Coding — Persift Corpus</title>
+<style>
+:root {
+  --bg: #F7F7F5;
+  --surface: #FFFFFF;
+  --surface-2: #EFEFEC;
+  --ink: #1C1E22;
+  --ink-dim: #5B5F68;
+  --ink-faint: #8A8E96;
+  --border: #DEDEDA;
+  --accent: #5B5FE8;
+  --accent-dim: #EEEEFC;
+  --accent-ink: #3A3DB8;
+  --good: #1E8E5A;
+  --good-bg: #E6F5EC;
+  --warn: #B7791F;
+  --warn-bg: #FBF0DD;
+  --bad: #C0392B;
+  --bad-bg: #FBEAE7;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171B;
+    --surface: #1D2025;
+    --surface-2: #262A31;
+    --ink: #ECEDEF;
+    --ink-dim: #9A9EA8;
+    --ink-faint: #6B6F78;
+    --border: #33373F;
+    --accent: #8286F2;
+    --accent-dim: #262A4A;
+    --accent-ink: #B4B7F8;
+    --good: #4FBE84;
+    --good-bg: #16281F;
+    --warn: #D9A441;
+    --warn-bg: #2E2712;
+    --bad: #E17163;
+    --bad-bg: #301917;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171B; --surface: #1D2025; --surface-2: #262A31;
+  --ink: #ECEDEF; --ink-dim: #9A9EA8; --ink-faint: #6B6F78;
+  --border: #33373F; --accent: #8286F2; --accent-dim: #262A4A; --accent-ink: #B4B7F8;
+  --good: #4FBE84; --good-bg: #16281F; --warn: #D9A441; --warn-bg: #2E2712;
+  --bad: #E17163; --bad-bg: #301917;
+}
+:root[data-theme="light"] {
+  --bg: #F7F7F5; --surface: #FFFFFF; --surface-2: #EFEFEC;
+  --ink: #1C1E22; --ink-dim: #5B5F68; --ink-faint: #8A8E96;
+  --border: #DEDEDA; --accent: #5B5FE8; --accent-dim: #EEEEFC; --accent-ink: #3A3DB8;
+  --good: #1E8E5A; --good-bg: #E6F5EC; --warn: #B7791F; --warn-bg: #FBF0DD;
+  --bad: #C0392B; --bad-bg: #FBEAE7;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+header.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+header.page-head .eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+header.page-head h1 {
+  font-size: 21px;
+  font-weight: 650;
+  margin: 0;
+  text-wrap: balance;
+}
+header.page-head p {
+  margin: 2px 0 0;
+  color: var(--ink-dim);
+  max-width: 72ch;
+  font-size: 13.5px;
+}
+
+.stats {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.stat .n { font-size: 18px; font-weight: 600; color: var(--ink); }
+.stat .l { font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+}
+.tab-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface-2);
+  color: var(--ink-dim);
+  cursor: pointer;
+  position: relative;
+  top: 1px;
+}
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-bottom: 1px solid var(--surface);
+}
+.tab-btn .badge-count {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  margin-left: 5px;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 14px 0 10px;
+  z-index: 5;
+  border-bottom: 1px solid var(--border);
+}
+
+.search {
+  flex: 1 1 240px;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+}
+.search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.search::placeholder { color: var(--ink-faint); }
+
+.chip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--accent); color: var(--ink); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.companies { display: flex; flex-direction: column; gap: 10px; }
+
+.company {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.company-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.company-head:hover { background: var(--surface-2); }
+.company-head .caret {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+  width: 10px;
+}
+.company.open .caret { transform: rotate(90deg); }
+.company-head .cname {
+  font-weight: 650;
+  font-size: 14px;
+  flex: 1;
+}
+.company-head .ccount {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.company-head .cjobid {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+.field-list {
+  display: none;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+.company.open .field-list { display: flex; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.field-row:last-child { border-bottom: none; }
+.field-row:hover { background: var(--surface-2); }
+.field-row.hidden-by-filter { display: none; }
+
+.field-row .check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border);
+  margin-top: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: white;
+}
+.field-row.tagged .check { background: var(--accent); border-color: var(--accent); }
+
+.field-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.field-label-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.field-label {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.field-label.empty { color: var(--ink-faint); font-style: italic; font-weight: 400; }
+.field-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.field-meta .seg { white-space: nowrap; }
+.field-meta .seg b { color: var(--ink-dim); font-weight: 600; }
+.field-nearby {
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  max-width: 62ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-opts {
+  font-size: 11px;
+  color: var(--accent-ink);
+  font-family: var(--mono);
+  max-width: 62ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-company-tag {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+.badges { display: flex; gap: 5px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+.badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.badge.type-text { background: var(--accent-dim); color: var(--accent-ink); }
+.badge.type-select, .badge.type-combobox { background: var(--warn-bg); color: var(--warn); }
+.badge.type-radio, .badge.type-checkbox { background: var(--good-bg); color: var(--good); }
+.badge.type-file { background: var(--bad-bg); color: var(--bad); }
+.badge.type-other { background: var(--surface-2); color: var(--ink-faint); }
+.badge.req { background: var(--bad-bg); color: var(--bad); }
+.badge.hidden { background: var(--surface-2); color: var(--ink-faint); text-decoration: line-through; }
+.badge.rule-autocomplete { background: var(--good-bg); color: var(--good); }
+.badge.rule-label { background: var(--accent-dim); color: var(--accent-ink); }
+.badge.rule-options { background: var(--warn-bg); color: var(--warn); }
+
+.detail {
+  display: none;
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink-dim);
+  border: 1px solid var(--border);
+}
+.field-row.expanded .detail { display: block; }
+
+.tag-panel {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  left: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  padding: 12px 14px;
+  display: none;
+  gap: 10px;
+  align-items: center;
+  z-index: 20;
+}
+.tag-panel.visible { display: flex; }
+.tag-panel .count {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.tag-panel input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 9px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.tag-panel input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.groups-panel {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.groups-panel h2 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+.groups-panel .sub { color: var(--ink-dim); font-size: 12.5px; margin: 0 0 12px; }
+.group-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.group-card .gname {
+  font-weight: 650;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.group-card .gname .n {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.group-card .gitems {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.group-card .gitem {
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+}
+.group-card .gitem b { color: var(--ink); font-family: var(--sans); font-weight: 600; }
+
+/* Cluster review cards */
+.cluster-intro {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+.cluster-intro b { color: var(--ink); }
+.cluster-intro .rule-key { font-family: var(--mono); font-size: 11.5px; }
+
+.cluster-list { display: flex; flex-direction: column; gap: 10px; }
+
+.cluster-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.cluster-card.status-confirmed { border-color: var(--good); }
+.cluster-card.status-rejected { opacity: 0.5; }
+.cluster-card.status-rejected .cluster-body { display: none; }
+
+.cluster-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.cluster-head:hover { background: var(--surface-2); }
+.cluster-head .caret {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+  width: 10px;
+  flex-shrink: 0;
+}
+.cluster-card.open .caret { transform: rotate(90deg); }
+.cluster-head .ctitle-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cluster-head .ctitle {
+  font-weight: 650;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cluster-head .csub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.cluster-head .ccount {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cluster-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.cluster-actions .btn { padding: 5px 10px; font-size: 11.5px; }
+
+.cluster-name-input {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 650;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  color: var(--ink);
+  padding: 1px 2px;
+  min-width: 160px;
+}
+.cluster-name-input:focus-visible { outline: none; border-bottom-color: var(--accent); }
+
+.cluster-body {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 10px 14px;
+}
+.cluster-card.open .cluster-body { display: block; }
+
+.cluster-member {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.cluster-member:last-child { border-bottom: none; }
+.cluster-member .mcompany {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  min-width: 130px;
+  flex-shrink: 0;
+}
+.cluster-member .mlabel { color: var(--ink); font-weight: 500; flex: 1; min-width: 0; }
+.cluster-member .mlabel.empty { color: var(--ink-faint); font-style: italic; font-weight: 400; }
+.cluster-member .moutlier { color: var(--warn); font-size: 10.5px; font-family: var(--mono); }
+
+.empty-note {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  padding: 30px;
+  text-align: center;
+}
+
+::selection { background: var(--accent); color: white; }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">Persift &middot; Form Engine &middot; P1 open-coding pass</div>
+    <h1>Field Open-Coding — full corpus coverage</h1>
+    <p>Every company from the 767-job Greenhouse corpus (P1.2) with a real application form (&gt;5 fields, richest posting per company). 269 companies were crawled; 116 cleared the real-form bar — the rest are excluded here as likely generic-listing-page noise (separate apply_url triage, not yet fixed). A deterministic pass (no LLM) pre-grouped exact/near-exact matches — review those in the Clusters tab first, then work the Residue tab for everything that needs real judgment.</p>
+    <div class="stats">
+      <div class="stat"><span class="n" id="statCompanies">—</span><span class="l">companies</span></div>
+      <div class="stat"><span class="n" id="statFields">—</span><span class="l">fields</span></div>
+      <div class="stat"><span class="n" id="statClusters">—</span><span class="l">auto-clusters</span></div>
+      <div class="stat"><span class="n" id="statConfirmed">0</span><span class="l">confirmed</span></div>
+      <div class="stat"><span class="n" id="statTagged">0</span><span class="l">residue tagged</span></div>
+      <div class="stat"><span class="n" id="statGroups">0</span><span class="l">total groups</span></div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="clusters">Clusters <span class="badge-count" id="tabClusterCount"></span></button>
+      <button class="tab-btn" data-tab="triage">Residue Review <span class="badge-count" id="tabTriageCount"></span></button>
+      <button class="tab-btn" data-tab="residue">Residue (raw) <span class="badge-count" id="tabResidueCount"></span></button>
+      <button class="tab-btn" data-tab="groups">Named groups <span class="badge-count" id="tabGroupsCount"></span></button>
+    </div>
+  </header>
+
+  <div class="tab-panel active" id="panel-clusters">
+    <div class="cluster-intro">
+      <b>Deterministic pre-clustering</b> — id-attribute matches, autocomplete spec values, near-exact normalized label text, section-as-fallback-label text, and identical non-trivial options lists — no semantic guessing. Every cluster is pre-confirmed, pre-rejected, or flagged ⚠ SPECIAL from a reviewed session (evidence shown per card). Everything is still editable. Outlier members within a cluster are flagged if their label doesn't quite match the rest.
+    </div>
+    <div class="cluster-list" id="clusterList"></div>
+  </div>
+
+  <div class="tab-panel" id="panel-triage">
+    <div class="cluster-intro">
+      <b>Residue, split in two.</b> "Likely match" = the field's label/section text has high word-overlap (≥60% shared, non-generic words) with a label already inside a CONFIRMED cluster — a mechanical near-duplicate check, not a semantic guess, so treat it as fast-skim/confirm, not blind trust. "Needs your read" = genuinely novel, ambiguous, or too different in wording to trust a mechanical match — this is the pile worth your judgment. Every "likely match" shows its suggested category and overlap score so you can sanity-check before confirming.
+    </div>
+    <div class="cluster-list" id="triageAutoList"></div>
+    <div style="margin: 24px 0 10px; font-weight: 650; font-size: 14px; color: var(--ink-dim);">Needs your read</div>
+    <div class="toolbar" id="triageToolbar" style="position:static;">
+      <input class="search" id="triageSearchBox" type="text" placeholder="Filter needs-your-read fields by label text…" />
+    </div>
+    <div class="cluster-list" id="triageReviewList"></div>
+  </div>
+
+  <div class="tab-panel" id="panel-residue">
+    <div class="toolbar" id="toolbar">
+      <input class="search" id="searchBox" type="text" placeholder="Filter by label, name, autocomplete, nearby text…" />
+      <button class="chip" data-type-filter="text">text</button>
+      <button class="chip" data-type-filter="select">select</button>
+      <button class="chip" data-type-filter="combobox">combobox</button>
+      <button class="chip" data-type-filter="radio">radio</button>
+      <button class="chip" data-type-filter="checkbox">checkbox</button>
+      <button class="chip" data-type-filter="file">file</button>
+      <button class="chip" data-type-filter="textarea">textarea</button>
+      <button class="chip" id="noLabelFilter">no label found</button>
+      <button class="btn" id="expandAll">Expand all</button>
+      <button class="btn" id="collapseAll">Collapse all</button>
+    </div>
+    <div class="companies" id="companies"></div>
+  </div>
+
+  <div class="tab-panel" id="panel-groups">
+    <div class="groups-panel" id="groupsPanel" style="border-top:none; padding-top:0; margin-top:0;">
+      <p class="sub">All named groups so far — confirmed clusters plus manually tagged residue fields, in one place. This is what "Export tags" downloads.</p>
+      <div id="groupsList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tag-panel" id="tagPanel">
+  <span class="count" id="tagCount">0 selected</span>
+  <input id="tagInput" type="text" placeholder="Group name (e.g. first_name, work_auth, essay_open_ended)…" />
+  <button class="btn primary" id="applyTag">Apply</button>
+  <button class="btn" id="clearSelection">Clear</button>
+</div>
+
+<div class="tag-panel" id="exportPanelWrap" style="display:none;"></div>
+
+<script>
+const DATA = __DATA_PLACEHOLDER__;
+const CLUSTER_DATA = __CLUSTERS_PLACEHOLDER__;
+const DECISIONS = __DECISIONS_PLACEHOLDER__;
+const TRIAGE = __TRIAGE_PLACEHOLDER__;
+const TRIAGE_DECISIONS = __TRIAGE_DECISIONS_PLACEHOLDER__;
+const MANUAL_SINGLETON_TAGS = __MANUAL_SINGLETON_TAGS_PLACEHOLDER__;
+const MANUAL_FIELD_INDEX_TAGS = __MANUAL_FIELD_INDEX_TAGS_PLACEHOLDER__;
+
+// ---------- shared state ----------
+const state = {
+  tags: new Map(),           // "ci:fi" -> group name (residue-tagged fields)
+  selected: new Set(),       // residue selection for tagging
+  activeTypeFilters: new Set(),
+  noLabelOnly: false,
+  searchTerm: '',
+  clusterStatus: new Map(),  // cluster_id -> 'confirmed' | 'rejected' | undefined
+  clusterNames: new Map(),   // cluster_id -> renamed group name (defaults to auto key)
+  rejectedResidue: new Map(), // "ci:fi" -> reject note (individually reviewed and excluded, e.g. page-chrome caught while reading an option list)
+};
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fieldAt(ci, fi) { return DATA[ci].fields[fi]; }
+function companyAt(ci) { return DATA[ci].company; }
+
+function typeClass(itype) {
+  const t = (itype || '').toLowerCase();
+  if (t === 'text' || t === 'textarea' || t === 'email' || t === 'tel') return 'type-text';
+  if (t === 'select') return 'type-select';
+  if (t === 'combobox') return 'type-combobox';
+  if (t === 'radio') return 'type-radio';
+  if (t === 'checkbox') return 'type-checkbox';
+  if (t === 'file') return 'type-file';
+  return 'type-other';
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    document.getElementById('tagPanel').classList.toggle('visible', (btn.dataset.tab === 'residue' || btn.dataset.tab === 'triage') && state.selected.size > 0);
+  });
+});
+
+// ============ CLUSTERS TAB ============
+
+function defaultClusterName(c) {
+  return c.key;
+}
+
+function normalizeLabelForOutlier(label) {
+  if (!label) return '';
+  return label.toLowerCase().replace(/[*✱]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function renderClusters() {
+  const list = document.getElementById('clusterList');
+  list.innerHTML = '';
+
+  const sorted = [...CLUSTER_DATA.clusters].sort((a, b) => b.members.length - a.members.length);
+
+  sorted.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'cluster-card';
+    card.dataset.clusterId = c.cluster_id;
+
+    const status = state.clusterStatus.get(c.cluster_id);
+    if (status) card.classList.add('status-' + status);
+
+    const name = state.clusterNames.get(c.cluster_id) || defaultClusterName(c);
+
+    // outlier detection for label-rule clusters: flag members whose normalized
+    // label doesn't match the cluster key (shouldn't happen for label-rule
+    // clusters by construction, but autocomplete/options clusters can have
+    // genuinely different label text worth a glance)
+    const head = document.createElement('div');
+    head.className = 'cluster-head';
+    head.innerHTML = `
+      <span class="caret">&#9656;</span>
+      <div class="ctitle-wrap">
+        <div class="ctitle">
+          <input class="cluster-name-input" value="${esc(name)}" data-cluster-id="${c.cluster_id}" />
+        </div>
+        <div class="csub">rule: ${esc(c.rule)} &middot; auto-key: "${esc(c.key)}"</div>
+      </div>
+      <span class="ccount">${c.members.length} fields, ${new Set(c.members.map(m=>m.company)).size} companies</span>
+      <div class="cluster-actions">
+        <button class="btn primary" data-action="confirm" data-cluster-id="${c.cluster_id}">${status === 'confirmed' ? '✓ Confirmed' : 'Confirm'}</button>
+        <button class="btn danger" data-action="reject" data-cluster-id="${c.cluster_id}">${status === 'rejected' ? 'Rejected' : 'Reject'}</button>
+      </div>
+    `;
+    head.querySelector('.caret').addEventListener('click', (e) => {
+      e.stopPropagation();
+      card.classList.toggle('open');
+    });
+    head.querySelector('.ctitle-wrap').addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      card.classList.toggle('open');
+    });
+    const nameInput = head.querySelector('.cluster-name-input');
+    nameInput.addEventListener('click', (e) => e.stopPropagation());
+    nameInput.addEventListener('input', (e) => {
+      state.clusterNames.set(c.cluster_id, e.target.value);
+      updateGlobalStats();
+    });
+    head.querySelector('[data-action="confirm"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur = state.clusterStatus.get(c.cluster_id);
+      state.clusterStatus.set(c.cluster_id, cur === 'confirmed' ? undefined : 'confirmed');
+      renderClusters();
+      renderGroups();
+    });
+    head.querySelector('[data-action="reject"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur = state.clusterStatus.get(c.cluster_id);
+      state.clusterStatus.set(c.cluster_id, cur === 'rejected' ? undefined : 'rejected');
+      renderClusters();
+      renderGroups();
+    });
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'cluster-body';
+
+    const rk = c.rule + '::' + c.key;
+    const reasonText = (DECISIONS && (DECISIONS.confirm && DECISIONS.confirm[rk] !== undefined
+        ? null // confirm reasons are implicit in the rename; only show notes for reject/special
+        : DECISIONS.reject && DECISIONS.reject[rk]
+          ? DECISIONS.reject[rk]
+          : DECISIONS.special && DECISIONS.special[rk]
+            ? DECISIONS.special[rk].note
+            : null));
+    if (reasonText) {
+      const reasonEl = document.createElement('div');
+      reasonEl.style.cssText = 'padding:8px 0 10px;font-size:12px;color:var(--ink-dim);border-bottom:1px solid var(--border);margin-bottom:6px;';
+      reasonEl.innerHTML = `<b style="color:var(--ink);">Reasoning:</b> ${esc(reasonText)}`;
+      body.appendChild(reasonEl);
+    }
+
+    const clusterNorm = normalizeLabelForOutlier(c.key);
+    c.members.forEach(m => {
+      const f = fieldAt(m.ci, m.fi);
+      const memberNorm = normalizeLabelForOutlier(f.label);
+      const isOutlier = c.rule !== 'label' && memberNorm && clusterNorm && memberNorm !== clusterNorm && !memberNorm.includes(clusterNorm) && !clusterNorm.includes(memberNorm);
+      const row = document.createElement('div');
+      row.className = 'cluster-member';
+      row.innerHTML = `
+        <span class="mcompany">${esc(m.company)}</span>
+        <span class="mlabel ${f.label ? '' : 'empty'}">${f.label ? esc(f.label) : '(no label)'} <span style="color:var(--ink-faint);font-family:var(--mono);font-size:10.5px;">· ${esc(f.itype)}</span></span>
+        ${isOutlier ? '<span class="moutlier">⚠ check</span>' : ''}
+      `;
+      body.appendChild(row);
+    });
+    card.appendChild(body);
+
+    list.appendChild(card);
+  });
+
+  document.getElementById('statClusters').textContent = CLUSTER_DATA.clusters.length;
+  document.getElementById('tabClusterCount').textContent = CLUSTER_DATA.clusters.length;
+  updateGlobalStats();
+}
+
+// ============ RESIDUE TAB (same mechanics as before, scoped to residue fields) ============
+
+function fieldKey(ci, fi) { return ci + ':' + fi; }
+
+function renderResidue() {
+  const container = document.getElementById('companies');
+  container.innerHTML = '';
+
+  const residueSet = new Set(CLUSTER_DATA.residue.map(r => r.ci + ':' + r.fi));
+
+  // group residue by company
+  const byCompany = new Map();
+  CLUSTER_DATA.residue.forEach(r => {
+    if (!byCompany.has(r.ci)) byCompany.set(r.ci, []);
+    byCompany.get(r.ci).push(r.fi);
+  });
+
+  const companyIndices = [...byCompany.keys()].sort((a, b) => companyAt(a).localeCompare(companyAt(b)));
+
+  companyIndices.forEach(ci => {
+    const fis = byCompany.get(ci);
+    if (fis.length === 0) return;
+    const card = document.createElement('div');
+    card.className = 'company';
+    card.dataset.idx = ci;
+
+    const head = document.createElement('div');
+    head.className = 'company-head';
+    head.innerHTML = `
+      <span class="caret">&#9656;</span>
+      <span class="cname">${esc(companyAt(ci))}</span>
+      <span class="cjobid">job ${esc(DATA[ci].job_id)}</span>
+      <span class="ccount">${fis.length} unclustered fields</span>
+    `;
+    head.addEventListener('click', () => card.classList.toggle('open'));
+    card.appendChild(head);
+
+    const list = document.createElement('div');
+    list.className = 'field-list';
+
+    fis.forEach(fi => {
+      const f = fieldAt(ci, fi);
+      const key = fieldKey(ci, fi);
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.dataset.key = key;
+      row.dataset.itype = (f.itype || '').toLowerCase();
+      row.dataset.hasLabel = f.label ? '1' : '0';
+      row.dataset.searchBlob = [f.label, f.name, f.id, f.ac, f.nearby, f.desc, f.placeholder, f.section]
+        .filter(Boolean).join(' ').toLowerCase();
+
+      const badges = [];
+      badges.push(`<span class="badge ${typeClass(f.itype)}">${esc(f.itype || f.tag)}</span>`);
+      if (f.req) badges.push(`<span class="badge req">required</span>`);
+      if (f.vis === false) badges.push(`<span class="badge hidden">hidden</span>`);
+
+      const optsText = Array.isArray(f.opts) && f.opts.length
+        ? f.opts.slice(0, 6).join(' · ') + (f.opts.length > 6 ? ` …+${f.opts.length - 6}` : '')
+        : '';
+
+      const usingSectionFallback = !f.label && f.section && f.section.trim().length >= 15;
+      const displayLabel = f.label || (usingSectionFallback ? f.section : null);
+
+      row.innerHTML = `
+        <span class="check"></span>
+        <div class="field-main">
+          <div class="field-label-line">
+            <span class="field-label ${displayLabel ? '' : 'empty'}">${displayLabel ? esc(displayLabel) : '(no label or usable section text found)'}</span>
+            ${usingSectionFallback ? '<span style="font-family:var(--mono);font-size:10px;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;">from section, not label</span>' : ''}
+          </div>
+          <div class="field-meta">
+            <span class="seg"><b>name:</b> ${f.name ? esc(f.name) : '<i>empty</i>'}</span>
+            <span class="seg"><b>id:</b> ${f.id ? esc(f.id) : '<i>empty</i>'}</span>
+            <span class="seg"><b>autocomplete:</b> ${f.ac ? esc(f.ac) : '<i>empty</i>'}</span>
+            ${f.section && !usingSectionFallback ? `<span class="seg"><b>section:</b> ${esc(f.section)}</span>` : ''}
+          </div>
+          ${f.nearby ? `<div class="field-nearby">${esc(f.nearby)}</div>` : ''}
+          ${optsText ? `<div class="field-opts">options: ${esc(optsText)}</div>` : ''}
+          <div class="detail"></div>
+        </div>
+        <div class="badges">${badges.join('')}</div>
+      `;
+
+      const check = row.querySelector('.check');
+      check.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSelect(key, row);
+      });
+
+      row.addEventListener('click', (e) => {
+        if (e.target === check) return;
+        row.classList.toggle('expanded');
+        if (row.classList.contains('expanded')) {
+          const detail = row.querySelector('.detail');
+          detail.textContent = JSON.stringify(f, null, 2);
+        }
+      });
+
+      if (state.tags.has(key)) {
+        row.classList.add('tagged');
+        check.textContent = '✓';
+      }
+
+      list.appendChild(row);
+    });
+
+    card.appendChild(list);
+    container.appendChild(card);
+  });
+
+  document.getElementById('statFields').textContent = DATA.reduce((s, c) => s + c.fields.length, 0);
+  document.getElementById('statCompanies').textContent = DATA.length;
+  document.getElementById('tabResidueCount').textContent = CLUSTER_DATA.residue.length;
+  applyFilters();
+}
+
+function toggleSelect(key, row) {
+  if (state.selected.has(key)) {
+    state.selected.delete(key);
+  } else {
+    state.selected.add(key);
+  }
+  updateTagPanel();
+}
+
+function updateTagPanel() {
+  const panel = document.getElementById('tagPanel');
+  const count = document.getElementById('tagCount');
+  count.textContent = state.selected.size + ' selected';
+  const onResidueTab = document.getElementById('panel-residue').classList.contains('active')
+    || document.getElementById('panel-triage').classList.contains('active');
+  panel.classList.toggle('visible', onResidueTab && state.selected.size > 0);
+}
+
+function applyFilters() {
+  const term = state.searchTerm.trim().toLowerCase();
+  const rows = document.querySelectorAll('#panel-residue .field-row');
+  rows.forEach(row => {
+    let visible = true;
+    if (term && !row.dataset.searchBlob.includes(term)) visible = false;
+    if (state.activeTypeFilters.size > 0 && !state.activeTypeFilters.has(row.dataset.itype)) visible = false;
+    if (state.noLabelOnly && row.dataset.hasLabel === '1') visible = false;
+    row.classList.toggle('hidden-by-filter', !visible);
+  });
+
+  document.querySelectorAll('#panel-residue .company').forEach(card => {
+    const visibleRows = card.querySelectorAll('.field-row:not(.hidden-by-filter)').length;
+    card.style.display = visibleRows === 0 ? 'none' : '';
+    if ((term || state.activeTypeFilters.size > 0 || state.noLabelOnly) && visibleRows > 0) {
+      card.classList.add('open');
+    }
+  });
+}
+
+document.getElementById('searchBox').addEventListener('input', (e) => {
+  state.searchTerm = e.target.value;
+  applyFilters();
+});
+
+document.querySelectorAll('.chip[data-type-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const t = chip.dataset.typeFilter;
+    if (state.activeTypeFilters.has(t)) {
+      state.activeTypeFilters.delete(t);
+      chip.classList.remove('active');
+    } else {
+      state.activeTypeFilters.add(t);
+      chip.classList.add('active');
+    }
+    applyFilters();
+  });
+});
+
+document.getElementById('noLabelFilter').addEventListener('click', (e) => {
+  state.noLabelOnly = !state.noLabelOnly;
+  e.target.classList.toggle('active', state.noLabelOnly);
+  applyFilters();
+});
+
+document.getElementById('expandAll').addEventListener('click', () => {
+  document.querySelectorAll('#panel-residue .company').forEach(c => c.classList.add('open'));
+});
+document.getElementById('collapseAll').addEventListener('click', () => {
+  document.querySelectorAll('#panel-residue .company').forEach(c => c.classList.remove('open'));
+});
+
+document.getElementById('applyTag').addEventListener('click', () => {
+  const input = document.getElementById('tagInput');
+  const name = input.value.trim();
+  if (!name || state.selected.size === 0) return;
+  state.selected.forEach(key => state.tags.set(key, name));
+  state.selected.clear();
+  input.value = '';
+  updateTagPanel();
+  refreshTagVisuals();
+  renderGroups();
+});
+
+document.getElementById('clearSelection').addEventListener('click', () => {
+  state.selected.clear();
+  updateTagPanel();
+  refreshTagVisuals();
+});
+
+document.getElementById('tagInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('applyTag').click();
+});
+
+function refreshTagVisuals() {
+  document.querySelectorAll('#panel-residue .field-row, #panel-triage .field-row').forEach(row => {
+    const key = row.dataset.key;
+    const check = row.querySelector('.check');
+    row.classList.toggle('tagged', state.tags.has(key));
+    check.textContent = state.tags.has(key) ? '✓' : '';
+  });
+  updateGlobalStats();
+}
+
+// ============ NAMED GROUPS TAB (confirmed clusters + manual residue tags) ============
+
+function renderGroups() {
+  const groups = new Map(); // name -> [{company, field, source}]
+
+  CLUSTER_DATA.clusters.forEach(c => {
+    if (state.clusterStatus.get(c.cluster_id) !== 'confirmed') return;
+    const name = state.clusterNames.get(c.cluster_id) || defaultClusterName(c);
+    if (!groups.has(name)) groups.set(name, []);
+    c.members.forEach(m => {
+      groups.get(name).push({ company: m.company, field: fieldAt(m.ci, m.fi), source: 'cluster' });
+    });
+  });
+
+  state.tags.forEach((groupName, key) => {
+    const [ci, fi] = key.split(':').map(Number);
+    if (!groups.has(groupName)) groups.set(groupName, []);
+    groups.get(groupName).push({ company: companyAt(ci), field: fieldAt(ci, fi), source: 'manual' });
+  });
+
+  if (TRIAGE && TRIAGE.auto_match) {
+    TRIAGE.auto_match.forEach(e => {
+      const key = triageKey(e);
+      if (triageState.autoStatus.get(key) !== 'confirmed') return;
+      const name = triageState.autoNames.get(key) || e.suggested_category;
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name).push({ company: e.company, field: fieldAt(e.ci, e.fi), source: 'residue-auto-match' });
+    });
+  }
+
+  const list = document.getElementById('groupsList');
+  list.innerHTML = '';
+
+  if (groups.size === 0) {
+    list.innerHTML = '<div class="empty-note">No groups yet — confirm clusters or tag residue fields.</div>';
+  } else {
+    groups.forEach((items, name) => {
+      const card = document.createElement('div');
+      card.className = 'group-card';
+      card.innerHTML = `
+        <div class="gname">${esc(name)} <span class="n">${items.length} field${items.length === 1 ? '' : 's'}</span></div>
+        <div class="gitems">
+          ${items.slice(0, 40).map(it => `<div class="gitem"><b>${esc(it.field.label || '(no label)')}</b> — ${esc(it.company)} · ${esc(it.field.itype)} · ${it.source}</div>`).join('')}
+          ${items.length > 40 ? `<div class="gitem">…and ${items.length - 40} more</div>` : ''}
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  updateGlobalStats();
+}
+
+function updateGlobalStats() {
+  const confirmedClusters = [...state.clusterStatus.entries()].filter(([id, s]) => s === 'confirmed');
+  const confirmedFieldCount = confirmedClusters.reduce((sum, [id]) => {
+    const c = CLUSTER_DATA.clusters.find(x => x.cluster_id === id);
+    return sum + (c ? c.members.length : 0);
+  }, 0);
+
+  const groupNames = new Set();
+  confirmedClusters.forEach(([id]) => {
+    const c = CLUSTER_DATA.clusters.find(x => x.cluster_id === id);
+    groupNames.add(state.clusterNames.get(id) || defaultClusterName(c));
+  });
+  state.tags.forEach(name => groupNames.add(name));
+
+  let triageConfirmedCount = 0;
+  if (TRIAGE && TRIAGE.auto_match) {
+    TRIAGE.auto_match.forEach(e => {
+      const key = triageKey(e);
+      if (triageState.autoStatus.get(key) === 'confirmed') {
+        triageConfirmedCount++;
+        groupNames.add(triageState.autoNames.get(key) || e.suggested_category);
+      }
+    });
+  }
+
+  document.getElementById('statConfirmed').textContent = confirmedFieldCount + triageConfirmedCount;
+  document.getElementById('statTagged').textContent = state.tags.size;
+  document.getElementById('statGroups').textContent = groupNames.size;
+  document.getElementById('tabGroupsCount').textContent = groupNames.size;
+}
+
+// ============ RESIDUE REVIEW TAB (auto-match vs needs-your-read) ============
+
+const triageState = {
+  autoStatus: new Map(),   // "ci:fi" -> 'confirmed' | 'rejected'
+  autoNames: new Map(),    // "ci:fi" -> possibly-edited category name
+};
+
+function triageKey(entry) { return entry.ci + ':' + entry.fi; }
+
+function renderTriageAuto() {
+  const list = document.getElementById('triageAutoList');
+  list.innerHTML = '';
+
+  if (!TRIAGE || !TRIAGE.auto_match || TRIAGE.auto_match.length === 0) {
+    list.innerHTML = '<div class="empty-note">No auto-matches found.</div>';
+    return;
+  }
+
+  // group by suggested_category so related fields sit together
+  const byCategory = new Map();
+  TRIAGE.auto_match.forEach(e => {
+    if (!byCategory.has(e.suggested_category)) byCategory.set(e.suggested_category, []);
+    byCategory.get(e.suggested_category).push(e);
+  });
+
+  const sortedCats = [...byCategory.entries()].sort((a, b) => b[1].length - a[1].length);
+
+  sortedCats.forEach(([cat, entries]) => {
+    const card = document.createElement('div');
+    card.className = 'cluster-card';
+
+    const head = document.createElement('div');
+    head.className = 'cluster-head';
+    head.innerHTML = `
+      <span class="caret">&#9656;</span>
+      <div class="ctitle-wrap">
+        <div class="ctitle">${esc(cat)}</div>
+        <div class="csub">${entries.length} likely-match field(s), avg overlap ${(entries.reduce((s,e)=>s+e.match_score,0)/entries.length).toFixed(2)}</div>
+      </div>
+      <span class="ccount">${entries.length}</span>
+    `;
+    head.addEventListener('click', () => card.classList.toggle('open'));
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'cluster-body';
+    entries.sort((a,b) => b.match_score - a.match_score).forEach(e => {
+      const key = triageKey(e);
+      const status = triageState.autoStatus.get(key);
+      const row = document.createElement('div');
+      row.className = 'cluster-member';
+      row.style.cssText = 'align-items:center; gap:10px;';
+      row.innerHTML = `
+        <span class="mcompany">${esc(e.company)}</span>
+        <span class="mlabel">${esc(e.label_text)} <span style="color:var(--ink-faint);font-family:var(--mono);font-size:10.5px;">· overlap ${e.match_score.toFixed(2)}</span></span>
+        <button class="btn primary" data-action="confirm" style="padding:3px 8px;font-size:10.5px;">${status === 'confirmed' ? '✓' : 'Confirm'}</button>
+        <button class="btn danger" data-action="reject" style="padding:3px 8px;font-size:10.5px;">${status === 'rejected' ? '✗' : 'Reject'}</button>
+      `;
+      row.querySelector('[data-action="confirm"]').addEventListener('click', () => {
+        triageState.autoStatus.set(key, triageState.autoStatus.get(key) === 'confirmed' ? undefined : 'confirmed');
+        renderTriageAuto();
+        renderGroups();
+      });
+      row.querySelector('[data-action="reject"]').addEventListener('click', () => {
+        triageState.autoStatus.set(key, triageState.autoStatus.get(key) === 'rejected' ? undefined : 'rejected');
+        renderTriageAuto();
+        renderGroups();
+      });
+      body.appendChild(row);
+    });
+    card.appendChild(body);
+    list.appendChild(card);
+  });
+
+  document.getElementById('tabTriageCount').textContent =
+    (TRIAGE.auto_match ? TRIAGE.auto_match.length : 0) + (TRIAGE.needs_review ? TRIAGE.needs_review.length : 0);
+}
+
+let triageReviewSearch = '';
+
+function renderTriageReview() {
+  const list = document.getElementById('triageReviewList');
+  list.innerHTML = '';
+
+  if (!TRIAGE || !TRIAGE.needs_review) {
+    list.innerHTML = '<div class="empty-note">Nothing to show.</div>';
+    return;
+  }
+
+  const notReviewed = TRIAGE.needs_review.filter(e => !state.rejectedResidue.has(e.ci + ':' + e.fi) && !state.tags.has(e.ci + ':' + e.fi));
+  const term = triageReviewSearch.trim().toLowerCase();
+  const filtered = term
+    ? notReviewed.filter(e => (e.label_text || '').toLowerCase().includes(term) || e.company.toLowerCase().includes(term))
+    : notReviewed;
+
+  // group by company for scannability, same as the raw residue tab
+  const byCompany = new Map();
+  filtered.forEach(e => {
+    if (!byCompany.has(e.company)) byCompany.set(e.company, []);
+    byCompany.get(e.company).push(e);
+  });
+
+  const companies = [...byCompany.keys()].sort();
+  if (companies.length === 0) {
+    list.innerHTML = '<div class="empty-note">No matches for that filter.</div>';
+    return;
+  }
+
+  companies.forEach(company => {
+    const entries = byCompany.get(company);
+    const card = document.createElement('div');
+    card.className = 'company';
+
+    const head = document.createElement('div');
+    head.className = 'company-head';
+    head.innerHTML = `
+      <span class="caret">&#9656;</span>
+      <span class="cname">${esc(company)}</span>
+      <span class="ccount">${entries.length} field(s)</span>
+    `;
+    head.addEventListener('click', () => card.classList.toggle('open'));
+    card.appendChild(head);
+
+    const fieldList = document.createElement('div');
+    fieldList.className = 'field-list';
+    entries.forEach(e => {
+      const f = fieldAt(e.ci, e.fi);
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.dataset.key = e.ci + ':' + e.fi;
+      row.innerHTML = `
+        <span class="check"></span>
+        <div class="field-main">
+          <div class="field-label-line">
+            <span class="field-label ${e.label_text ? '' : 'empty'}">${e.label_text ? esc(e.label_text) : '(no usable text found)'}</span>
+            ${e.suggested_category ? `<span style="font-family:var(--mono);font-size:10px;color:var(--ink-faint);">weak guess: ${esc(e.suggested_category)} (${e.match_score.toFixed(2)})</span>` : ''}
+          </div>
+          <div class="field-meta">
+            <span class="seg"><b>type:</b> ${esc(f.itype || f.tag)}</span>
+            <span class="seg"><b>id:</b> ${f.id ? esc(f.id) : '<i>empty</i>'}</span>
+            <span class="seg"><b>autocomplete:</b> ${f.ac ? esc(f.ac) : '<i>empty</i>'}</span>
+          </div>
+          <div class="detail"></div>
+        </div>
+        <div class="badges"><span class="badge ${typeClass(f.itype)}">${esc(f.itype || f.tag)}</span></div>
+      `;
+      row.addEventListener('click', (ev) => {
+        if (ev.target.closest('.check')) return;
+        row.classList.toggle('expanded');
+        if (row.classList.contains('expanded')) {
+          row.querySelector('.detail').textContent = JSON.stringify(f, null, 2);
+        }
+      });
+      const check = row.querySelector('.check');
+      check.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const key = e.ci + ':' + e.fi;
+        toggleSelect(key, row);
+      });
+      if (state.tags.has(e.ci + ':' + e.fi)) {
+        row.classList.add('tagged');
+        check.textContent = '✓';
+      }
+      fieldList.appendChild(row);
+    });
+    card.appendChild(fieldList);
+    list.appendChild(card);
+  });
+}
+
+document.getElementById('triageSearchBox').addEventListener('input', (e) => {
+  triageReviewSearch = e.target.value;
+  renderTriageReview();
+});
+
+// ============ EXPORT ============
+// Single export button lives in the tag panel area but should work globally;
+// simplest: add a persistent small export control in the header stats row via JS.
+(function addExportButton() {
+  const tabs = document.querySelector('.tabs');
+  const btn = document.createElement('button');
+  btn.className = 'btn primary';
+  btn.textContent = 'Export all tags (JSON)';
+  btn.style.marginLeft = 'auto';
+  btn.addEventListener('click', () => {
+    const out = { confirmed_clusters: [], rejected_clusters: [], manual_tags: [], residue_auto_matches: [] };
+
+    CLUSTER_DATA.clusters.forEach(c => {
+      const status = state.clusterStatus.get(c.cluster_id);
+      if (status === 'confirmed') {
+        out.confirmed_clusters.push({
+          group: state.clusterNames.get(c.cluster_id) || defaultClusterName(c),
+          rule: c.rule,
+          auto_key: c.key,
+          members: c.members.map(m => ({ company: m.company, job_id: DATA[m.ci].job_id, field: fieldAt(m.ci, m.fi) })),
+        });
+      } else if (status === 'rejected') {
+        out.rejected_clusters.push({ rule: c.rule, auto_key: c.key, member_count: c.members.length });
+      }
+    });
+
+    state.tags.forEach((groupName, key) => {
+      const [ci, fi] = key.split(':').map(Number);
+      out.manual_tags.push({ group: groupName, company: companyAt(ci), job_id: DATA[ci].job_id, field: fieldAt(ci, fi) });
+    });
+
+    if (TRIAGE && TRIAGE.auto_match) {
+      TRIAGE.auto_match.forEach(e => {
+        const key = triageKey(e);
+        const status = triageState.autoStatus.get(key);
+        if (status !== 'confirmed') return;
+        out.residue_auto_matches.push({
+          group: triageState.autoNames.get(key) || e.suggested_category,
+          match_score: e.match_score,
+          company: e.company, job_id: e.job_id, field: fieldAt(e.ci, e.fi),
+        });
+      });
+    }
+
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'field_open_coding_tags.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  tabs.style.alignItems = 'center';
+  tabs.appendChild(btn);
+})();
+
+function preloadDecisions() {
+  if (typeof DECISIONS === 'undefined') return;
+  // Keyed by "rule::key", not bare key — several normalized keys are
+  // produced by more than one rule (e.g. "email" via both id-rule and
+  // label-rule as separate clusters), so a bare-key map would silently
+  // collapse them and only apply the decision to one.
+  const byRuleKey = new Map(CLUSTER_DATA.clusters.map(c => [c.rule + '::' + c.key, c]));
+
+  Object.entries(DECISIONS.confirm || {}).forEach(([rk, canonicalName]) => {
+    const c = byRuleKey.get(rk);
+    if (!c) return;
+    state.clusterStatus.set(c.cluster_id, 'confirmed');
+    state.clusterNames.set(c.cluster_id, canonicalName);
+  });
+
+  Object.entries(DECISIONS.reject || {}).forEach(([rk, note]) => {
+    const c = byRuleKey.get(rk);
+    if (!c) return;
+    state.clusterStatus.set(c.cluster_id, 'rejected');
+  });
+
+  // special-handling clusters: pre-fill the rename box with a clear marker
+  // but leave them unconfirmed so the founder makes the final call on how
+  // to wire honeypot/other-followup handling into the interpreter.
+  Object.entries(DECISIONS.special || {}).forEach(([rk, info]) => {
+    const c = byRuleKey.get(rk);
+    if (!c) return;
+    state.clusterNames.set(c.cluster_id, `⚠ SPECIAL: ${info.kind}`);
+  });
+}
+
+function preloadTriageDecisions() {
+  if (typeof TRIAGE_DECISIONS === 'undefined' || !TRIAGE_DECISIONS.confirmed) return;
+  TRIAGE_DECISIONS.confirmed.forEach(key => {
+    triageState.autoStatus.set(key, 'confirmed');
+  });
+}
+
+function preloadManualSingletonTags() {
+  if (typeof MANUAL_SINGLETON_TAGS === 'undefined') return;
+  MANUAL_SINGLETON_TAGS.forEach(e => {
+    state.tags.set(e.ci + ':' + e.fi, e.category);
+  });
+}
+
+function preloadManualFieldIndexTags() {
+  if (typeof MANUAL_FIELD_INDEX_TAGS === 'undefined') return;
+  MANUAL_FIELD_INDEX_TAGS.forEach(e => {
+    if (e.action === 'confirm') {
+      state.tags.set(e.ci + ':' + e.fi, e.category);
+    } else if (e.action === 'reject') {
+      state.rejectedResidue.set(e.ci + ':' + e.fi, e.note);
+    }
+  });
+}
+
+let init = false;
+function initAll() {
+  if (init) return;
+  init = true;
+  preloadDecisions();
+  preloadTriageDecisions();
+  preloadManualSingletonTags();
+  preloadManualFieldIndexTags();
+  renderClusters();
+  renderResidue();
+  renderTriageAuto();
+  renderTriageReview();
+  renderGroups();
+}
+initAll();
+</script>

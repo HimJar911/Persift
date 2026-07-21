@@ -1,0 +1,912 @@
+[
+  {
+    "ci": 9,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 9,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "asm's whole crawled page is a job-listing/search page (9 total fields, all search boxes or empty unlabeled checkbox_group filters with zero section/options/nearby text) \u2014 not an application form. Consistent with the original apply_url-quality triage flag on this domain."
+  },
+  {
+    "ci": 10,
+    "fi": 18,
+    "action": "confirm",
+    "category": "export_control",
+    "note": "New category. US Government space-tech export control question \u2014 'therefore will you state which of the following applies to you' implies a multi-option export-control status answer."
+  },
+  {
+    "ci": 10,
+    "fi": 20,
+    "action": "confirm",
+    "category": "essay",
+    "note": "New category. Open-ended free-response question with no fixed answer shape."
+  },
+  {
+    "ci": 10,
+    "fi": 21,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Role-specific technical screening essay question (physics/propulsion), company-unique content, same essay category \u2014 the interpreter can't meaningfully answer these beyond routing to LLM fallback/awaiting_review."
+  },
+  {
+    "ci": 10,
+    "fi": 22,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Same technical-essay family as fi 21."
+  },
+  {
+    "ci": 10,
+    "fi": 23,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Same technical-essay family as fi 21."
+  },
+  {
+    "ci": 10,
+    "fi": 24,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Same technical-essay family as fi 21."
+  },
+  {
+    "ci": 10,
+    "fi": 25,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Please confirm which season you are applying for' \u2014 term/season selection, same concept as other availability_start_date instances."
+  },
+  {
+    "ci": 10,
+    "fi": 27,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'When are you able to join Astranis as an intern?'"
+  },
+  {
+    "ci": 10,
+    "fi": 28,
+    "action": "confirm",
+    "category": "availability_end_date",
+    "note": "New category \u2014 'When do you plan on ending your internship?' is the end-date counterpart to availability_start_date, not seen before now."
+  },
+  {
+    "ci": 10,
+    "fi": 29,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "On-site work-arrangement commitment question, same family as workplace_type."
+  },
+  {
+    "ci": 11,
+    "fi": 23,
+    "action": "confirm",
+    "category": "age_18_or_older",
+    "note": ""
+  },
+  {
+    "ci": 11,
+    "fi": 29,
+    "action": "confirm",
+    "category": "language_proficiency",
+    "note": "New category \u2014 'fluent in written and verbal English' language requirement, same family as the earlier Point72 (Japanese) / SES.ai (Mandarin) findings."
+  },
+  {
+    "ci": 11,
+    "fi": 31,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'Current City, State'"
+  },
+  {
+    "ci": 11,
+    "fi": 32,
+    "action": "confirm",
+    "category": "willing_to_relocate",
+    "note": "New category \u2014 binary yes/no willingness to relocate to a SPECIFIC role location, distinct from location_preference (which is a multi-select of which offices/cities a candidate is open to in general)."
+  },
+  {
+    "ci": 11,
+    "fi": 35,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Earliest Start Date'"
+  },
+  {
+    "ci": 11,
+    "fi": 38,
+    "action": "confirm",
+    "category": "employee_referral",
+    "note": "New category \u2014 'If you were referred by an AST employee, please enter their AST email.'"
+  },
+  {
+    "ci": 11,
+    "fi": 39,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "New category \u2014 general 'I certify the facts in this application are true' attestation, distinct from CCPA/privacy consent. Will likely accumulate more instances (Jump Trading's 'Notice at Collection', Woolpert's 'Privacy Acknowledgement', Celonis's confirmations below all belong here too)."
+  },
+  {
+    "ci": 12,
+    "fi": 5,
+    "action": "confirm",
+    "category": "phone",
+    "note": "Different id-scheme ('input_5') than the id-rule-confirmed phone cluster, but same concept, confirmed by label 'Phone*'."
+  },
+  {
+    "ci": 12,
+    "fi": 7,
+    "action": "confirm",
+    "category": "street_address",
+    "note": "New category \u2014 granular address component, distinct from location_city."
+  },
+  {
+    "ci": 12,
+    "fi": 9,
+    "action": "confirm",
+    "category": "state",
+    "note": "New category \u2014 granular address component."
+  },
+  {
+    "ci": 12,
+    "fi": 10,
+    "action": "confirm",
+    "category": "zip_code",
+    "note": "New category \u2014 granular address component."
+  },
+  {
+    "ci": 12,
+    "fi": 13,
+    "action": "confirm",
+    "category": "linkedin_url",
+    "note": ""
+  },
+  {
+    "ci": 12,
+    "fi": 14,
+    "action": "confirm",
+    "category": "salary_expectation",
+    "note": "'What is your desired compensation range?'"
+  },
+  {
+    "ci": 12,
+    "fi": 15,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": ""
+  },
+  {
+    "ci": 12,
+    "fi": 16,
+    "action": "confirm",
+    "category": "eeo_disability_status",
+    "note": ""
+  },
+  {
+    "ci": 12,
+    "fi": 18,
+    "action": "confirm",
+    "category": "eeo_race_ethnicity",
+    "note": "'Race' \u2014 same category as eeo_race_ethnicity, shorter label."
+  },
+  {
+    "ci": 12,
+    "fi": 26,
+    "action": "confirm",
+    "category": "eeo_generic_decline_option",
+    "note": "New category \u2014 these 4 fields are individual OPTIONS within EEO question groups ('Not interested', 'Man', 'Black or of African descent', 'Asexual' \u2014 read via nearby text since label/section were empty), not standalone questions. Flagging as a distinct sub-concept since it's option-level, not question-level; may need remapping into the parent EEO categories once P1.4 handles group-vs-option structure properly rather than flat fields."
+  },
+  {
+    "ci": 12,
+    "fi": 27,
+    "action": "confirm",
+    "category": "eeo_generic_decline_option",
+    "note": "Option within an EEO gender question ('Man') \u2014 see fi 26 note."
+  },
+  {
+    "ci": 12,
+    "fi": 28,
+    "action": "confirm",
+    "category": "eeo_generic_decline_option",
+    "note": "Option within an EEO race question ('Black or of African descent') \u2014 see fi 26 note."
+  },
+  {
+    "ci": 12,
+    "fi": 29,
+    "action": "confirm",
+    "category": "eeo_generic_decline_option",
+    "note": "Option within an EEO sexual-orientation question ('Asexual') \u2014 see fi 26 note."
+  },
+  {
+    "ci": 13,
+    "fi": 10,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 13,
+    "fi": 13,
+    "action": "confirm",
+    "category": "program_affiliation",
+    "note": "New category \u2014 'Are you part of a Bitmovin class at your school?' is a company-partnership-program affiliation question, same underlying concept as RocketLab's scholarship/fellowship question found earlier."
+  },
+  {
+    "ci": 13,
+    "fi": 16,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "Commute-frequency commitment question, same family as workplace_type."
+  },
+  {
+    "ci": 13,
+    "fi": 18,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "'I agree with Privacy Notice for Recruitment' \u2014 general privacy attestation."
+  },
+  {
+    "ci": 15,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 6,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search/sort/filter chrome on the listing page (confirmed pattern: bare search inputs, a 'Sort by' select, section='Keyword'), not the application form."
+  },
+  {
+    "ci": 15,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 11,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 19,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 20,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 21,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 23,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 24,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 25,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 27,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 28,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 29,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 30,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 31,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 33,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 34,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 35,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 36,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 37,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 38,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 39,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 40,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 41,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 43,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 44,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 45,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 46,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 15,
+    "fi": 47,
+    "action": "reject",
+    "category": null,
+    "note": "Confirmed via raw HTML (corpus/pages/8244421002.html.gz): lives inside a `data-filterdropdown-list` widget with a `sr-only` (screen-reader-only, visually hidden) heading \u2014 a job-board filter dropdown, same family as Anduril's rejected filter checkboxes, not a real application question."
+  },
+  {
+    "ci": 16,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Job-board search box ('Enter Job Title or Location')."
+  },
+  {
+    "ci": 16,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "Page-chrome language switcher (id='language-selector'), same pattern as previously-rejected language switchers."
+  },
+  {
+    "ci": 16,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "'To your colleagues or friends' \u2014 a 'share this job' widget fragment, not a form field."
+  },
+  {
+    "ci": 17,
+    "fi": 21,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": ""
+  },
+  {
+    "ci": 17,
+    "fi": 25,
+    "action": "confirm",
+    "category": "current_country_id_number",
+    "note": "New category \u2014 'I confirm to have a valid NIE (spanish tax number)' is a country-specific tax/ID confirmation. Very narrow/company-specific; flagged as its own category rather than force-fit, may end up a rare long-tail category."
+  },
+  {
+    "ci": 17,
+    "fi": 27,
+    "action": "confirm",
+    "category": "education_degree",
+    "note": "Diploma confirmation, same underlying fact as education_degree (has a Bachelor/Master from a specific university type)."
+  },
+  {
+    "ci": 17,
+    "fi": 29,
+    "action": "confirm",
+    "category": "availability_commitment_confirmation",
+    "note": "New category \u2014 'available to work 40h per week for 12 months' is a commitment CONFIRMATION (yes/no), distinct from availability_hours_per_week (which asks the actual number)."
+  },
+  {
+    "ci": 17,
+    "fi": 31,
+    "action": "confirm",
+    "category": "workplace_type",
+    "note": "On-site work-arrangement commitment."
+  },
+  {
+    "ci": 17,
+    "fi": 33,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'Preferred Start Date'"
+  },
+  {
+    "ci": 17,
+    "fi": 37,
+    "action": "confirm",
+    "category": "work_history_employer",
+    "note": "New category \u2014 'Most Recent Employer'."
+  },
+  {
+    "ci": 17,
+    "fi": 38,
+    "action": "confirm",
+    "category": "work_history_title",
+    "note": "New category \u2014 'Most Recent Job Title'."
+  },
+  {
+    "ci": 17,
+    "fi": 39,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "General information-accuracy attestation."
+  },
+  {
+    "ci": 17,
+    "fi": 41,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Privacy Notice acknowledgment."
+  },
+  {
+    "ci": 17,
+    "fi": 43,
+    "action": "confirm",
+    "category": "program_affiliation",
+    "note": "'Which Celonis campus event or university career fair did you attend?' \u2014 company-program/event affiliation, same family as bitmovin's program_affiliation."
+  },
+  {
+    "ci": 17,
+    "fi": 45,
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "note": ""
+  },
+  {
+    "ci": 17,
+    "fi": 46,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'What does The Best Team Wins mean to you?' \u2014 open-ended company-culture essay question."
+  },
+  {
+    "ci": 18,
+    "fi": 14,
+    "action": "confirm",
+    "category": "education_school",
+    "note": "'What university are you currently attending?'"
+  },
+  {
+    "ci": 18,
+    "fi": 15,
+    "action": "confirm",
+    "category": "graduation_date",
+    "note": "'What year do you plan to graduate?'"
+  },
+  {
+    "ci": 18,
+    "fi": 16,
+    "action": "confirm",
+    "category": "essay",
+    "note": "'Describe the type of role you would like to have within that department' \u2014 open-ended."
+  },
+  {
+    "ci": 18,
+    "fi": 17,
+    "action": "confirm",
+    "category": "availability_start_date",
+    "note": "'What semester and year are you looking for an internship?'"
+  },
+  {
+    "ci": 18,
+    "fi": 18,
+    "action": "confirm",
+    "category": "availability_hours_per_week",
+    "note": ""
+  },
+  {
+    "ci": 18,
+    "fi": 23,
+    "action": "confirm",
+    "category": "needs_sponsorship",
+    "note": "Section-fallback field (empty label, section IS the sponsorship question) \u2014 matches the already-confirmed needs_sponsorship category exactly."
+  },
+  {
+    "ci": 18,
+    "fi": 24,
+    "action": "confirm",
+    "category": "department_interest",
+    "note": "Section-fallback field (empty label, section='What department(s) are you most interested in for your internship?') \u2014 matches department_interest exactly."
+  },
+  {
+    "ci": 19,
+    "fi": 11,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Open-ended 'what would you be doing at Checkbook' creative-response question."
+  },
+  {
+    "ci": 19,
+    "fi": 12,
+    "action": "confirm",
+    "category": "location_city",
+    "note": "'What city and state are you located in?'"
+  },
+  {
+    "ci": 20,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 1,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 2,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 7,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 8,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 9,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 10,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 14,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 15,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 16,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 17,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 20,
+    "fi": 18,
+    "action": "reject",
+    "category": null,
+    "note": "cityoffortworth's crawled page is a government job-board/listing page: ASP.NET hidden viewstate fields (__VIEWSTATE, __EVENTTARGET, etc.), 'By Phrase/Job Type/Department' filter widgets (section='Job Board'), and literal Google Translate widget internals (goog-gt-votingInput*). No real application-form field observed on this page."
+  },
+  {
+    "ci": 21,
+    "fi": 18,
+    "action": "confirm",
+    "category": "mailing_address",
+    "note": "New category \u2014 'Current Mailing Address', distinct from location_city/street_address (single combined field here)."
+  },
+  {
+    "ci": 21,
+    "fi": 19,
+    "action": "confirm",
+    "category": "security_clearance",
+    "note": "'Current clearance level' \u2014 same category as RocketLab's earlier-found security_clearance."
+  },
+  {
+    "ci": 21,
+    "fi": 21,
+    "action": "confirm",
+    "category": "consent_attestation_general",
+    "note": "Location/date acknowledgment attestation."
+  },
+  {
+    "ci": 21,
+    "fi": 23,
+    "action": "confirm",
+    "category": "current_school_year",
+    "note": "New category \u2014 'School Year completed by the beginning of Summer 2027' asks what year of school (freshman/sophomore/etc.) the candidate will have completed, distinct from graduation_date (a specific future date)."
+  },
+  {
+    "ci": 22,
+    "fi": 3,
+    "action": "reject",
+    "category": null,
+    "note": "section='Filter jobs' \u2014 job-board listing filter widget, not the application form. Consistent with the earlier-confirmed reject on this exact company's 'Keywords'/'l-team' search fields."
+  },
+  {
+    "ci": 22,
+    "fi": 4,
+    "action": "reject",
+    "category": null,
+    "note": "section='Filter jobs' \u2014 job-board listing filter widget, not the application form. Consistent with the earlier-confirmed reject on this exact company's 'Keywords'/'l-team' search fields."
+  },
+  {
+    "ci": 22,
+    "fi": 5,
+    "action": "reject",
+    "category": null,
+    "note": "section='Filter jobs' \u2014 job-board listing filter widget, not the application form. Consistent with the earlier-confirmed reject on this exact company's 'Keywords'/'l-team' search fields."
+  },
+  {
+    "ci": 23,
+    "fi": 8,
+    "action": "confirm",
+    "category": "essay",
+    "note": "Open-ended 'type of problems you most enjoy working on' question."
+  },
+  {
+    "ci": 24,
+    "fi": 0,
+    "action": "reject",
+    "category": null,
+    "note": "Bare site search input (id='searchInput'), same pattern as other rejected search boxes."
+  },
+  {
+    "ci": 25,
+    "fi": 25,
+    "action": "confirm",
+    "category": "work_authorized",
+    "note": "'legally eligible to work in the U.S.'"
+  },
+  {
+    "ci": 25,
+    "fi": 29,
+    "action": "confirm",
+    "category": "nepotism_disclosure",
+    "note": "New category \u2014 'close relatives who work at Cypress Creek' conflict-of-interest/nepotism disclosure question."
+  }
+]
