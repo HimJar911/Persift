@@ -1,10 +1,18 @@
 import asyncio
+import hashlib
 import logging
 
 import httpx
 
-from db import increment_consecutive_failures, reset_consecutive_failures
-from pollers.filter import is_intern_role, assign_categories
+from db import (
+    get_company_payload_hash,
+    increment_consecutive_failures,
+    log_company_poll,
+    reset_consecutive_failures,
+    set_company_payload_hash,
+)
+from pollers.filter import assign_categories
+from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +35,53 @@ async def _poll_company(
                 await asyncio.sleep(60)
                 resp = await client.get(url, timeout=20)
             if resp.status_code == 404:
+                await log_company_poll(slug, "greenhouse", "http_404", http_status=404)
                 return []
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            logger.debug("Greenhouse HTTP %s for %s", exc.response.status_code, slug)
+            status = exc.response.status_code
+            logger.debug("Greenhouse HTTP %s for %s", status, slug)
             await increment_consecutive_failures(slug, "greenhouse")
+            if status == 429:
+                outcome = "http_429"
+            elif 400 <= status < 500:
+                outcome = "http_4xx"
+            else:
+                outcome = "http_5xx"
+            await log_company_poll(
+                slug, "greenhouse", outcome,
+                http_status=status, error_detail=str(exc),
+            )
+            return []
+        except httpx.TimeoutException as exc:
+            logger.debug("Greenhouse timeout for %s: %s", slug, exc)
+            await increment_consecutive_failures(slug, "greenhouse")
+            await log_company_poll(slug, "greenhouse", "timeout", error_detail=str(exc))
             return []
         except httpx.RequestError as exc:
             logger.debug("Greenhouse request error for %s: %s", slug, exc)
             await increment_consecutive_failures(slug, "greenhouse")
+            await log_company_poll(slug, "greenhouse", "connection_error", error_detail=str(exc))
+            return []
+        except Exception as exc:
+            logger.exception("Greenhouse unexpected error for %s", slug)
+            await increment_consecutive_failures(slug, "greenhouse")
+            await log_company_poll(slug, "greenhouse", "other_exception", error_detail=str(exc))
+            return []
+
+        # Skip entirely if this company's response is byte-identical to last
+        # poll — most companies' listings don't change between two 10-min
+        # cycles, and parsing + diffing the full response anyway was the
+        # root cause of a Jul 22 incident (see migration 024). Hash is
+        # computed on the raw body, before any JSON parsing.
+        payload_hash = hashlib.sha256(resp.content).hexdigest()
+        last_hash, _ = await get_company_payload_hash(slug, "greenhouse")
+        if payload_hash == last_hash:
+            await reset_consecutive_failures(slug, "greenhouse")
+            await log_company_poll(
+                slug, "greenhouse", "ok_unchanged",
+                http_status=resp.status_code,
+            )
             return []
 
         data = resp.json()
@@ -43,9 +89,11 @@ async def _poll_company(
         results = []
         for job in jobs:
             title = job.get("title", "")
-            if not is_intern_role(title):
+            if not title:
                 continue
             location_obj = job.get("location", {}) or {}
+            description = job.get("content", "")
+            yoe_min, yoe_max = extract_years_of_experience(title, description)
             results.append(
                 {
                     "job_id": str(job["id"]),
@@ -54,11 +102,25 @@ async def _poll_company(
                     "title": title,
                     "location": location_obj.get("name", "Unknown"),
                     "apply_url": job.get("absolute_url", ""),
-                    "description_html": job.get("content", ""),
-                    "categories": assign_categories(title, job.get("content", "")),
+                    "description_html": description,
+                    "categories": assign_categories(title, description),
+                    "years_of_experience_min": yoe_min,
+                    "years_of_experience_max": yoe_max,
+                    "raw_ats_metadata": {
+                        "metadata": job.get("metadata"),
+                        "departments": job.get("departments"),
+                    },
                 }
             )
         await reset_consecutive_failures(slug, "greenhouse")
+        await set_company_payload_hash(slug, "greenhouse", payload_hash)
+        await log_company_poll(
+            slug, "greenhouse",
+            "ok_with_jobs" if results else "ok_zero_jobs",
+            http_status=resp.status_code,
+            job_count=len(jobs),
+            matched_count=len(results),
+        )
         return results
 
 

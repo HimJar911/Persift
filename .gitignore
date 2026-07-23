@@ -12,7 +12,8 @@ outputs/*
 !outputs/.gitkeep
 
 # Corpus harvester output (P1.2) — generated crawl data, not source
-corpus/
+corpus/*
+!corpus/README.md
 
 # Resume files (personal — not for repo)
 resume/base_resume.pdf

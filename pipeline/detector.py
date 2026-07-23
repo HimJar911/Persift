@@ -1,7 +1,13 @@
 import logging
 from typing import Awaitable, Callable
 
-from db import filter_new_ids, find_incomplete_ids, mark_seen_batch, repair_jobs_batch
+from db import (
+    filter_new_ids,
+    find_incomplete_ids,
+    mark_seen_batch,
+    repair_jobs_batch,
+    repair_metadata_batch,
+)
 from pipeline.enricher import enrich
 
 logger = logging.getLogger(__name__)
@@ -26,7 +32,11 @@ async def detect_new_jobs(
     Self-healing: polled jobs already in the DB whose row has an empty
     description/company_name/apply_url are repaired from this poll's data.
     At steady state find_incomplete_ids returns nothing, so the extra cost is
-    one indexed SELECT per cycle.
+    one indexed SELECT per cycle. raw_ats_metadata is backfilled the same way
+    on every already-seen job in this poll (repair_metadata_batch no-ops once
+    a row already has real data) — catches up rows inserted before a given
+    ATS started capturing a field, e.g. Jul 22's Greenhouse 'departments' /
+    Lever 'department' capture-gap fixes.
     """
     new_jobs = await filter_new_ids(jobs)
 
@@ -44,6 +54,9 @@ async def detect_new_jobs(
         repairs = [enrich(j) for j in seen_jobs if (j["job_id"], j["ats"]) in incomplete]
         await repair_jobs_batch(repairs)
         logger.info("%s: repaired %d job rows with empty fields", ats, len(repairs))
+
+    if seen_jobs:
+        await repair_metadata_batch(seen_jobs)
 
     if enriched:
         logger.info(

@@ -1,12 +1,14 @@
 # Persift — Claude Code Context
 
-> **Three-file doc system. Read the right one:**
+> **Doc system. Read the right one:**
 > - **This file (CLAUDE.md)** — stable: identity, codebase map, how to operate, how to run. Rarely changes.
+> - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Read when you need current state. Kept short on purpose — it holds only what's currently true and what to do next, not history.
+> - **`decisions/`** — why things are the way they are: rejected designs, locked-in architecture, incident postmortems. Check here before re-litigating something that looks like it might have been tried before, or before you need the reasoning behind a current design. Index: `decisions/README.md`.
 > - **`ARCHITECTURE.md`** — the coupling map: what depends on what. **Read before changing any status string, API shape, DB column, config constant, or the extension↔API contract.**
-> - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Read when you need current state; don't trust its dates blindly.
-> - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts. **§3.6a is the full corpus-harvester spec (P1.2) — implemented in `pipeline/corpus_harvester.py`, run to completion Jul 17 (767/767 Greenhouse jobs, 718 `ok`). §3.6b: the resulting corpus has since been fully open-coded by hand (Jul 20) — every field in 116 usable-form companies individually classified into 110+ categories, tracked in `corpus_analysis/` (read `corpus_analysis/README.md` first). §7 has resolution-layer rules and extraction gaps found along the way. Next: P1.3 replay harness.**
-> - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date; soft launch ~July 22.
-> - **`CatchUpDocs/`** (parent dir) — session summaries.
+> - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts. §3.6a is the corpus-harvester spec (P1.2) — see `corpus/README.md` and `corpus_analysis/README.md` for what it built and found. §7 has resolution-layer rules and extraction gaps found along the way. Next: P1.3 replay harness.
+> - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date.
+> - **`CatchUpDocs/`** (parent dir) — pre-Claude-Code archive (claude.ai chat hand-off docs, April–June 2026). Historical only, not part of the active doc system — don't extend it.
+> - **Generated/non-obvious directories get their own `README.md` at the point of confusion** (e.g. `corpus/README.md`) rather than a full explanation living here — this map only points to them.
 
 Persift is the outcome data layer for early-career hiring. Students get autonomous job applications and automatic tracking (free). Career centers get live visibility into student job searches and outcomes without self-reporting (paid — the revenue side). Outcome capture = apply-through exhaust + Gmail signal parsing (interview vs. not).
 
@@ -20,6 +22,7 @@ This codebase has more coupling than its size suggests — a status string, an A
 - a `user_jobs.status` string → see ARCHITECTURE.md "spine"; grep all of api/, pipeline/, main.py, extension/
 - an API request/response shape → see ARCHITECTURE.md "Extension ↔ API"; check `extension/api.js` callers
 - a `users` column or `application_settings` JSONB key → see "profile data location"; check matcher + getProfile + filler_utils
+- `jobs.years_of_experience_min/max`, `jobs.raw_ats_metadata`, or `users.years_of_experience` → check all 5 non-Workday pollers (they write these) + `pipeline/matcher.py`'s hard filter #4 (reads them) — see STATE.md for the full design and why a categorical seniority label was rejected in favor of this
 - a `config.py` constant → grep for the symbol; it's the single source of truth, so consumers are everywhere
 - a scheduler cadence in main.py → check the matching lookback-window coupling
 
@@ -33,19 +36,20 @@ This codebase has more coupling than its size suggests — a status string, an A
 
 | File / Folder | What it does |
 |---|---|
-| `main.py` | Orchestrator + APScheduler. Flags: --seed, --discover, --no-discover, --check. `process_single_job` = enrich + Slack (placeholder for extension handoff). Cleanup job = lease-expiry sweep (target-arch). |
+| `main.py` | Orchestrator + APScheduler. Flags: --seed, --discover, --no-discover, --check. `process_new_jobs`/`run_jobright_cycle` log new jobs (`_log_new_job`) — Slack notification removed Jul 22 (dead pre-extension placeholder that was slowing down the poll's write phase under load, see `decisions/0006-unbounded-batch-chunking.md`). Cleanup job = lease-expiry sweep (target-arch). |
 | `config.py` | All config/constants — single source of truth. SEARCH_PROFILE, fallback slugs, model versions. (Still gpt-4o; strategy is Claude — see STATE.md.) |
-| `db.py` | asyncpg pool. init_db, filter_new_ids, mark_seen_batch, consecutive_failures helpers. |
-| `discover_companies.py` | CLI: company discovery crawl → JSON + companies table. |
+| `db.py` | asyncpg pool. `init_db`, `filter_new_ids`, `mark_seen_batch`, `find_incomplete_ids`, `repair_jobs_batch`, `repair_metadata_batch`, `get_company_payload_hash`/`set_company_payload_hash`, `log_company_poll`, `consecutive_failures` helpers. **All batch INSERT/UPDATE functions are chunked** (`_BATCH_CHUNK_SIZE = 2000`, shared `_chunks()` helper) — do not add a new batch function without chunking it; see `decisions/0006-unbounded-batch-chunking.md` for why (an unchunked batch call caused a 13+ min hang at real full-poll volume). |
+| `discover_companies.py` | CLI: company discovery crawl → JSON + companies table. Greenhouse crawls both `boards.greenhouse.io` and `job-boards.greenhouse.io` (dual-domain, Jul 21); unions the last N Common Crawl monthly indexes via `--months` (default 6), not just the latest — a single month misses companies a crawler didn't happen to revisit that cycle. |
 | `discovery_runner.py` | Slim Render entry point: jobright poll + Worker A as pure asyncio loops (no APScheduler). Subset of main.py — keep in sync. |
 | `update_profile.py` | Standalone: merges profile fields into application_settings. Safe to re-run. |
 | **api/** | |
 | `api/server.py` | FastAPI (target-arch contract). /users, /users/{id}, POST /jobs/claim (atomic), /jobs/{id}/{submitted,awaiting_review,released,heartbeat,resume}, /jobs/queue/count, /users/{id}/documents/{type}. CORS allow_origins=["*"] (debug). |
 | **pollers/** | |
-| `pollers/{greenhouse,ashby,lever,smartrecruiters,workday,custom,jobright}.py` | Per-source pollers. Workday = post-launch v2 (kept, deferred). |
-| `pollers/filter.py` | Shared filtering: is_intern_role, is_entry_level, assign_categories, matches_title. Imported widely. |
+| `pollers/{greenhouse,ashby,lever,smartrecruiters,workday,custom,jobright}.py` | Per-source pollers. Workday = post-launch v2 (kept, deferred). **`is_intern_role()` title-drop-gate REMOVED from greenhouse/ashby/lever/smartrecruiters/custom** — see `decisions/0002-intern-only-scope-removed.md`. Still called in `workday.py` and `main.py`'s Jobright cycle only, deliberately. All 5 redesigned pollers run `pollers.seniority.extract_years_of_experience()` and populate `years_of_experience_min/max` + `raw_ats_metadata` on every job (see `decisions/0001-seniority-classification-rejected.md`). **Greenhouse/Ashby/Lever/SmartRecruiters also do a payload-hash (or, for Ashby, real ETag) change-detection skip before parsing** — `db.get_company_payload_hash`/`set_company_payload_hash`, migration 024 — and call `log_company_poll` on every attempt (all 4, not just Greenhouse). See `decisions/0006-unbounded-batch-chunking.md`. |
+| `pollers/seniority.py` | One function: `extract_years_of_experience(*texts)` — literal "N years of experience" regex extraction only, zero inference. Read its module docstring before touching; see `decisions/0001-seniority-classification-rejected.md` for why a categorical design was tried and rejected first. |
+| `pollers/filter.py` | Shared filtering: `is_intern_role` (only Workday/Jobright use it now), `assign_categories` (title+full-description regex → category taxonomy). **Only 4 of ~23 categories have been hardened against bare-word false positives — the other ~19 have the same live bug, confirmed with fresh examples Jul 22.** See STATE.md "RESUME HERE" — this is the next thing to fix. `is_entry_level`/`matches_title` deleted (dead code). Category classification for jobs regex can't resolve (LLM fallback) is designed (`decisions/0003-category-classifier-design.md`) but **not yet built**. |
 | **pipeline/** | |
-| `pipeline/matcher.py` | Matching: 6 hard filters + scoring. Writes 'matched' user_jobs (excluded→'notified') + model_predictions. Reads profile from COLUMNS. _SCORE_THRESHOLD=50. 6-min lookback (coupled to scheduler cadence). |
+| `pipeline/matcher.py` | Matching: 6 hard filters + scoring. Writes 'matched' user_jobs (excluded→'notified') + model_predictions. Reads profile from COLUMNS. _SCORE_THRESHOLD=50. 6-min lookback (coupled to scheduler cadence). **Hard filter #4 repointed Jul 21**: was a dead `job_types` string-list comparison (never populated by any onboarding flow), now compares `users.years_of_experience` (migration 023) against `jobs.years_of_experience_min` (migration 022) — excludes only when BOTH sides have real data; either NULL passes through unfiltered on this axis (matched on category/location/work_model/sponsorship instead). |
 | `pipeline/tailor_worker.py` | Atomic-claims matched→preparing, success→ready, failure→abandoned. L3+L4+L5, pro-first, Semaphore(5), weasyprint lazy import. Writes tailored PDF. |
 | `pipeline/scorer.py` | L1+L2: keyword extraction + relevance (all-MiniLM-L6-v2). |
 | `pipeline/injector.py` | L3: keyword injection. |
@@ -54,7 +58,7 @@ This codebase has more coupling than its size suggests — a status string, an A
 | `pipeline/discovery_worker.py` | Worker A v1.1.0: discovery_staging → ATS fingerprint → companies. _BATCH_SIZE=50. |
 | `pipeline/notifier.py` | Slack Block Kit notifications. |
 | `pipeline/detector.py`, `enricher.py` | New-job detection + enrichment. Used by main.py polling path. |
-| **migrations/** | 001–018. **18 tables total** (+ `field_corrections`, migration 015; see ARCHITECTURE.md inventory). |
+| **migrations/** | 001–024. **18 tables total** (+ `field_corrections` migration 015, `corpus_crawl_state` migration 020, `company_poll_log` migration 021; see ARCHITECTURE.md inventory). Migration 022 (`jobs.years_of_experience_min/max` + `raw_ats_metadata`) and 023 (`users.years_of_experience`) — see `decisions/0001-seniority-classification-rejected.md`. Migration 024 (`companies.last_payload_hash`/`last_response_etag`, `company_poll_log`'s `ok_unchanged` outcome) — see `decisions/0006-unbounded-batch-chunking.md`. |
 | **extension/** | |
 | `extension/manifest.json` | MV3. filler_utils.js injected before greenhouse.js + ashby.js. |
 | `extension/filler_utils.js` | ~1240-line shared form-filler. See filler_utils section below. |

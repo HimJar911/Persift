@@ -12,7 +12,8 @@ import re
 
 import httpx
 
-from pollers.filter import is_intern_role, assign_categories
+from pollers.filter import assign_categories
+from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
 
@@ -132,12 +133,13 @@ async def _poll_company(
 
             for job in jobs:
                 title = _resolve_field(job, title_field)
-                if not title or not is_intern_role(str(title)):
+                if not title:
                     continue
 
                 job_id = _resolve_field(job, id_field)
                 location = _resolve_field(job, location_field) or "Unknown"
                 apply_url = _build_apply_url(url_template, job, str(job_id))
+                yoe_min, yoe_max = extract_years_of_experience(str(title))
 
                 all_results.append(
                     {
@@ -150,6 +152,8 @@ async def _poll_company(
                         "apply_url": apply_url,
                         "description_html": "",
                         "categories": assign_categories(str(title)),
+                        "years_of_experience_min": yoe_min,
+                        "years_of_experience_max": yoe_max,
                     }
                 )
 

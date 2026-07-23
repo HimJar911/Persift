@@ -20,12 +20,11 @@ from pollers.workday import poll_workday
 from pollers.smartrecruiters import poll_smartrecruiters
 from pollers.custom import poll_custom
 from pollers.jobright import poll_jobright, resolve_apply_url, _RESOLVE_SEMAPHORE
-from pollers.filter import is_entry_level, is_intern_role
+from pollers.filter import is_intern_role
 from pipeline.detector import detect_new_jobs
 from pipeline.matcher import run_matching_cycle
 from pipeline.tailor_worker import run_tailor_cycle
 from pipeline.discovery_worker import run_discovery_cycle
-from pipeline.notifier import send_slack_notification
 
 
 logging.basicConfig(
@@ -199,31 +198,28 @@ async def _maybe_refresh_slugs() -> None:
         logger.warning("Slug refresh failed — keeping previous data (%s)", exc)
 
 
-async def process_single_job(job: dict) -> None:
-    """Notify — tailoring and PDF disabled for testing.
-
-    Jobs arrive already enriched: detect_new_jobs enriches before insert
-    (enrich-before-insert fix, Jul 2026) and returns the enriched dicts.
+def _log_new_job(job: dict) -> None:
+    """Log a newly-detected job. Slack notification removed (Jul 22) — that
+    path predated the matcher->tailor_worker->extension flow, was still
+    firing per-job on every poll cycle, and its concurrent HTTP calls were
+    measured competing with detect_new_jobs for event-loop time badly enough
+    to stall DB writes under real poll volume (Slack itself was also
+    rate-limiting hard at that volume). Real per-user job delivery is the
+    extension claiming from user_jobs, not this. Notification-on-new-job
+    will get rebuilt against the extension when that's the actual design.
     """
     logger.info(
         "New job: %s at %s (%s) — categories: %s",
         job["title"], job["company_name"], job["ats"],
         ", ".join(job.get("categories", [])) or "uncategorized",
     )
-    try:
-        await send_slack_notification(job, "Tailoring disabled — test run", Path("none.pdf"))
-    except Exception:
-        logger.exception("Failed to send Slack notification for %s at %s", job["title"], job["company_name"])
 
 
 async def process_new_jobs(raw_jobs: list[dict], ats: str) -> None:
-    """Detect new jobs and process them concurrently (bounded by semaphore)."""
+    """Detect new jobs (persisted by detect_new_jobs) and log them."""
     new_jobs = await detect_new_jobs(raw_jobs, ats)
-    if not new_jobs:
-        return
-
-    tasks = [asyncio.create_task(process_single_job(job)) for job in new_jobs]
-    await asyncio.gather(*tasks, return_exceptions=True)
+    for job in new_jobs:
+        _log_new_job(job)
 
 
 async def poll_all() -> tuple[list[dict], ...]:
@@ -274,10 +270,8 @@ async def run_jobright_cycle() -> None:
         logger.info("=== Jobright cycle complete — no new jobs ===")
         return
 
-    # Process new jobs through the pipeline
-    await asyncio.gather(*(
-        process_single_job(job) for job in new_jobs
-    ), return_exceptions=True)
+    for job in new_jobs:
+        _log_new_job(job)
 
     logger.info("=== Jobright cycle complete ===")
 
