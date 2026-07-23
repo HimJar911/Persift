@@ -12,33 +12,17 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # ---------------------------------------------------------------------------
-# Search profile — single place to configure what jobs to look for.
-# Change these lists to target different roles (e.g. data science interns,
-# new-grad SWE, etc.).
+# Search profile — exclude_keywords still gates is_intern_role (pollers/
+# filter.py), the drop-gate used only by Workday and the Jobright cycle
+# (main.py) — both deliberately out of scope for the ingestion-filter
+# redesign that removed is_intern_role from the other 6 pollers. Do not
+# widen this back into a general role/domain filter; role_keywords and
+# domain_keywords (used only by the since-deleted matches_title()) were
+# removed as dead code once that function's only caller turned out not to
+# exist.
 # ---------------------------------------------------------------------------
 
 SEARCH_PROFILE = {
-    "role_keywords": [
-        "intern", "internship",
-        "co-op", "coop",
-        "apprentice", "apprenticeship",
-    ],
-    "domain_keywords": [
-        # Core SWE
-        "software", "engineer", "developer", "swe", "sde", "programming",
-        # Web / stack
-        "backend", "back end", "back-end",
-        "frontend", "front end", "front-end",
-        "fullstack", "full stack", "full-stack",
-        # Infra / ops
-        "devops", "dev ops", "sre", "site reliability",
-        "cloud", "infrastructure", "platform",
-        "embedded", "systems",
-        # AI / ML
-        "ai", "ml", "research",
-        # Test
-        "sdet",
-    ],
     "exclude_keywords": [
         "senior", "sr.", "sr ",
         "staff", "principal",

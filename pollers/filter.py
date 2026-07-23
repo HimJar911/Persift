@@ -12,11 +12,12 @@ def _compile_patterns(keywords: list[str]) -> re.Pattern:
     return re.compile(r"\b(?:" + "|".join(escaped) + r")\b", re.IGNORECASE)
 
 _EXCLUDE_RE = _compile_patterns(SEARCH_PROFILE["exclude_keywords"])
-
-def is_entry_level(title: str) -> bool:
-    """Return True if the title does not contain any seniority exclude keywords."""
-    return not bool(_EXCLUDE_RE.search(title))
-
+_TOKEN_RE = re.compile(r"[a-z0-9\-]+")
+_ROLE_TOKENS: frozenset[str] = frozenset({
+    "intern", "interns", "internship", "internships",
+    "co-op", "coop", "coops",
+    "apprentice", "apprentices", "apprenticeship", "apprenticeships",
+})
 
 def is_intern_role(title: str) -> bool:
     """Return True if the title contains a role keyword (intern/co-op/etc.)
@@ -118,19 +119,22 @@ _CATEGORY_PATTERNS: dict[str, re.Pattern] = {
     ]),
     "education_and_training": _compile_patterns([
         "education", "teaching", "curriculum", "instructional",
-        "learning", "tutor", "training",
+        "e-learning", "learning experience", "learning designer", "tutor",
+        "training program", "training specialist", "training coordinator",
     ]),
     "health care": _compile_patterns([
-        "health care", "clinical", "medical", "health", "biotech",
-        "pharmaceutical", "nursing", "patient",
+        "health care", "healthcare", "clinical", "medical", "biotech",
+        "pharmaceutical", "nursing", "patient care", "patient experience",
     ]),
     "supply_chain": _compile_patterns([
         "supply chain", "logistics", "procurement", "sourcing",
-        "inventory", "warehouse", "operations", "fulfillment",
+        "inventory", "warehouse", "fulfillment", "supply chain operations",
+        "logistics operations", "fleet operations",
     ]),
     "arts_and_entertainment": _compile_patterns([
-        "entertainment", "media", "film", "music", "gaming",
-        "game developer", "animation", "production",
+        "entertainment", "media production", "film production", "music",
+        "gaming", "game developer", "animation", "video production",
+        "content production", "broadcast",
     ]),
     "project_management": _compile_patterns([
         "project manager", "program manager", "pmo", "scrum master",
@@ -142,37 +146,14 @@ _CATEGORY_PATTERNS: dict[str, re.Pattern] = {
 def assign_categories(title: str, description: str = "") -> list[str]:
     """Return list of unified taxonomy categories matching this job.
 
-    Matches against title + first 500 chars of description.
+    Matches against the full title + description — real job descriptions run
+    4,000-11,000+ characters (measured live across Stripe/Databricks/Affirm
+    Greenhouse postings), so a short prefix was mostly boilerplate "About us"
+    copy and missed role-specific language entirely.
     Returns empty list if no categories match — job goes to 'other'.
     """
-    text = f"{title} {description[:500]}"
+    text = f"{title} {description}"
     return [
         cat for cat, pattern in _CATEGORY_PATTERNS.items()
         if pattern.search(text)
     ]
-
-
-# ---------------------------------------------------------------------------
-# Legacy title filter — kept for backward compatibility (used by simplify.py)
-# ---------------------------------------------------------------------------
-
-_DOMAIN_RE = _compile_patterns(SEARCH_PROFILE["domain_keywords"])
-_TOKEN_RE = re.compile(r"[a-z0-9\-]+")
-_ROLE_TOKENS: frozenset[str] = frozenset({
-    "intern", "interns", "internship", "internships",
-    "co-op", "coop", "coops",
-    "apprentice", "apprentices", "apprenticeship", "apprenticeships",
-})
-
-
-def matches_title(title: str) -> bool:
-    """Return True if the job title looks like a role we care about.
-
-    Must contain a ROLE keyword AND a DOMAIN keyword, and must NOT contain
-    any EXCLUDE keyword.  Used by pollers/simplify.py.
-    """
-    if _EXCLUDE_RE.search(title):
-        return False
-    tokens = _TOKEN_RE.findall(title.lower())
-    has_role = bool(_ROLE_TOKENS & set(tokens))
-    return has_role and bool(_DOMAIN_RE.search(title))

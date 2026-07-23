@@ -38,7 +38,8 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
         """
         SELECT job_id, ats, company_slug, company_name, title,
                description, categories, work_model, h1b_sponsored,
-               experience_level, location, apply_url, posted_at
+               experience_level, location, apply_url, posted_at,
+               years_of_experience_min, years_of_experience_max
         FROM jobs
         WHERE matcher_checked_at IS NULL
         """
@@ -70,7 +71,8 @@ async def _fetch_active_users(conn) -> list[dict]:
     rows = await conn.fetch(
         """
         SELECT id, tier, preferences, resume_text, application_settings,
-               needs_sponsorship, visa_type, university, major, graduation_date
+               needs_sponsorship, visa_type, university, major, graduation_date,
+               years_of_experience
         FROM users WHERE resume_text != ''
         """
     )
@@ -79,7 +81,7 @@ async def _fetch_active_users(conn) -> list[dict]:
         app = json.loads(r["application_settings"])
         # Profile facts the matcher reasons about live in COLUMNS (field-home
         # migration 016 — one home per fact). application_settings JSONB now holds
-        # only form-fill carry-along (job_types/locations/blacklist etc.).
+        # only form-fill carry-along (locations/blacklist etc.).
         result.append({
             "id":                   r["id"],
             "tier":                 r["tier"],
@@ -91,6 +93,7 @@ async def _fetch_active_users(conn) -> list[dict]:
             "university":           r["university"],
             "graduation_date":      r["graduation_date"],
             "major":                r["major"],
+            "years_of_experience":  r["years_of_experience"],
         })
     return result
 
@@ -111,9 +114,15 @@ def _passes_hard_filters(job: dict, user: dict) -> bool:
     if user.get("needs_sponsorship") and job["h1b_sponsored"] == "No":
         return False
 
-    # 4. Job type match — absent/empty "job_types" means match all
-    job_types = app.get("job_types", [])
-    if job_types and job.get("experience_level") not in job_types:
+    # 4. Years-of-experience eligibility — only filters when BOTH sides have
+    # a real value. jobs.years_of_experience_min is literal extraction only
+    # (migration 022 — never inferred; NULL means the posting didn't state a
+    # number, not "unknown"). users.years_of_experience (migration 023) is
+    # NULL until onboarding captures it. No data on either side means don't
+    # filter — an honest absence of signal, not a guess in either direction.
+    job_yoe_min = job.get("years_of_experience_min")
+    user_yoe = user.get("years_of_experience")
+    if job_yoe_min is not None and user_yoe is not None and user_yoe < job_yoe_min:
         return False
 
     # 5. Location match — Remote always passes; On-Site/Hybrid checked against user locations
@@ -188,6 +197,7 @@ def _build_user_profile_snapshot(user: dict) -> dict:
         "university":            user.get("university"),
         "graduation_date":       str(user.get("graduation_date")) if user.get("graduation_date") else None,
         "major":                 user.get("major"),
+        "years_of_experience":   user.get("years_of_experience"),
         "categories":            user.get("preferences", {}).get("categories", []),
         "work_models":           user.get("preferences", {}).get("work_models", []),
         "resume_length_chars":   len(user.get("resume_text") or ""),
@@ -453,7 +463,8 @@ if __name__ == "__main__":
                 """
                 SELECT job_id, ats, company_slug, company_name, title,
                        description, categories, work_model, h1b_sponsored,
-                       experience_level, location, apply_url, posted_at
+                       experience_level, location, apply_url, posted_at,
+                       years_of_experience_min, years_of_experience_max
                 FROM jobs
                 """
             )
@@ -466,7 +477,8 @@ if __name__ == "__main__":
                 f"""
                 SELECT job_id, ats, company_slug, company_name, title,
                        description, categories, work_model, h1b_sponsored,
-                       experience_level, location, apply_url, posted_at
+                       experience_level, location, apply_url, posted_at,
+                       years_of_experience_min, years_of_experience_max
                 FROM jobs
                 WHERE first_seen_at > NOW() - INTERVAL '{_cli_window}'
                 """

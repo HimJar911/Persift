@@ -65,15 +65,20 @@ _SKIP_SLUGS = frozenset({
 
 ATS_PLATFORMS = {
     "greenhouse": {
-        "domain": "boards.greenhouse.io",
+        # Greenhouse has two live frontend domains — job-boards.greenhouse.io
+        # is the newer one and carries ~4x boards.greenhouse.io's Common Crawl
+        # volume (confirmed CC-MAIN-2026-25: 4 pages vs 1). Both use the same
+        # /{slug}/... URL shape, so one regex covers both once the domain is
+        # substituted in per-domain at crawl time (see discover_ats).
+        "domains": ["boards.greenhouse.io", "job-boards.greenhouse.io"],
         "output": PROJECT_DIR / "greenhouse_companies.json",
-        "slug_regex": re.compile(r"^https?://boards\.greenhouse\.io/([^/?#]+)"),
+        "slug_regex_template": r"^https?://{domain}/([^/?#]+)",
         "fallback": GREENHOUSE_FALLBACK_SLUGS,
     },
     "lever": {
-        "domain": "jobs.lever.co",
+        "domains": ["jobs.lever.co"],
         "output": PROJECT_DIR / "lever_companies.json",
-        "slug_regex": re.compile(r"^https?://jobs\.lever\.co/([^/?#]+)"),
+        "slug_regex_template": r"^https?://{domain}/([^/?#]+)",
         "fallback": LEVER_FALLBACK_SLUGS,
         "timeout": _LEVER_TIMEOUT,
         "retry_limit": _LEVER_RETRY_LIMIT,
@@ -81,15 +86,15 @@ ATS_PLATFORMS = {
         "merge_existing": True,
     },
     "ashby": {
-        "domain": "jobs.ashbyhq.com",
+        "domains": ["jobs.ashbyhq.com"],
         "output": PROJECT_DIR / "ashby_companies.json",
-        "slug_regex": re.compile(r"^https?://jobs\.ashbyhq\.com/([^/?#]+)"),
+        "slug_regex_template": r"^https?://{domain}/([^/?#]+)",
         "fallback": ASHBY_FALLBACK_SLUGS,
     },
     "smartrecruiters": {
-        "domain": "jobs.smartrecruiters.com",
+        "domains": ["jobs.smartrecruiters.com"],
         "output": PROJECT_DIR / "smartrecruiters_companies.json",
-        "slug_regex": re.compile(r"^https?://jobs\.smartrecruiters\.com/([^/?#]+)"),
+        "slug_regex_template": r"^https?://{domain}/([^/?#]+)",
         "fallback": SMARTRECRUITERS_FALLBACK_SLUGS,
     },
 }
@@ -103,14 +108,28 @@ _PROBE_DOMAIN = "boards.greenhouse.io"
 _PROBE_TIMEOUT = 20   # short — just a liveness check, fail fast
 _MAX_PROBE_ATTEMPTS = 3
 
+# How many recent monthly indexes to union by default. Common Crawl only sees
+# a company's board if some page linking to it got crawled that month, so any
+# single month misses companies visible in others — see get_recent_cdx_apis.
+_DEFAULT_NUM_MONTHS = 6
 
-def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tuple[str, str]:
-    """Return (crawl_id, cdx_api_url) for the latest *ready* Common Crawl index.
 
-    If crawl_override is given, find that specific crawl in the list (no fallback).
-    Otherwise, probe crawls newest-first until one answers a page-count query —
-    skipping any that are still being indexed (timeouts / errors).  Tries up to
-    _MAX_PROBE_ATTEMPTS crawls before raising RuntimeError.
+def get_recent_cdx_apis(
+    client: httpx.Client, num_months: int, crawl_override: str | None
+) -> list[tuple[str, str]]:
+    """Return up to *num_months* ready (crawl_id, cdx_api_url) pairs, newest first.
+
+    Common Crawl is a general web crawl, not an ATS directory — it only sees a
+    company's job-board URL if some other page linked to it and got crawled
+    that month. Any single month misses companies that were unlinked/uncrawled
+    that cycle but visible in an earlier or later one, so querying only the
+    latest index (the old behavior) systematically undercounts. Querying the
+    last *num_months* indexes and unioning results (done by the caller, via
+    the same existing-slug merge run_discovery already does per platform)
+    recovers companies that only appeared in some months, not all.
+
+    If crawl_override is given, returns exactly that one crawl (unchanged
+    single-crawl behavior, e.g. for reproducing a past run).
     """
     logger.info("Fetching Common Crawl index list from %s", COLLINFO_URL)
     resp = client.get(COLLINFO_URL, timeout=30)
@@ -120,21 +139,23 @@ def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tupl
     if not crawls:
         raise RuntimeError("Common Crawl collinfo.json returned empty list")
 
-    # Sort by id descending to get the latest first
     crawls.sort(key=lambda c: c["id"], reverse=True)
 
     if crawl_override:
         for c in crawls:
             if c["id"] == crawl_override:
                 logger.info("Using specified crawl: %s", c["id"])
-                return c["id"], c["cdx-api"]
+                return [(c["id"], c["cdx-api"])]
         raise RuntimeError(
             f"Crawl {crawl_override!r} not found. "
             f"Latest available: {crawls[0]['id']}"
         )
 
-    # Auto-select: probe up to _MAX_PROBE_ATTEMPTS crawls, newest first.
-    for c in crawls[:_MAX_PROBE_ATTEMPTS]:
+    # Probe more candidates than num_months needs, in case some are still
+    # being indexed (same tolerance as the single-crawl probe above).
+    max_attempts = num_months + _MAX_PROBE_ATTEMPTS
+    ready: list[tuple[str, str]] = []
+    for c in crawls[:max_attempts]:
         crawl_id = c["id"]
         cdx_api = c["cdx-api"]
         logger.info("Probing crawl %s...", crawl_id)
@@ -143,15 +164,20 @@ def get_latest_cdx_api(client: httpx.Client, crawl_override: str | None) -> tupl
             timeout=_PROBE_TIMEOUT, retry_limit=1,
         )
         if pages is not None:
-            logger.info("Using crawl %s (%d pages for probe domain)", crawl_id, pages)
-            return crawl_id, cdx_api
-        logger.warning("Crawl %s not ready — trying previous", crawl_id)
+            logger.info("Crawl %s ready (%d pages for probe domain)", crawl_id, pages)
+            ready.append((crawl_id, cdx_api))
+            if len(ready) >= num_months:
+                break
+        else:
+            logger.warning("Crawl %s not ready — skipping", crawl_id)
 
-    tried = [c["id"] for c in crawls[:_MAX_PROBE_ATTEMPTS]]
-    raise RuntimeError(
-        f"No ready Common Crawl index found after probing {_MAX_PROBE_ATTEMPTS} crawls. "
-        f"Tried: {tried}"
-    )
+    if not ready:
+        tried = [c["id"] for c in crawls[:max_attempts]]
+        raise RuntimeError(
+            f"No ready Common Crawl index found after probing {max_attempts} crawls. "
+            f"Tried: {tried}"
+        )
+    return ready
 
 
 # ---------------------------------------------------------------------------
@@ -283,12 +309,16 @@ def discover_ats(
 ) -> tuple[list[str] | None, int]:
     """Discover all company slugs for one ATS platform via paginated CDX queries.
 
-    Returns (sorted deduplicated list of slugs or None, pages_fetched).
-    None means the CDX API was completely unreachable.
+    Queries every domain in cfg["domains"] (a platform can have more than one
+    live frontend, e.g. Greenhouse's boards.greenhouse.io + newer
+    job-boards.greenhouse.io) and merges the results.
+
+    Returns (sorted deduplicated list of slugs or None, total pages_fetched).
+    None means every configured domain's CDX query was unreachable.
     """
     cfg = ATS_PLATFORMS[ats_name]
-    domain = cfg["domain"]
-    regex = cfg["slug_regex"]
+    domains = cfg["domains"]
+    regex_template = cfg["slug_regex_template"]
     label = ats_name.title()
     slug_filter = cfg.get("slug_filter")
 
@@ -297,44 +327,58 @@ def discover_ats(
     retry_limit = cfg.get("retry_limit", _RETRY_LIMIT)
     page_delay = cfg.get("page_delay", _PAGE_DELAY)
 
-    # Get total page count
-    logger.info("%s: checking page count...", label)
-    num_pages = _get_num_pages(
-        client, cdx_api, domain, label,
-        timeout=timeout, retry_limit=retry_limit,
-    )
-    if num_pages is None:
-        logger.error("%s: could not determine page count — skipping", label)
-        return None, 0
-    if num_pages == 0:
-        logger.warning("%s: CDX returned 0 pages", label)
-        return [], 0
-
-    logger.info("%s: %d pages to fetch", label, num_pages)
-
-    # Fetch all pages with progress and politeness delay
     all_slugs: list[str] = []
-    pages_ok = 0
-    for page in range(num_pages):
-        print(f"  {label}: fetching page {page + 1}/{num_pages}...", flush=True)
-        page_slugs = _fetch_page_slugs(
-            client, cdx_api, domain, regex, page, label,
+    total_pages_fetched = 0
+    any_domain_reachable = False
+
+    for domain in domains:
+        domain_label = f"{label} ({domain})"
+        regex = re.compile(regex_template.format(domain=re.escape(domain)))
+
+        logger.info("%s: checking page count...", domain_label)
+        num_pages = _get_num_pages(
+            client, cdx_api, domain, domain_label,
             timeout=timeout, retry_limit=retry_limit,
-            slug_filter=slug_filter,
         )
-        all_slugs.extend(page_slugs)
-        if page_slugs:
-            pages_ok += 1
+        if num_pages is None:
+            logger.error("%s: could not determine page count — skipping domain", domain_label)
+            continue
+        any_domain_reachable = True
+        if num_pages == 0:
+            logger.warning("%s: CDX returned 0 pages", domain_label)
+            continue
 
-        # Politeness delay between pages (skip after last page)
-        if page < num_pages - 1:
-            time.sleep(page_delay)
+        logger.info("%s: %d pages to fetch", domain_label, num_pages)
 
-    # Deduplicate and sort
+        pages_ok = 0
+        for page in range(num_pages):
+            print(f"  {domain_label}: fetching page {page + 1}/{num_pages}...", flush=True)
+            page_slugs = _fetch_page_slugs(
+                client, cdx_api, domain, regex, page, domain_label,
+                timeout=timeout, retry_limit=retry_limit,
+                slug_filter=slug_filter,
+            )
+            all_slugs.extend(page_slugs)
+            if page_slugs:
+                pages_ok += 1
+
+            # Politeness delay between pages (skip after last page)
+            if page < num_pages - 1:
+                time.sleep(page_delay)
+
+        total_pages_fetched += num_pages
+        logger.info("%s: %d/%d pages fetched", domain_label, pages_ok, num_pages)
+
+    if not any_domain_reachable:
+        logger.error("%s: could not reach any configured domain — skipping", label)
+        return None, 0
+
+    # Deduplicate and sort (same slug can legitimately appear under multiple
+    # domains, e.g. a company mid-migration between Greenhouse frontends)
     unique = sorted(set(all_slugs))
     logger.info(
-        "%s: %d/%d pages fetched, %d unique slugs (from %d raw matches)",
-        label, pages_ok, num_pages, len(unique), len(all_slugs),
+        "%s: %d unique slugs across %d domain(s) (from %d raw matches)",
+        label, len(unique), len(domains), len(all_slugs),
     )
 
     # Merge with existing file if configured (e.g. Lever — CDX is unreliable)
@@ -480,12 +524,21 @@ def _load_existing(path: Path) -> list[str]:
     return []
 
 
-def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -> None:
-    """Discover companies for all ATS platforms and save results."""
+def run_discovery(
+    crawl_override: str | None = None,
+    revalidate: bool = False,
+    num_months: int = _DEFAULT_NUM_MONTHS,
+) -> None:
+    """Discover companies for all ATS platforms and save results.
+
+    Queries *num_months* recent Common Crawl indexes (not just the latest —
+    see get_recent_cdx_apis for why) and unions the slugs each one turns up
+    per platform before validating/saving once at the end.
+    """
     client = httpx.Client()
 
     try:
-        crawl_id, cdx_api = get_latest_cdx_api(client, crawl_override)
+        crawl_apis = get_recent_cdx_apis(client, num_months, crawl_override)
     except Exception as exc:
         logger.error("Failed to get Common Crawl index info: %s", exc)
         logger.warning("Keeping existing company files unchanged")
@@ -493,29 +546,42 @@ def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -
         return
 
     names = list(ATS_PLATFORMS.keys())
+    raw_slugs: dict[str, set[str]] = {name: set() for name in names}
+    page_counts: dict[str, int] = {name: 0 for name in names}
+    any_crawl_hit: dict[str, bool] = {name: False for name in names}
+
+    # Run sequentially — polite to Common Crawl servers. Each crawl adds
+    # whatever new slugs it turns up on top of what earlier crawls (and the
+    # existing saved files) already found.
+    for crawl_id, cdx_api in crawl_apis:
+        logger.info("=== Querying crawl %s ===", crawl_id)
+        for name in names:
+            slugs, num_pages = discover_ats(client, name, cdx_api)
+            page_counts[name] += num_pages
+            if slugs:
+                raw_slugs[name].update(slugs)
+                any_crawl_hit[name] = True
+
+    client.close()
+
     results: dict[str, list[str]] = {}
-    page_counts: dict[str, int] = {}
-
-    # Run sequentially — polite to Common Crawl servers
     for name in names:
-        slugs, num_pages = discover_ats(client, name, cdx_api)
         cfg = ATS_PLATFORMS[name]
-        page_counts[name] = num_pages
+        slugs = sorted(raw_slugs[name])
 
-        if slugs is None or (len(slugs) == 0 and num_pages > 0):
-            # CDX unreachable or returned empty despite having pages — keep existing
+        if not any_crawl_hit[name]:
+            # Every crawl for this platform was unreachable or empty — keep existing.
             existing = _load_existing(cfg["output"])
             if existing:
-                reason = "unreachable" if slugs is None else "returned 0 slugs"
                 logger.warning(
-                    "%s: CDX %s — keeping existing file (%d companies)",
-                    name.title(), reason, len(existing),
+                    "%s: no crawl returned data — keeping existing file (%d companies)",
+                    name.title(), len(existing),
                 )
                 results[name] = existing
             else:
                 fallback = list(cfg["fallback"])
                 logger.warning(
-                    "%s: CDX failed and no existing file — using hardcoded fallback (%d companies)",
+                    "%s: no crawl returned data and no existing file — using hardcoded fallback (%d companies)",
                     name.title(), len(fallback),
                 )
                 results[name] = fallback
@@ -526,8 +592,8 @@ def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -
 
             if new_slugs:
                 logger.info(
-                    "%s: validating %d new slugs (skipping %d already known)",
-                    name.title(), len(new_slugs), len(existing_set),
+                    "%s: validating %d new slugs across %d crawl(s) (skipping %d already known)",
+                    name.title(), len(new_slugs), len(crawl_apis), len(existing_set),
                 )
                 validated_new = asyncio.run(validate_slugs(name, new_slugs))
                 results[name] = sorted(set(existing) | set(validated_new))
@@ -537,8 +603,6 @@ def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -
                 )
             else:
                 results[name] = slugs
-
-    client.close()
 
     # Save results — never overwrite with empty data
     for name in names:
@@ -558,9 +622,10 @@ def run_discovery(crawl_override: str | None = None, revalidate: bool = False) -
     # Summary
     total = sum(len(results[n]) for n in names)
     num_platforms = len(names)
+    crawl_ids = [c[0] for c in crawl_apis]
     print()
     print("=" * 60)
-    print(f"  Common Crawl index used: {crawl_id}")
+    print(f"  Common Crawl indexes used ({len(crawl_ids)}): {', '.join(crawl_ids)}")
     print("=" * 60)
     for name in names:
         count = len(results[name])
@@ -580,8 +645,16 @@ def main() -> None:
     parser.add_argument(
         "--crawl",
         default=None,
-        help="Specific Common Crawl index to query (e.g. CC-MAIN-2026-12). "
-             "If omitted, the latest available index is used automatically.",
+        help="Specific Common Crawl index to query (e.g. CC-MAIN-2026-12), instead "
+             "of the recent-months union. Overrides --months (queries exactly one).",
+    )
+    parser.add_argument(
+        "--months",
+        type=int,
+        default=_DEFAULT_NUM_MONTHS,
+        help=f"Number of recent monthly Common Crawl indexes to union (default {_DEFAULT_NUM_MONTHS}). "
+             "A single month misses companies that were unlinked/uncrawled that cycle but "
+             "visible in another — see get_recent_cdx_apis.",
     )
     parser.add_argument(
         "--revalidate",
@@ -590,7 +663,7 @@ def main() -> None:
              "against their live ATS APIs and remove any that no longer respond with 200/403.",
     )
     args = parser.parse_args()
-    run_discovery(crawl_override=args.crawl, revalidate=args.revalidate)
+    run_discovery(crawl_override=args.crawl, revalidate=args.revalidate, num_months=args.months)
 
 
 if __name__ == "__main__":
