@@ -1,12 +1,16 @@
 # Persift — Claude Code Context
 
 > **Doc system. Read the right one:**
+>
+> **Mandatory floor, every session, no exceptions:** read **this file, then `STATE.md`**, before anything else — in that order. `STATE.md` is what's actually true right now; nothing else in this list overrides it. **If `LAUNCH_PLAN.md` (or any other doc) conflicts with `STATE.md` — a checkbox marked incomplete for something `STATE.md`/`decisions/` show is actually done, a stale status — `STATE.md` wins.** This is a real failure mode, not a hypothetical: a session once read `LAUNCH_PLAN.md` first, trusted a stale unchecked box over `STATE.md`'s current truth, and built a wrong narrative ("P1.2 isn't built") on top of it before self-correcting. Don't repeat that — check `STATE.md`/`decisions/` before trusting any plan-doc checkbox as current status.
+>
+> **Everything below this line is conditional — read only what the actual task needs, in whatever order that implies. There is no fixed sequence for these; it depends on what you're doing this session, not what happened last session:**
 > - **This file (CLAUDE.md)** — stable: identity, codebase map, how to operate, how to run. Rarely changes.
-> - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Read when you need current state. Kept short on purpose — it holds only what's currently true and what to do next, not history.
+> - **`STATE.md`** — volatile: current progress, DB snapshot, pending work, known issues. Kept short on purpose — it holds only what's currently true and what to do next, not history.
 > - **`decisions/`** — why things are the way they are: rejected designs, locked-in architecture, incident postmortems. Check here before re-litigating something that looks like it might have been tried before, or before you need the reasoning behind a current design. Index: `decisions/README.md`.
 > - **`ARCHITECTURE.md`** — the coupling map: what depends on what. **Read before changing any status string, API shape, DB column, config constant, or the extension↔API contract.**
 > - **`FORM_ENGINE_DESIGN.md`** — LOCKED design for the autofill engine (Extraction → Interpretation → Resolution → Fill/Verify → Telemetry → Replay). **Read before touching filler_utils.js, any content/*.js adapter, field classification, or telemetry.** Its §1 standing rules override ad-hoc instincts. §3.6a is the corpus-harvester spec (P1.2) — see `corpus/README.md` and `corpus_analysis/README.md` for what it built and found. §7 has resolution-layer rules and extraction gaps found along the way. Next: P1.3 replay harness.
-> - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date.
+> - **`LAUNCH_PLAN.md`** (parent dir) — THE single converged plan (v2, Jul 5): audit fixes + form engine + launch in one spine. Tech-week pitch July 27, 2026 is the only hard date. **Its checkboxes can go stale relative to `STATE.md`/`decisions/` — treat it as scope/dates, not a live status tracker.**
 > - **`CatchUpDocs/`** (parent dir) — pre-Claude-Code archive (claude.ai chat hand-off docs, April–June 2026). Historical only, not part of the active doc system — don't extend it.
 > - **Generated/non-obvious directories get their own `README.md` at the point of confusion** (e.g. `corpus/README.md`) rather than a full explanation living here — this map only points to them.
 
