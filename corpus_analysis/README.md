@@ -112,3 +112,5 @@ Early in this session, checkbox groups sharing literal words like "Marketing," "
 ## Next step (not started)
 
 P1.3 — replay harness. Load `oc_compact_full.json` + the decision files above as the answer key, write `interpret(field) → category` per §3.2 of `FORM_ENGINE_DESIGN.md`, score per-category coverage. The category list itself (see "The category system" above) needs to be formalized into a real enum first — right now it only exists as the union of values scattered across the decision JSON files.
+
+**Before P1.3/P1.4 generalize past Greenhouse:** see `decisions/0008-corpus-harvester-scale-and-scope-gap.md` (Jul 23 2026) — this whole corpus is 767 Greenhouse-only jobs, harvested before the ingestion pipeline fix that unlocked the real 246K+-job, 4-ATS volume. `pipeline/corpus_harvester.py` has Greenhouse-specific logic (iframe-embed detection) that won't transfer as-is to Ashby/Lever/SmartRecruiters — each needs its own "how do I reach the real rendered form" handling, even if the field-discovery JS itself generalizes. Flagged, not started.
