@@ -26,6 +26,8 @@ from db import (
     set_company_payload_hash,
 )
 from pollers.filter import assign_categories
+from pollers.geography import normalize_smartrecruiters_country
+from pollers.metadata_categories import map_smartrecruiters_function
 from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
@@ -155,6 +157,11 @@ async def _poll_company(
                 company = job.get("company", {}) or {}
                 experience_level = job.get("experienceLevel")
                 yoe_min, yoe_max = extract_years_of_experience(title)
+                function_obj = job.get("function") or {}
+                categories = assign_categories(title)
+                mapped_category = map_smartrecruiters_function(function_obj.get("label"))
+                if mapped_category and mapped_category not in categories:
+                    categories.append(mapped_category)
                 all_results.append(
                     {
                         "job_id": job_id,
@@ -165,7 +172,7 @@ async def _poll_company(
                         "location": location.get("fullLocation", "Unknown"),
                         "apply_url": _APPLY_URL.format(slug=slug, job_id=job_id),
                         "description_html": "",
-                        "categories": assign_categories(title),
+                        "categories": categories,
                         "years_of_experience_min": yoe_min,
                         "years_of_experience_max": yoe_max,
                         "raw_ats_metadata": {
@@ -174,6 +181,7 @@ async def _poll_company(
                             "department": job.get("department"),
                             "typeOfEmployment": job.get("typeOfEmployment"),
                             "industry": job.get("industry"),
+                            "country": normalize_smartrecruiters_country(location.get("country")),
                         },
                     }
                 )

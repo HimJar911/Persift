@@ -11,6 +11,8 @@ from db import (
     set_company_payload_hash,
 )
 from pollers.filter import assign_categories
+from pollers.geography import normalize_ashby_country
+from pollers.metadata_categories import map_department
 from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,11 @@ async def _poll_company(
                 title, description_plain, description_html
             )
 
+            categories = assign_categories(title, description_html or description_plain)
+            mapped_category = map_department(posting.get("department"))
+            if mapped_category and mapped_category not in categories:
+                categories.append(mapped_category)
+
             results.append(
                 {
                     "job_id": str(posting["id"]),
@@ -95,9 +102,7 @@ async def _poll_company(
                     "apply_url": posting.get("jobUrl") or posting.get("applyUrl", ""),
                     "description_html": description_html,
                     "description_plain": description_plain,
-                    "categories": assign_categories(
-                        title, description_html or description_plain,
-                    ),
+                    "categories": categories,
                     "years_of_experience_min": yoe_min,
                     "years_of_experience_max": yoe_max,
                     "raw_ats_metadata": {
@@ -105,6 +110,9 @@ async def _poll_company(
                         "team": posting.get("team"),
                         "employmentType": employment_type,
                         "workplaceType": posting.get("workplaceType"),
+                        "country": normalize_ashby_country(
+                            ((posting.get("address") or {}).get("postalAddress") or {}).get("addressCountry")
+                        ),
                     },
                 }
             )

@@ -3,6 +3,7 @@ import hashlib
 import logging
 
 import httpx
+from bs4 import BeautifulSoup
 
 from db import (
     get_company_payload_hash,
@@ -12,11 +13,35 @@ from db import (
     set_company_payload_hash,
 )
 from pollers.filter import assign_categories
+from pollers.geography import normalize_lever_country
+from pollers.metadata_categories import map_department
 from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.lever.co/v0/postings/{slug}?mode=json"
+
+
+def _lists_to_text(lists: list[dict] | None) -> str:
+    """Flatten Lever's `lists` array (section heading + HTML content, e.g.
+    "Requirements"/"Qualifications") into plain text.
+
+    Lever splits real posting content across descriptionPlain (intro only)
+    and this array — confirmed live (Jul 23 2026 audit) that descriptionPlain
+    alone carries ~26% of a posting's total available text, and 35.7% of
+    sampled postings had an explicit "N years of experience" phrase sitting
+    only here, invisible to extract_years_of_experience()/assign_categories()
+    before this fix.
+    """
+    if not lists:
+        return ""
+    parts = []
+    for section in lists:
+        heading = section.get("text", "")
+        content_html = section.get("content", "")
+        content_text = BeautifulSoup(content_html, "html.parser").get_text(separator="\n", strip=True)
+        parts.append(f"{heading}\n{content_text}" if heading else content_text)
+    return "\n\n".join(parts)
 
 _CONCURRENCY = 30
 
@@ -74,7 +99,13 @@ async def _poll_company(
             lever_cats = posting.get("categories", {}) or {}
             commitment = lever_cats.get("commitment")
             description_plain = posting.get("descriptionPlain", "")
-            yoe_min, yoe_max = extract_years_of_experience(title, description_plain)
+            lists_text = _lists_to_text(posting.get("lists"))
+            full_text = f"{description_plain}\n\n{lists_text}" if lists_text else description_plain
+            yoe_min, yoe_max = extract_years_of_experience(title, full_text)
+            categories = assign_categories(title, full_text)
+            mapped_category = map_department(lever_cats.get("department"))
+            if mapped_category and mapped_category not in categories:
+                categories.append(mapped_category)
             results.append(
                 {
                     "job_id": str(posting["id"]),
@@ -83,8 +114,8 @@ async def _poll_company(
                     "title": title,
                     "location": lever_cats.get("location", "Unknown"),
                     "apply_url": posting.get("hostedUrl", ""),
-                    "description_plain": description_plain,
-                    "categories": assign_categories(title, description_plain),
+                    "description_plain": full_text,
+                    "categories": categories,
                     "years_of_experience_min": yoe_min,
                     "years_of_experience_max": yoe_max,
                     "raw_ats_metadata": {
@@ -92,6 +123,7 @@ async def _poll_company(
                         "department": lever_cats.get("department"),
                         "team": lever_cats.get("team"),
                         "workplaceType": posting.get("workplaceType"),
+                        "country": normalize_lever_country(posting.get("country")),
                     },
                 }
             )

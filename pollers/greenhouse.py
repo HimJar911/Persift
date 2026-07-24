@@ -12,6 +12,8 @@ from db import (
     set_company_payload_hash,
 )
 from pollers.filter import assign_categories
+from pollers.gh_metadata import parse_greenhouse_metadata
+from pollers.metadata_categories import map_greenhouse_departments
 from pollers.seniority import extract_years_of_experience
 
 logger = logging.getLogger(__name__)
@@ -94,6 +96,11 @@ async def _poll_company(
             location_obj = job.get("location", {}) or {}
             description = job.get("content", "")
             yoe_min, yoe_max = extract_years_of_experience(title, description)
+            parsed_metadata = parse_greenhouse_metadata(job.get("metadata"))
+            categories = assign_categories(title, description)
+            mapped_category = map_greenhouse_departments(job.get("departments"))
+            if mapped_category and mapped_category not in categories:
+                categories.append(mapped_category)
             results.append(
                 {
                     "job_id": str(job["id"]),
@@ -103,12 +110,13 @@ async def _poll_company(
                     "location": location_obj.get("name", "Unknown"),
                     "apply_url": job.get("absolute_url", ""),
                     "description_html": description,
-                    "categories": assign_categories(title, description),
+                    "categories": categories,
                     "years_of_experience_min": yoe_min,
                     "years_of_experience_max": yoe_max,
                     "raw_ats_metadata": {
                         "metadata": job.get("metadata"),
                         "departments": job.get("departments"),
+                        **parsed_metadata,
                     },
                 }
             )
