@@ -71,26 +71,30 @@ _CATEGORY_PATTERNS: dict[str, re.Pattern] = {
         "process analyst", "operations analyst",
     ]),
     "consulting": _compile_patterns([
-        "consultant", "consulting", "advisory", "strategy analyst",
-        "management consulting",
+        "consultant", "consulting", "advisory services", "strategy analyst",
+        "management consulting", "strategy consultant",
     ]),
     "accounting_and_finance": _compile_patterns([
-        "accountant", "accounting", "finance", "financial analyst",
-        "investment banking", "equity research", "audit", "tax analyst",
-        "treasury", "controller",
+        "accountant", "accounting", "financial analyst",
+        "investment banking", "equity research", "financial audit",
+        "tax analyst", "treasury analyst", "corporate controller",
     ]),
     "marketing": _compile_patterns([
-        "marketing", "growth", "demand generation", "brand", "content",
-        "seo", "digital marketing", "social media", "campaign",
-        "communications",
+        "marketing", "demand generation", "brand marketing",
+        "brand manager", "content marketing", "seo specialist",
+        "digital marketing", "social media marketing",
+        "social media manager", "marketing campaign",
+        "communications specialist", "communications manager",
     ]),
     "sales": _compile_patterns([
-        "sales", "account executive", "business development", "bdr", "sdr",
-        "revenue", "account manager",
+        "sales representative", "sales associate", "sales executive",
+        "sales development", "account executive", "business development",
+        "bdr", "sdr", "revenue operations", "account manager",
     ]),
     "creatives_and_design": _compile_patterns([
-        "designer", "ux", "ui", "product design", "graphic design",
-        "visual design", "motion design", "brand design", "illustrator",
+        "designer", "ux design", "ui design", "ux/ui", "product design",
+        "graphic design", "visual design", "motion design", "brand design",
+        "illustrator",
     ]),
     "engineering_and_development": _compile_patterns([
         "hardware engineer", "electrical engineer", "mechanical engineer",
@@ -98,47 +102,52 @@ _CATEGORY_PATTERNS: dict[str, re.Pattern] = {
         "industrial engineer", "manufacturing engineer",
     ]),
     "human_resources": _compile_patterns([
-        "human resources", "hr ", "recruiter", "recruiting", "talent",
+        "human resources", "hr generalist", "hr manager", "hr business partner",
+        "recruiter", "recruiting coordinator", "talent acquisition",
         "people operations", "hris",
     ]),
     "legal_and_compliance": _compile_patterns([
-        "legal", "compliance", "paralegal", "regulatory", "counsel",
-        "attorney", "contracts",
+        "legal counsel", "legal associate", "legal analyst", "compliance officer",
+        "compliance analyst", "compliance manager", "paralegal",
+        "regulatory affairs", "regulatory compliance", "general counsel",
+        "attorney", "contracts manager", "contracts specialist",
     ]),
     "management_and_executive": _compile_patterns([
-        "operations manager", "chief of staff", "strategy",
-        "corporate development", "general manager",
+        "operations manager", "chief of staff", "corporate strategy",
+        "strategy manager", "corporate development", "general manager",
     ]),
     "public_sector_and_government": _compile_patterns([
-        "government", "public sector", "public policy", "federal",
-        "defense", "intelligence", "civic",
+        "government relations", "public sector", "public policy",
+        "federal government", "defense contractor", "intelligence analyst",
+        "civic engagement",
     ]),
     "customer_service_and_support": _compile_patterns([
         "customer success", "customer support", "customer service",
         "client success", "technical support", "help desk",
     ]),
     "education_and_training": _compile_patterns([
-        "education", "teaching", "curriculum", "instructional",
+        "teaching", "curriculum design", "instructional design",
         "e-learning", "learning experience", "learning designer", "tutor",
         "training program", "training specialist", "training coordinator",
     ]),
     "health care": _compile_patterns([
-        "health care", "healthcare", "clinical", "medical", "biotech",
-        "pharmaceutical", "nursing", "patient care", "patient experience",
+        "health care", "healthcare", "clinical research", "clinical trial",
+        "medical device", "medical affairs", "biotech", "pharmaceutical",
+        "nursing", "patient care", "patient experience",
     ]),
     "supply_chain": _compile_patterns([
-        "supply chain", "logistics", "procurement", "sourcing",
-        "inventory", "warehouse", "fulfillment", "supply chain operations",
+        "supply chain", "logistics", "procurement", "sourcing specialist",
+        "inventory management", "warehouse operations", "fulfillment",
         "logistics operations", "fleet operations",
     ]),
     "arts_and_entertainment": _compile_patterns([
-        "entertainment", "media production", "film production", "music",
-        "gaming", "game developer", "animation", "video production",
-        "content production", "broadcast",
+        "entertainment industry", "media production", "film production",
+        "music industry", "gaming industry", "game developer", "animation",
+        "video production", "content production", "broadcast",
     ]),
     "project_management": _compile_patterns([
         "project manager", "program manager", "pmo", "scrum master",
-        "agile", "project coordinator",
+        "agile coach", "project coordinator",
     ]),
 }
 
@@ -146,12 +155,25 @@ _CATEGORY_PATTERNS: dict[str, re.Pattern] = {
 def assign_categories(title: str, description: str = "") -> list[str]:
     """Return list of unified taxonomy categories matching this job.
 
-    Matches against the full title + description — real job descriptions run
-    4,000-11,000+ characters (measured live across Stripe/Databricks/Affirm
-    Greenhouse postings), so a short prefix was mostly boilerplate "About us"
-    copy and missed role-specific language entirely.
-    Returns empty list if no categories match — job goes to 'other'.
+    Title-first: the title alone is checked before the description is
+    consulted at all. Full-description matching pulls in unrelated
+    boilerplate (benefits/EEO/perks sections) that shares vocabulary with
+    the taxonomy — e.g. "contracts" in a legal disclaimer tagging an
+    engineering role `legal_and_compliance`, or "medical" in a benefits
+    blurb tagging a civil-engineer role `health care`. Real examples
+    confirmed live: a nurse posting tagged `marketing`, a VP-SWE role
+    tagged with 8 unrelated categories (see STATE.md, decisions/0003).
+    Description is only searched if the title resolves nothing, to catch
+    jobs whose title alone is uninformative (e.g. a generic "Associate").
+    Returns empty list if nothing matches — job goes to 'other'.
     """
+    title_matches = [
+        cat for cat, pattern in _CATEGORY_PATTERNS.items()
+        if pattern.search(title)
+    ]
+    if title_matches:
+        return title_matches
+
     text = f"{title} {description}"
     return [
         cat for cat, pattern in _CATEGORY_PATTERNS.items()

@@ -15,6 +15,14 @@ outputs/*
 corpus/*
 !corpus/README.md
 
+# Category-classification eval corpus (side mission, Jul 24) — generated batch/label
+# churn, not source. See corpus_analysis/category_eval/README.md for what it is and
+# how to regenerate/resume it.
+corpus_analysis/category_eval/*
+!corpus_analysis/category_eval/README.md
+corpus_analysis/category_eval_v2/*
+!corpus_analysis/category_eval_v2/README.md
+
 # Resume files (personal — not for repo)
 resume/base_resume.pdf
 resume/base_resume.txt
