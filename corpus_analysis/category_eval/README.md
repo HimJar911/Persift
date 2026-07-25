@@ -113,18 +113,39 @@ order match.)
    `assign_categories(title, '')` nor `raw_ats_metadata`'s category/function/
    department fields produce an answer).
 2. Split into batches (100/batch recommended, not 30).
-3. Dispatch Haiku subagents per batch with the labeling prompt (see git log
-   / session transcript for the exact prompt text — not preserved as a
-   separate file; the category clarifications block is the important part
-   to carry forward, it measurably changed labeling quality).
+3. Dispatch Haiku subagents per batch with the labeling prompt. **The exact
+   verbatim prompt now lives in `STATE.md`'s RESUME HERE section ("Labeling
+   prompt" subsection) — use that, not this file.** (Jul 24's version of
+   this README pointed to "git log / session transcript" for the prompt
+   text; that turned out to be a dead end — it wasn't actually recoverable
+   and had to be re-supplied from scratch Jul 25. Don't repeat that mistake
+   — if you use the prompt, also copy it somewhere durable like this file
+   or STATE.md, don't just point at chat history again.)
 4. Merge by `job_id` (not position) into a frozen corpus.
 5. Run the same dispatch pattern with the Tier 3 framing (production-style
    prompt: no confidence/note fields, empty-list-is-correct emphasized) to
    get predictions, merge, score.
 
-**Not yet done, if picked back up:**
-- Label the remaining ~2,000 of v2's 5,000-job sample (indices 1500+ in
-  `eval_corpus_v2_raw.jsonl` are the untouched resolved-control block).
+**Status as of Jul 25 2026 (see STATE.md RESUME HERE for full detail):**
+- The unresolved pool (1,495 jobs) was fully labeled Jul 24
+  (`frozen_eval_corpus_v2_partial.jsonl` + `gt_labels/gt_batch_NNN_labels.jsonl`,
+  30/batch).
+- The 3,471-job resolved-control block was already split into 35 batches of
+  100 (`category_eval_v2/gt_batches_b100/gt100_batch_00.jsonl`–`_34.jsonl`)
+  — confirmed via a bucket audit (3,471 `resolved_control_v2` + 29 stray
+  `unresolved_v2` rows), no regeneration needed despite what this doc
+  previously implied.
+- **25 of 35 resolved-control batches labeled** as of Jul 25
+  (`gt_labels/gt100_batch_00_labels.jsonl`–`_24_labels.jsonl`). 10 remain
+  (`_25`–`_34`). Check `gt_labels/` for which exist before dispatching more.
+- Once all 35 are labeled: merge by `job_id`, compute Tier 1+2 precision/
+  recall against the full resolved-control block (same method as the 77-job
+  v1 clean sample), excluding jobs where `current_tier12_categories` is
+  empty despite being in the resolved bucket (recheck for the v1 sampling
+  bug here too).
+
+**Not yet done after that (explicitly deferred to the founder, not solo
+decisions):**
 - Re-test Tier 3 with the category-clarifications prompt update (only the
   *ground-truth labeling* prompt got the clarifications; Tier 3 itself
   didn't, so the three error clusters found may still be present at the
