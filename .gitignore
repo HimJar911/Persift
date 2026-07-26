@@ -22,6 +22,7 @@ corpus_analysis/category_eval/*
 !corpus_analysis/category_eval/README.md
 corpus_analysis/category_eval_v2/*
 !corpus_analysis/category_eval_v2/README.md
+!corpus_analysis/category_eval_v2/score_resolved_control.py
 
 # Resume files (personal — not for repo)
 resume/base_resume.pdf
