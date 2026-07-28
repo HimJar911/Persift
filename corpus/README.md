@@ -45,15 +45,24 @@ and why it deliberately doesn't reuse `extension/filler_utils.js`).
    already crawled — it did not re-crawl or invalidate the first run's 718
    `ok` records).
 
-**Practical implication for anyone using this data next:** the
-`corpus_analysis/` open-coding pass (categories, clusters, decision files)
-was built against ONLY the first run's 767-job/269-company slice. The
-second run's ~19,100 additional `ok` records are NOT yet run through that
-pipeline — they're raw, uncategorized field data sitting in
-`manifest.jsonl`/`corpus_crawl_state` waiting for someone to extend the
-open-coding pass (or build the P1.3 replay harness) against the full
-volume. Don't assume `corpus_analysis/`'s category coverage claims apply to
-records outside the original 767.
+**UPDATE 2026-07-29 — resolved.** The `corpus_analysis/` open-coding pass has
+been extended to cover the full second-run volume (junk-page triage, a
+formalized `taxonomy_v1` canonical enum, LLM-assisted residue classification
+with raw-HTML verification, and held-out company-level generalization
+validation — 99.2% overall coverage, 99.0% coverage / 100% correctness on
+20 companies never seen during taxonomy-building). Full account:
+`corpus_analysis/README.md`'s "Full-volume extension (2026-07-28→29)"
+section. `corpus_analysis/`'s category coverage claims now apply to the
+full harvested volume, not just the original 767-job slice — use
+`oc_compact_full_v2.json` / `cluster_decisions_v2.json`, not the original
+`oc_compact_full.json` / `cluster_decisions.json`, for anything downstream
+(e.g. P1.3's replay harness).
+
+As part of this pass, a junk-page triage was also retroactively run against
+the ORIGINAL 767-job corpus (see `corpus_analysis/original_corpus_junk_exclusions.py`)
+— 27 companies confirmed via direct field-list inspection to be non-form
+pages (cookie-consent banners, job-search widgets, marketing lead-gen) and
+excluded from the v2 compact corpus.
 
 ## Harvester resilience fixes (2026-07-26, `HARVESTER_VERSION` 1.0.0 → 1.3.0)
 

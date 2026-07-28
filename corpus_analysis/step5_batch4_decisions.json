@@ -1,0 +1,596 @@
+[
+  {
+    "job_id": "4513943005",
+    "h": "5fd1380d",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4536653005",
+    "h": "ee80ad3d",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "4545434008",
+    "h": "459134bd",
+    "action": "confirm",
+    "category": "location_city"
+  },
+  {
+    "job_id": "4565984006",
+    "h": "e1bae160",
+    "action": "confirm",
+    "category": "location_preference"
+  },
+  {
+    "job_id": "4568601005",
+    "h": "49f1cac",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4568601005",
+    "h": "e3ffeeb8",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4585080006",
+    "h": "98730a58",
+    "action": "confirm",
+    "category": "travel_willingness"
+  },
+  {
+    "job_id": "4587320005",
+    "h": "74eb8e4e",
+    "action": "confirm",
+    "category": "current_salary"
+  },
+  {
+    "job_id": "4593259005",
+    "h": "2eb283ff",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4596418006",
+    "h": "cc70c6e2",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4599700005",
+    "h": "3dac7fb3",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4601615101",
+    "h": "ffb92178",
+    "action": "confirm",
+    "category": "department_interest"
+  },
+  {
+    "job_id": "4602177005",
+    "h": "e130a80f",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4602177005",
+    "h": "4663ab4c",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4609213008",
+    "h": "d18c582",
+    "action": "confirm",
+    "category": "work_authorized"
+  },
+  {
+    "job_id": "4612403005",
+    "h": "c1983499",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "4613067006",
+    "h": "4668cab8",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4623959005",
+    "h": "95a9ad8a",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4623959005",
+    "h": "28838f8b",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4623959005",
+    "h": "bb5d718c",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4624948005",
+    "h": "cb73eba1",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4625271005",
+    "h": "4a652f32",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4627111006",
+    "h": "491869d4",
+    "action": "confirm",
+    "category": "travel_willingness"
+  },
+  {
+    "job_id": "4628848101",
+    "h": "56198b25",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "4628848101",
+    "h": "e8f36d26",
+    "action": "confirm",
+    "category": "language_proficiency"
+  },
+  {
+    "job_id": "4630983101",
+    "h": "7862aef4",
+    "action": "confirm",
+    "category": "skill_experience_years"
+  },
+  {
+    "job_id": "4634307005",
+    "h": "611d979",
+    "action": "confirm",
+    "category": "willing_to_relocate"
+  },
+  {
+    "job_id": "4634308005",
+    "h": "96d695b7",
+    "action": "confirm",
+    "category": "willing_to_relocate"
+  },
+  {
+    "job_id": "4634488005",
+    "h": "a3658ae",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4635507005",
+    "h": "7c6d1cb8",
+    "action": "confirm",
+    "category": "certifications"
+  },
+  {
+    "job_id": "4636097005",
+    "h": "d44bb655",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "4636097005",
+    "h": "7c7b52e3",
+    "action": "confirm",
+    "category": "availability_hours_per_week"
+  },
+  {
+    "job_id": "4640400005",
+    "h": "f786002",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4640831005",
+    "h": "491eb2d",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4640834005",
+    "h": "bb0a6b6d",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4647417005",
+    "h": "7f32fab9",
+    "action": "confirm",
+    "category": "location_preference"
+  },
+  {
+    "job_id": "4648176005",
+    "h": "7ff20eda",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4648176005",
+    "h": "12cbf0db",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4648176005",
+    "h": "9be997f1",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4648176005",
+    "h": "3c2d7ef0",
+    "action": "confirm",
+    "category": "country_of_residence"
+  },
+  {
+    "job_id": "4650514005",
+    "h": "83a4707e",
+    "action": "confirm",
+    "category": "country_of_residence"
+  },
+  {
+    "job_id": "4651121006",
+    "h": "436c956b",
+    "action": "confirm",
+    "category": "graduation_date"
+  },
+  {
+    "job_id": "4651121006",
+    "h": "f4a0624f",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4652485006",
+    "h": "8da1f2b0",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4662257007",
+    "h": "1f2aedd9",
+    "action": "confirm",
+    "category": "work_authorized"
+  },
+  {
+    "job_id": "4662257007",
+    "h": "c88733a6",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "4663481005",
+    "h": "1e408bf4",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "4663481005",
+    "h": "76fec1b",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "4664065005",
+    "h": "4bd9dddc",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4664065005",
+    "h": "34323789",
+    "action": "confirm",
+    "category": "department_interest"
+  },
+  {
+    "job_id": "4664842005",
+    "h": "9c75407f",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "38d66839",
+    "action": "confirm",
+    "category": "travel_willingness"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "5e8a2c3b",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "2ab12f51",
+    "action": "confirm",
+    "category": "contract_length"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "843df03d",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "2f5b8093",
+    "action": "confirm",
+    "category": "availability_hours_per_week"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "db850256",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "6e5ee457",
+    "action": "confirm",
+    "category": "age_18_or_older"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "138c658",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "9412a859",
+    "action": "confirm",
+    "category": "consent_background_check"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "b9c66c5b",
+    "action": "confirm",
+    "category": "consent_background_check"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "df7a305d",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "7254125e",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4667503005",
+    "h": "c99b2477",
+    "action": "confirm",
+    "category": "qualifications_confirmation"
+  },
+  {
+    "job_id": "4670010005",
+    "h": "1ac57516",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "4670109101",
+    "h": "48afd1e7",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4670109101",
+    "h": "4b04fa88",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4670848101",
+    "h": "4f2f64ca",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4676295005",
+    "h": "8d0e025a",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "4676295005",
+    "h": "6ddd0cb3",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4676295005",
+    "h": "6b4f6c5f",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4676295005",
+    "h": "791c78c8",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "444e41a6",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "6a0205a8",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "cbfa06d5",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "b8200ab9",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "f570c527",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4676566005",
+    "h": "31f0b148",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4679601006",
+    "h": "d712c811",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4680795005",
+    "h": "2e776ddc",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4680795005",
+    "h": "f2e49df4",
+    "action": "confirm",
+    "category": "language_proficiency"
+  },
+  {
+    "job_id": "4683055005",
+    "h": "ac2a1189",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4685421101",
+    "h": "c184b0f0",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4685680005",
+    "h": "999ac15c",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4685680005",
+    "h": "bf4e855e",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4685680005",
+    "h": "e030b6cb",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4685680005",
+    "h": "e285df6c",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4686030006",
+    "h": "c90e9f79",
+    "action": "confirm",
+    "category": "event_attendance"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "551e64fb",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "e7f846fc",
+    "action": "confirm",
+    "category": "ai_tool_usage_disclosure"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "7ad228fd",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "dac0afe",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "a085ecff",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "335fcf00",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "c639b101",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "59139302",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "1d80c31a",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "b05aa51b",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4686279005",
+    "h": "4334871c",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  }
+]

@@ -1,0 +1,126 @@
+{
+ "label::number of years completed": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::did you graduate": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::address": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::are you legally authorized to work in the united states for coupang": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::do you now or will you in the future require sponsorship for employment visa status e g h 1b visa status etc to work legally for coupang in the united states": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::coupang corporation or its affiliates and subsidiaries collectively referred to as coupang does not collect or use any personal information other than the types of information specified in this consent coupang can conduct a background check at the successful hiring stage please ensure that your resume does not include any personal information other than the types specified in this consent": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::1 i understand that working with relatives in the same department area where they can influence each other s work can potentially create conflict of interest and hence needs prior approval of coupang people department": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::coupang corporation or its affiliates and subsidiaries or collectively referred to as coupang does not collect process or use any personal information other than the types of information specified in this consent please ensure that your resume does not include any personal information other than the types specified in this consent": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::2 optional name contact information email address nationality educational background work experience qualifications national merit status for special hiring program applicants only relative s name relationship team and application history are collected and used on an ongoing basis for recruitment purposes and may be provided to any of our affiliates and subsidiaries other than the company to which you originally applied for the purpose of reviewing and conducting recruitment for similar positions personal information collected and provided will be retained for the duration of the year round recruitment retention period defined in the privacy policy you may refuse to provide consent but such refusal may prevent the year round hiring from progressing normally or may result in the restriction of opportunities in the hiring process of companies other than the one you applied": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::1 required by submitting your resume you consent to the required collection processing use required provision transfer and consignment of personal information as set forth in our privacy policy https privacy coupang com en land jobs": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::you have the right to inquire access request a copy supplement correct delete suspend the collection processing or use and suspend the transfer of your personal information that coupang holds exercising certain rights such as deletion of personal information may result in the restriction of the hiring process if you wish to exercise any of these choices please contact our privacy representative at candidatedataremove coupang com": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::coupang corporation or its affiliates and subsidiaries collectively referred to as coupang does not collect or use any personal information other than the types of information specified in this consent please ensure that your resume does not include any personal information other than the types specified in this consent": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::1 required by submitting your resume you consent to the required collection and use required provision and consignment as set forth in our privacy policy https privacy coupang com en land jobs": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::3 optional recordings of the interview process and transcriptions of interview audio maybe collected and used for the following purposes i to record the interview process ii to transcribe and document interview audio iii to summarize interview results iv to verify the interview process and evaluation results v to improve the hiring procedures vi to check candidate fitment for other open positions vii to review past interview records collected personal information are retained for 4 years from the notification of hiring result and then deleted you may refuse to provide this consent and refusal will not affect the recruitment process": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::2 optional at coupang we use a third party transcribing tool to help our interviewers focus on the conversation and not on taking notes this third party transcribing tool records and transcribes the audio from the conversation and then summarizes it into notes which may be used for the following purposes i to verify the interview process and evaluation results ii to improve hiring procedures iii to check whether other open positions are suitable for the candidate and iv to review past interview records please note that our use of this tool does not replace human involvement in any decision making processes if you prefer not to have your interview recorded and summarized by our third party transcribing tool it will have no bearing on your interview outcome if you are a u s resident during the application process you can find more information about how we process your personal data in the applicant privacy policy": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::3 optional by providing my telephone number and checking the box below i give my express written consent and agreement to receive telephone calls and text messages from or on behalf of coupang corporation or its affiliates and subsidiaries at the telephone number provided for year round recruitment notifications communications notices and updates including via automated telephone and text messaging this consent is not required to proceed with the recruitment process but if you do not agree we will not be able to contact you by call or text message your carrier may charge you for sending a message or calling coupang": {
+  "action": "confirm",
+  "category": "consent_sms_communication"
+ },
+ "label::4 optional coupang and its affiliate or subsidiary company will send recruitment notifications by email using the email address provided by you with the consent": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::4 optional coupang or its affiliate or subsidiary company will send recruitment notifications through transmission media such as phone email and sms using the contact information and email address based on your consent": {
+  "action": "confirm",
+  "category": "consent_sms_communication"
+ },
+ "label::5 optional coupang or its affiliate or subsidiary company will conduct reference checks on you within the following scope based on your consent additional reference checks may be conducted on applicants who applied for a job at coupang and passed interviews and coupang arranges means to conduct reference checks coupang may collect other personal information about you including integrity information collected from public sources and the performance evaluation information collected from your former employer or colleagues": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::coupang corporation or its affiliates and subsidiaries collectively referred to as coupang does not collect or use any personal information other than the types of information specified in this consent such information is collected and used as per the applicable law including the extant digital personal data and protection act 2023 data protection act please ensure that your resume does not include any personal information other than the types specified in this consent": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::2 do you require a visa to legally work in india": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::2 optional name contact information email address nationality educational background work experience qualifications national merit status for special hiring program applicants only relative s name relationship team and application history are collected and used on an ongoing basis for recruitment purposes and may be provided to any of our affiliates and subsidiaries other than the company to which you originally applied for the purpose of reviewing and conducting recruitment for similar positions personal information collected and provided will be retained for the duration of the year round recruitment retention period defined in the privacy policy you may refuse to provide consent but such refusal may prevent you from applying": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::3 optional recordings of the interview process and transcriptions of interview audio maybe collected and used for the following purposes i to record the interview process ii to transcribe and document interview audio iii to summarize interview results iv to verify the interview process and evaluation results v to improve the hiring procedures vi to check candidate fit for other open positions vii to review past interview records collected personal information are retained for 4 years from the notification of hiring result and then deleted you may refuse to provide this consent and refusal will not affect the recruitment process": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::4 optional coupang affiliate or subsidiary company will send recruitment notifications through the agreed modes of communication such as phone email and sms using the contact information obtained with your consent": {
+  "action": "confirm",
+  "category": "consent_sms_communication"
+ },
+ "label::5 optional i consent to reference checks on me within the following scope additional reference checks can be done on applicants who applied for a job at coupang and passed on site interviews and coupang arranges means to conduct reference checks": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::for more information": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::1 i understand that working with relatives in the coupang group of companies collectively the coupang group where they can influence each other s work can potentially create conflicts of interest therefore such a situation requires prior approval from the people operations in view of the above i hereby confirm that i do not have any relatives working in any company within the coupang group or serving on the board of directors of any company within the coupang group": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::3 optional coupang and its affiliate or subsidiary company will send recruitment notifications through various forms of communication such as phone email and sms using the contact information and email address provided by you with the consent": {
+  "action": "confirm",
+  "category": "consent_sms_communication"
+ },
+ "label::1 required by submitting your resume you consent to the required optional collection and use of your personal information and the required optional provision and the consignment of personal information as stated in our privacy policy https privacy coupang com en land jobs to withdraw your application to unsubscribe from recruitment notices or to request to delete your information contact us at candidatedataremove coupang com however please note that we cannot delete information during the period that falls under article 12946 of the california government code please refer to the privacy policy for the retention period": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::1 are you currently or have you been a government official public servant or employee of a public institution who may be subject to post employment or reemployment restrictions under applicable laws or regulations": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ },
+ "label::2 do you acknowledge and agree that where required under applicable laws or regulations": {
+  "action": "confirm",
+  "category": "consent_attestation_general"
+ }
+}

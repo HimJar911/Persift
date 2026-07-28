@@ -1,0 +1,52 @@
+{
+  "id::form-first_name": {
+    "action": "confirm",
+    "category": "first_name",
+    "matched_via": "id::first_name"
+  },
+  "id::form-last_name": {
+    "action": "confirm",
+    "category": "last_name",
+    "matched_via": "id::last_name"
+  },
+  "id::form-email": {
+    "action": "confirm",
+    "category": "email",
+    "matched_via": "id::email"
+  },
+  "id::form-phone": {
+    "action": "confirm",
+    "category": "phone",
+    "matched_via": "id::phone"
+  },
+  "id::form-resume": {
+    "action": "confirm",
+    "category": "resume_upload",
+    "matched_via": "id::resume"
+  },
+  "id::form-disability_status": {
+    "action": "confirm",
+    "category": "eeo_disability_status",
+    "matched_via": "id::disability_status"
+  },
+  "id::form-veteran_status": {
+    "action": "confirm",
+    "category": "eeo_veteran_status",
+    "matched_via": "id::veteran_status"
+  },
+  "id::form-gender": {
+    "action": "confirm",
+    "category": "eeo_gender_identity",
+    "matched_via": "id::gender"
+  },
+  "id::form-cover_letter": {
+    "action": "confirm",
+    "category": "cover_letter_upload",
+    "matched_via": "id::cover_letter"
+  },
+  "id::form-preferred_name": {
+    "action": "confirm",
+    "category": "preferred_first_name",
+    "matched_via": "id::preferred_name"
+  }
+}

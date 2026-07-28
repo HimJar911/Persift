@@ -1,0 +1,525 @@
+[
+  {
+    "job_id": "7749354",
+    "h": "92d79e41",
+    "action": "confirm",
+    "category": "country_of_origin"
+  },
+  {
+    "job_id": "4614379006",
+    "h": "591f66f2",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4687905005",
+    "h": "e07d35f8",
+    "action": "confirm",
+    "category": "language_proficiency"
+  },
+  {
+    "job_id": "4469881007",
+    "h": "34b35165",
+    "action": "reject",
+    "category": null,
+    "note": "site search box"
+  },
+  {
+    "job_id": "7712052003",
+    "h": "41fa53a",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "7712052003",
+    "h": "cc820359",
+    "action": "confirm",
+    "category": "consent_privacy_policy"
+  },
+  {
+    "job_id": "7712052003",
+    "h": "5f5be55a",
+    "action": "confirm",
+    "category": "how_heard_about_role"
+  },
+  {
+    "job_id": "7712052003",
+    "h": "7665be34",
+    "action": "confirm",
+    "category": "eeo_gender_identity"
+  },
+  {
+    "job_id": "7712052003",
+    "h": "a03429b8",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4410540006",
+    "h": "b897ee05",
+    "action": "confirm",
+    "category": "education_school"
+  },
+  {
+    "job_id": "4410540006",
+    "h": "baed16a6",
+    "action": "confirm",
+    "category": "graduation_date"
+  },
+  {
+    "job_id": "4410540006",
+    "h": "3a9e2eef",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4410540006",
+    "h": "8ccc0712",
+    "action": "confirm",
+    "category": "graduation_date"
+  },
+  {
+    "job_id": "4747061007",
+    "h": "4708be47",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "5155449007",
+    "h": "b1b0290",
+    "action": "confirm",
+    "category": "mailing_address"
+  },
+  {
+    "job_id": "5155449007",
+    "h": "7197e6bb",
+    "action": "confirm",
+    "category": "security_clearance"
+  },
+  {
+    "job_id": "5155449007",
+    "h": "89fa50fc",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "5155449007",
+    "h": "1cd432fd",
+    "action": "confirm",
+    "category": "current_school_year"
+  },
+  {
+    "job_id": "4123841008",
+    "h": "d2186a54",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "7659795",
+    "h": "3f758ddf",
+    "action": "confirm",
+    "category": "nepotism_disclosure"
+  },
+  {
+    "job_id": "7659795",
+    "h": "c4ecd70c",
+    "action": "confirm",
+    "category": "nepotism_disclosure"
+  },
+  {
+    "job_id": "7659795",
+    "h": "1618c18",
+    "action": "confirm",
+    "category": "willing_to_relocate"
+  },
+  {
+    "job_id": "5982800004",
+    "h": "f8b5365a",
+    "action": "confirm",
+    "category": "current_employee_of_company"
+  },
+  {
+    "job_id": "5982800004",
+    "h": "a6d65db3",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "2642ec37",
+    "action": "confirm",
+    "category": "military_branch"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "70f7073b",
+    "action": "confirm",
+    "category": "skillbridge_eligibility_date"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "734c2fdc",
+    "action": "confirm",
+    "category": "military_separation_date"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "7d3867b",
+    "action": "confirm",
+    "category": "employee_referral"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "8b107590",
+    "action": "confirm",
+    "category": "how_heard_about_role"
+  },
+  {
+    "job_id": "4661526007",
+    "h": "6802ae88",
+    "action": "confirm",
+    "category": "consent_ccpa_share_sale"
+  },
+  {
+    "job_id": "4691295005",
+    "h": "bc2e2835",
+    "action": "confirm",
+    "category": "education_school"
+  },
+  {
+    "job_id": "4691295005",
+    "h": "e1e1ec37",
+    "action": "confirm",
+    "category": "relevant_industry_experience"
+  },
+  {
+    "job_id": "4691295005",
+    "h": "9a6f923a",
+    "action": "confirm",
+    "category": "country_of_residence"
+  },
+  {
+    "job_id": "4691295005",
+    "h": "2d49743b",
+    "action": "confirm",
+    "category": "state"
+  },
+  {
+    "job_id": "4691295005",
+    "h": "62d1f059",
+    "action": "confirm",
+    "category": "consent_attestation_general"
+  },
+  {
+    "job_id": "5991766004",
+    "h": "bfc8254",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  },
+  {
+    "job_id": "5991766004",
+    "h": "10539fd3",
+    "action": "confirm",
+    "category": "language_proficiency"
+  },
+  {
+    "job_id": "4786015101",
+    "h": "60be8419",
+    "action": "confirm",
+    "category": "field_of_study_relevance"
+  },
+  {
+    "job_id": "4786015101",
+    "h": "de04d85d",
+    "action": "confirm",
+    "category": "academic_grade"
+  },
+  {
+    "job_id": "7875125",
+    "h": "73048601",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "7875125",
+    "h": "c08dc038",
+    "action": "confirm",
+    "category": "previously_employed_here"
+  },
+  {
+    "job_id": "4579609101",
+    "h": "c01b03ed",
+    "action": "confirm",
+    "category": "publication_list"
+  },
+  {
+    "job_id": "4579609101",
+    "h": "e31b927c",
+    "action": "confirm",
+    "category": "intended_work_country"
+  },
+  {
+    "job_id": "4579609101",
+    "h": "da751328",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "5645073004",
+    "h": "4905e4cd",
+    "action": "confirm",
+    "category": "consent_gdpr_notice"
+  },
+  {
+    "job_id": "8376407002",
+    "h": "a9be0c6e",
+    "action": "confirm",
+    "category": "courses_remaining"
+  },
+  {
+    "job_id": "5193364008",
+    "h": "d0a77bf3",
+    "action": "confirm",
+    "category": "nationality_check"
+  },
+  {
+    "job_id": "5193364008",
+    "h": "893521f6",
+    "action": "confirm",
+    "category": "location_city"
+  },
+  {
+    "job_id": "5193364008",
+    "h": "1c0f03f7",
+    "action": "confirm",
+    "category": "interview_availability"
+  },
+  {
+    "job_id": "5193364008",
+    "h": "2597e607",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "5193364008",
+    "h": "2eec888b",
+    "action": "confirm",
+    "category": "certifications"
+  },
+  {
+    "job_id": "5301639008",
+    "h": "821759ab",
+    "action": "confirm",
+    "category": "criminal_background_disclosure"
+  },
+  {
+    "job_id": "5301639008",
+    "h": "c7408a58",
+    "action": "confirm",
+    "category": "criminal_background_disclosure"
+  },
+  {
+    "job_id": "5301639008",
+    "h": "c995b2f9",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "5301639008",
+    "h": "ff122fc6",
+    "action": "confirm",
+    "category": "ai_tool_usage_disclosure"
+  },
+  {
+    "job_id": "7793050",
+    "h": "53b55d22",
+    "action": "confirm",
+    "category": "current_salary"
+  },
+  {
+    "job_id": "7793050",
+    "h": "53b56163",
+    "action": "confirm",
+    "category": "salary_expectation"
+  },
+  {
+    "job_id": "7793050",
+    "h": "4ac90718",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "7793050",
+    "h": "53b569e5",
+    "action": "confirm",
+    "category": "notice_period"
+  },
+  {
+    "job_id": "4666808005",
+    "h": "98e10fc0",
+    "action": "confirm",
+    "category": "national_id_number"
+  },
+  {
+    "job_id": "4666808005",
+    "h": "57a055b8",
+    "action": "confirm",
+    "category": "resume_upload"
+  },
+  {
+    "job_id": "5215559008",
+    "h": "78e10780",
+    "action": "confirm",
+    "category": "technical_skills"
+  },
+  {
+    "job_id": "5633294004",
+    "h": "7e8cc1c1",
+    "action": "confirm",
+    "category": "state"
+  },
+  {
+    "job_id": "4593959101",
+    "h": "411b2990",
+    "action": "confirm",
+    "category": "availability_hours_per_week"
+  },
+  {
+    "job_id": "4593959101",
+    "h": "d3f50b91",
+    "action": "confirm",
+    "category": "currently_enrolled_status"
+  },
+  {
+    "job_id": "4593959101",
+    "h": "1a194c8d",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "4593959101",
+    "h": "c4dca27d",
+    "action": "confirm",
+    "category": "mailing_address"
+  },
+  {
+    "job_id": "4593959101",
+    "h": "964a9054",
+    "action": "confirm",
+    "category": "language_proficiency"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "51a65bad",
+    "action": "confirm",
+    "category": "military_branch"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "53fb844e",
+    "action": "confirm",
+    "category": "military_specialty_code"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "8e4c7c07",
+    "action": "confirm",
+    "category": "military_rank"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "90a1a4a8",
+    "action": "confirm",
+    "category": "military_time_in_service"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "92f6cd49",
+    "action": "confirm",
+    "category": "military_separation_date"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "97a11e8b",
+    "action": "confirm",
+    "category": "contract_length"
+  },
+  {
+    "job_id": "4831071004",
+    "h": "99f6472c",
+    "action": "confirm",
+    "category": "department_interest"
+  },
+  {
+    "job_id": "5469305003",
+    "h": "d79e2593",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "5469305003",
+    "h": "acc4283d",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "5469305003",
+    "h": "d277ec3f",
+    "action": "confirm",
+    "category": "availability_start_date"
+  },
+  {
+    "job_id": "4846819101",
+    "h": "2c4a0e94",
+    "action": "confirm",
+    "category": "previously_employed_here"
+  },
+  {
+    "job_id": "8004171",
+    "h": "795fbe83",
+    "action": "confirm",
+    "category": "how_heard_about_role"
+  },
+  {
+    "job_id": "8004171",
+    "h": "d98af038",
+    "action": "confirm",
+    "category": "location_preference"
+  },
+  {
+    "job_id": "8004171",
+    "h": "14cb29d9",
+    "action": "confirm",
+    "category": "work_authorized"
+  },
+  {
+    "job_id": "5688235004",
+    "h": "d307ce77",
+    "action": "confirm",
+    "category": "workplace_type"
+  },
+  {
+    "job_id": "5688235004",
+    "h": "90f40720",
+    "action": "confirm",
+    "category": "essay"
+  },
+  {
+    "job_id": "8202342002",
+    "h": "a25900a6",
+    "action": "confirm",
+    "category": "nepotism_disclosure"
+  },
+  {
+    "job_id": "8202342002",
+    "h": "aa8bd493",
+    "action": "confirm",
+    "category": "nepotism_disclosure"
+  },
+  {
+    "job_id": "8491138002",
+    "h": "5831e84d",
+    "action": "confirm",
+    "category": "availability_commitment_confirmation"
+  }
+]

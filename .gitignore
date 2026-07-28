@@ -24,6 +24,12 @@ corpus_analysis/category_eval_v2/*
 !corpus_analysis/category_eval_v2/README.md
 !corpus_analysis/category_eval_v2/score_resolved_control.py
 
+# Full-volume compact corpus (Jul 28-29 extension) — 258MB, exceeds GitHub's
+# 100MB file limit. Regenerable from corpus/manifest.jsonl via
+# build_compact_corpus_v2.py; not source. All decision files that key
+# against it (cluster_decisions_v2.json, etc.) stay tracked.
+corpus_analysis/oc_compact_full_v2.json
+
 # Resume files (personal — not for repo)
 resume/base_resume.pdf
 resume/base_resume.txt

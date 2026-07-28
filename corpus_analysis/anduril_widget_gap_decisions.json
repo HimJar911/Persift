@@ -1,0 +1,552 @@
+{
+ "label::administration": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::air vehicle engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::altius": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::arsenal": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::arsenalos": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::business development": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::business operations": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::business systems": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::chief engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::communications": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::core operations": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::corporate platform engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::corporateos": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::early career": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::electrical engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::electronic warfare": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::events": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::factory systems": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::finance accounting": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::firmware engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::growth": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::hardware operations": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::imaging": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::information systems": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::internships": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::legal business affairs": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::logistics deployments": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::manufacturing": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::maritime": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::mechanical engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::mission engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::product architecture": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::product development": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::program management": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::quality engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::radar": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::reliability engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::rocket motor systems": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::safety": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::skillbridge": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::software": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::software engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::supply chain": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::systems engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::technical program management": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::test evaluation": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::abu dhabi united arab emirates": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::amsterdam north holland netherlands": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::ashville ohio united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::atlanta georgia united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::bellevue washington united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::boston massachusetts united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::boulder colorado united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::broomfield colorado united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::brussels brussels capital belgium": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::canberra australian capital territory australia": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::chantilly virginia united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::colorado springs colorado united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::columbus ohio united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::costa mesa california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::denver colorado united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::dublin dublin ireland": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::el segundo california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::foothill ranch california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::fort benning georgia united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::fort bragg north carolina united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::fort collins colorado united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::fort stockton texas united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::goleta california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::hamilton washington united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::honolulu hawaii united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::hudson new hampshire united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::huntsville alabama united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::irvine california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::las vegas nevada united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::lexington massachusetts united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::llanbedr wales united kingdom": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::london england united kingdom": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::mchenry mississippi united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::melbourne victoria australia": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::morrisville north carolina united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::mountain view california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::okinawa japan": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::phoenix arizona united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::quincy massachusetts united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::quonset rhode island united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::reston virginia united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::riyadh saudi arabia": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::san clemente california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::santa ana california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::seattle washington united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::stockton california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::sydney new south wales australia": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::taipei taiwan": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::tokyo prefecture japan": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::tokyo japan": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::tustin california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::victorville california united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::waltham massachusetts united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::warsaw mazowieckie poland": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::washington district of columbia united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::contract": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::temporary": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::engineering": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::finance": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::marketing": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::operations": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::product": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::sales": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ },
+ "label::university internships new grads": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option, hidden (vis=false), no section \u2014 same pattern already documented in corpus_analysis/README.md as job-board chrome, not a real application-form field"
+ }
+}

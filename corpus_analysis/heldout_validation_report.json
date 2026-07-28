@@ -1,0 +1,38 @@
+{
+  "heldout_companies": [
+    "4347120007",
+    "4358496007",
+    "4476000008",
+    "4567386006",
+    "4855948101",
+    "5046050007",
+    "5106468008",
+    "5739901004",
+    "5804361004",
+    "7736276003",
+    "8401231002",
+    "8491055002",
+    "Accenturefederalservices",
+    "Apptronik",
+    "Sonymusicentertainment",
+    "equipmentshare",
+    "lucidsoftware",
+    "offerup",
+    "senrasystems",
+    "skildai-careers"
+  ],
+  "heldout_field_count": 38623,
+  "resolved_count": 38236,
+  "coverage_pct": 99.0,
+  "unresolved_count": 387,
+  "correctness_review": {
+    "sample_size": 60,
+    "correct": 60,
+    "incorrect": 0,
+    "method": "manual read of label/section/id/itype vs. assigned_category for a 60-field random sample of the resolved held-out fields, drawn from heldout_sample_for_manual_review.json"
+  },
+  "unresolved_characterization": {
+    "method": "manual read of all 387 unresolved held-out fields",
+    "finding": "Overwhelmingly one-off, hyper-specific skill-gate yes/no questions unique to a single job posting (e.g. Apptronik's 'Do you have at least N years of experience with <specific tech stack>?', worded differently per posting) plus a handful of one-off portfolio/GitHub-link phrasings and 2 Korean file-upload labels. These are genuine long-tail phrasing variance, not a systematic taxonomy gap -- each would need to be seen verbatim to cluster, since the wording is unique per job req rather than a recurring question type. Not evidence the taxonomy needs new categories; it's the expected residual of a natural-language label-matching approach."
+  }
+}

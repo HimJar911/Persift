@@ -1,0 +1,44 @@
+{
+ "label::ausw hlen": {
+  "excluded_non_english": true
+ },
+ "label::seleccionar": {
+  "excluded_non_english": true
+ },
+ "label::s lectionner une option": {
+  "excluded_non_english": true
+ },
+ "label::anh ngen": {
+  "excluded_non_english": true
+ },
+ "label::hast du eine arbeitserlaubnis und wenn ja welche": {
+  "excluded_non_english": true
+ },
+ "label::k ndigungsfrist": {
+  "excluded_non_english": true
+ },
+ "label::sonstiges": {
+  "excluded_non_english": true
+ },
+ "label::bist du derzeit bei einer agentur innerhalb des wpp netzwerks b": {
+  "excluded_non_english": true
+ },
+ "label::aktuelle wpp agentur falls zutreffend": {
+  "excluded_non_english": true
+ },
+ "label::hast du zuvor bei einer wpp agentur gearbeitet": {
+  "excluded_non_english": true
+ },
+ "label::gehaltswunsch p a": {
+  "excluded_non_english": true
+ },
+ "label::vollzeit teilzeit": {
+  "excluded_non_english": true
+ },
+ "label::wybierz": {
+  "excluded_non_english": true
+ },
+ "label::selecteren": {
+  "excluded_non_english": true
+ }
+}

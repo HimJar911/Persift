@@ -1,0 +1,12 @@
+{
+ "label::air vehicles": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option (case-insensitive company match fix)"
+ },
+ "label::west lafayette indiana united states": {
+  "action": "reject",
+  "category": null,
+  "note": "Anduril job-board department/location/employment-type filter widget checkbox option (case-insensitive company match fix)"
+ }
+}
