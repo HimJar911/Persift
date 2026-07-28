@@ -43,7 +43,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("corpus-harvester")
 
-HARVESTER_VERSION = "1.0.0"
+HARVESTER_VERSION = "1.3.0"
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 CORPUS_DIR = PROJECT_DIR / "corpus"
@@ -59,7 +59,22 @@ _JITTER_MAX_S = 8.0
 # Consecutive no_form_found/error/likely_blocked results this improbable in a
 # row (across random Greenhouse tenants) implies we're being blocked, not
 # hitting organically bad forms. Tune down if real data shows false trips.
-_BLOCK_STREAK_THRESHOLD = 8
+# Raised from 8 (v1.0.0's sequential-only threshold) once concurrent workers
+# were added: with N workers interleaving results from many different tenants,
+# a real streak of N-ish organic failures back-to-back is unremarkable and
+# must not be confused with an actual block signal.
+_BLOCK_STREAK_THRESHOLD = 20
+
+_DEFAULT_CONCURRENCY = 1
+
+# Recommended concurrency observed live 2026-07-26 on this dev machine
+# (~7.4GB total RAM, already under load from other apps): concurrency=7
+# caused the shared Playwright Node.js driver subprocess to die outright
+# twice within ~15 min each time (free memory measured at ~247MB during the
+# second death) — a single shared driver process means one OOM-adjacent
+# event takes down every worker simultaneously, not just one. concurrency=3
+# is the recommended ceiling on memory-constrained machines; raise only if
+# `Get-CimInstance Win32_OperatingSystem` shows several GB free headroom.
 
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -377,7 +392,6 @@ async def _crawl_one(browser, job: dict) -> tuple[dict, str, bytes]:
     job_id, ats, apply_url, company_name = job["job_id"], job["ats"], job["apply_url"], job["company_name"]
     crawl_started_at = datetime.now(timezone.utc).isoformat()
 
-    page = await browser.new_page(user_agent=_USER_AGENT)
     apply_click_needed = False
     apply_click_ambiguous = False
     extraction_status = "error"
@@ -385,8 +399,23 @@ async def _crawl_one(browser, job: dict) -> tuple[dict, str, bytes]:
     fields: list[dict] = []
     html = ""
     crawled_url = apply_url
+    page = None
 
     try:
+        # Deliberately inside the try: under concurrency, a crashed/closed
+        # browser process can make new_page() itself raise
+        # (TargetClosedError). That must produce a per-job 'error' record,
+        # not an unhandled exception that propagates through asyncio.gather
+        # and kills every other in-flight worker (confirmed live 2026-07-26 —
+        # took down a 19K-job run at ~2,855/19,412).
+        #
+        # wait_for is required here, not just goto's own timeout: on a
+        # memory-starved machine (confirmed live 2026-07-26, ~245MB free),
+        # new_page() itself can hang indefinitely waiting for the OS/browser
+        # to allocate a new process — with no timeout of its own, a starved
+        # worker just sits forever with no way to ever reach the except
+        # block. Two of three workers did exactly this in the field.
+        page = await asyncio.wait_for(browser.new_page(user_agent=_USER_AGENT), timeout=_GOTO_TIMEOUT_MS / 1000)
         response = await page.goto(apply_url, timeout=_GOTO_TIMEOUT_MS, wait_until="domcontentloaded")
         await _wait_for_dom_stability(page)
 
@@ -436,7 +465,11 @@ async def _crawl_one(browser, job: dict) -> tuple[dict, str, bytes]:
         error_detail = f"{type(exc).__name__}: {exc}"
         extraction_status = "error"
     finally:
-        await page.close()
+        if page is not None:
+            try:
+                await page.close()
+            except Exception:
+                pass
 
     crawl_finished_at = datetime.now(timezone.utc).isoformat()
     page_html_path = f"pages/{job_id}.html.gz"
@@ -516,7 +549,137 @@ async def _upsert_crawl_state(job_id: str, ats: str, extraction_status: str, err
 # Main crawl loop
 # ---------------------------------------------------------------------------
 
-async def run_harvest(limit: int | None, retry_errors: bool) -> None:
+class _SharedState:
+    """Coordination across concurrent workers — one instance per run.
+
+    block_streak is a global smoke alarm (not per-tenant): with N workers
+    interleaving results from many different tenants, a real streak of
+    organic failures is unremarkable up to _BLOCK_STREAK_THRESHOLD, so this
+    stays a simple shared counter rather than per-host tracking.
+    """
+
+    def __init__(self, total: int) -> None:
+        self.total = total
+        self.completed = 0
+        self.block_streak = 0
+        self.totals: dict[str, int] = {}
+        self.stop_requested = False
+        self.write_lock = asyncio.Lock()
+        self.browser = None
+        self.browser_lock = asyncio.Lock()
+        self.jobs_since_launch = 0
+
+
+# Proactively recycle the shared browser process every N jobs, not just on
+# outright death. Pages are closed after every job (_crawl_one's finally
+# block) so steady-state memory *should* stay flat, but Chromium/Playwright
+# are known to creep in real-world long-running sessions even with clean
+# page lifecycles (renderer/cache state not always fully reclaimed) — a real
+# risk flagged 2026-07-26 on this machine's already-tight RAM headroom
+# (~245MB free at the last crash) rather than something ruled out by reading
+# this code alone. Recycling bounds any such creep to a small window instead
+# of letting it accumulate across a ~16K-job run.
+_BROWSER_RECYCLE_EVERY = 300
+
+
+async def _get_or_relaunch_browser(p, state: "_SharedState"):
+    """Returns the shared browser, relaunching it if dead OR due for recycle.
+
+    Dead-browser case confirmed live 2026-07-26: one Browser.new_page()
+    TargetClosedError propagated through asyncio.gather and killed an entire
+    19K-job run at ~2,855/19,412, losing 6 other workers' in-flight progress.
+    Every subsequent new_page() call on a dead browser fails identically, so
+    relaunching here caps the cost at one job, not the rest of the queue.
+    """
+    async with state.browser_lock:
+        due_for_recycle = state.jobs_since_launch >= _BROWSER_RECYCLE_EVERY
+        if state.browser is None or not state.browser.is_connected() or due_for_recycle:
+            if state.browser is not None:
+                reason = "scheduled recycle" if due_for_recycle else "connection lost"
+                logger.warning("Relaunching browser (%s, %d jobs since last launch).", reason, state.jobs_since_launch)
+                try:
+                    await state.browser.close()
+                except Exception:
+                    pass
+            state.browser = await p.chromium.launch(headless=True)
+            state.jobs_since_launch = 0
+        return state.browser
+
+
+async def _worker(
+    worker_id: int,
+    p,
+    job_queue: "asyncio.Queue[dict]",
+    state: _SharedState,
+    manifest_f,
+) -> None:
+    while True:
+        try:
+            job = job_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            return
+
+        if state.stop_requested:
+            job_queue.task_done()
+            continue
+
+        # The entire per-job body is defensive: nothing here may propagate
+        # out of this loop iteration. asyncio.gather cancels every sibling
+        # worker the instant ANY one of them raises — confirmed live
+        # 2026-07-26 (a single Browser.new_page() TargetClosedError took
+        # down a 19K-job run at ~2,855/19,412, discarding the other 6
+        # workers' in-flight jobs). A malformed job record, a DB hiccup, or
+        # any other surprise here must degrade to one 'error' row, never a
+        # run-ending exception.
+        try:
+            browser = await _get_or_relaunch_browser(p, state)
+            async with state.browser_lock:
+                state.jobs_since_launch += 1
+            record, status, html_bytes = await _crawl_one(browser, job)
+
+            if html_bytes:
+                gz_path = PAGES_DIR / f"{job['job_id']}.html.gz"
+                with gzip.open(gz_path, "wb") as f:
+                    f.write(html_bytes)
+
+            async with state.write_lock:
+                manifest_f.write(json.dumps(record) + "\n")
+                manifest_f.flush()
+
+                await _upsert_crawl_state(job["job_id"], job["ats"], status, record["error_detail"])
+
+                state.completed += 1
+                state.totals[status] = state.totals.get(status, 0) + 1
+                logger.info(
+                    "[w%d %d/%d] %s (%s) -> %s%s",
+                    worker_id, state.completed, state.total,
+                    job["company_name"] or job["job_id"], job["job_id"],
+                    status,
+                    f" ({len(record['fields'])} fields)" if status == "ok" else "",
+                )
+
+                if status in _FAILURE_STATUSES:
+                    state.block_streak += 1
+                else:
+                    state.block_streak = 0
+
+                if state.block_streak >= _BLOCK_STREAK_THRESHOLD and not state.stop_requested:
+                    state.stop_requested = True
+                    logger.warning(
+                        "Stopping early: %d consecutive failures/likely-blocked results across "
+                        "workers — this looks like a block, not organic bad-form noise. "
+                        "%d of %d jobs left un-attempted (safe to resume later).",
+                        state.block_streak, state.total - state.completed, state.total,
+                    )
+        except Exception as exc:
+            logger.error("[w%d] unhandled exception on job %s: %s: %s", worker_id, job.get("job_id"), type(exc).__name__, exc)
+        finally:
+            job_queue.task_done()
+
+        await asyncio.sleep(random.uniform(_JITTER_MIN_S, _JITTER_MAX_S))
+
+
+async def run_harvest(limit: int | None, retry_errors: bool, concurrency: int) -> None:
     await init_db()
     try:
         jobs = await _fetch_target_jobs(limit, retry_errors)
@@ -524,64 +687,47 @@ async def run_harvest(limit: int | None, retry_errors: bool) -> None:
             logger.info("Nothing to crawl — all targeted jobs already have crawl_state rows.")
             return
 
-        logger.info("Crawling %d Greenhouse job(s) (retry_errors=%s)", len(jobs), retry_errors)
+        logger.info(
+            "Crawling %d Greenhouse job(s) (retry_errors=%s, concurrency=%d)",
+            len(jobs), retry_errors, concurrency,
+        )
 
         PAGES_DIR.mkdir(parents=True, exist_ok=True)
         CORPUS_DIR.mkdir(parents=True, exist_ok=True)
 
-        totals: dict[str, int] = {}
-        block_streak = 0
+        state = _SharedState(total=len(jobs))
         start_time = time.monotonic()
 
+        job_queue: "asyncio.Queue[dict]" = asyncio.Queue()
+        for job in jobs:
+            job_queue.put_nowait(job)
+
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            state.browser = await p.chromium.launch(headless=True)
             try:
                 with MANIFEST_PATH.open("a", encoding="utf-8") as manifest_f:
-                    for i, job in enumerate(jobs, start=1):
-                        record, status, html_bytes = await _crawl_one(browser, job)
-
-                        if html_bytes:
-                            gz_path = PAGES_DIR / f"{job['job_id']}.html.gz"
-                            with gzip.open(gz_path, "wb") as f:
-                                f.write(html_bytes)
-
-                        manifest_f.write(json.dumps(record) + "\n")
-                        manifest_f.flush()
-
-                        await _upsert_crawl_state(job["job_id"], job["ats"], status, record["error_detail"])
-
-                        totals[status] = totals.get(status, 0) + 1
-                        logger.info(
-                            "[%d/%d] %s (%s) -> %s%s",
-                            i, len(jobs), job["company_name"] or job["job_id"], job["job_id"],
-                            status,
-                            f" ({len(record['fields'])} fields)" if status == "ok" else "",
-                        )
-
-                        if status in _FAILURE_STATUSES:
-                            block_streak += 1
-                        else:
-                            block_streak = 0
-
-                        if block_streak >= _BLOCK_STREAK_THRESHOLD:
-                            logger.warning(
-                                "Stopping early: %d consecutive failures/likely-blocked results — "
-                                "this looks like a block, not organic bad-form noise. "
-                                "%d of %d jobs left un-attempted (safe to resume later).",
-                                block_streak, len(jobs) - i, len(jobs),
-                            )
-                            break
-
-                        if i < len(jobs):
-                            await asyncio.sleep(random.uniform(_JITTER_MIN_S, _JITTER_MAX_S))
+                    workers = [
+                        asyncio.create_task(_worker(w, p, job_queue, state, manifest_f))
+                        for w in range(1, concurrency + 1)
+                    ]
+                    # Workers are now individually exception-safe (see _worker's
+                    # inner try/except), so gather cannot be short-circuited by
+                    # one worker's failure — but return_exceptions=True stays as
+                    # defense in depth in case a future change reintroduces a
+                    # gap, so one bug can't silently cancel the other workers.
+                    await asyncio.gather(*workers, return_exceptions=True)
             finally:
-                await browser.close()
+                if state.browser is not None:
+                    try:
+                        await state.browser.close()
+                    except Exception:
+                        pass
 
         elapsed = time.monotonic() - start_time
         _hr = "─" * 62
         print(_hr)
         print("  CORPUS HARVEST COMPLETE")
-        for status, count in sorted(totals.items(), key=lambda kv: -kv[1]):
+        for status, count in sorted(state.totals.items(), key=lambda kv: -kv[1]):
             print(f"  {status:32s} {count:4d}")
         print(f"  elapsed: {elapsed / 60:.1f} min")
         print(_hr, flush=True)
@@ -593,9 +739,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=None, help="Cap number of jobs crawled (smoke testing)")
     parser.add_argument("--retry-errors", action="store_true", help="Only re-attempt jobs with extraction_status='error'")
+    parser.add_argument(
+        "--concurrency", type=int, default=_DEFAULT_CONCURRENCY,
+        help=f"Number of concurrent browser pages (default {_DEFAULT_CONCURRENCY}, matches original sequential behavior)",
+    )
     args = parser.parse_args()
 
-    asyncio.run(run_harvest(limit=args.limit, retry_errors=args.retry_errors))
+    asyncio.run(run_harvest(limit=args.limit, retry_errors=args.retry_errors, concurrency=args.concurrency))
 
 
 if __name__ == "__main__":
