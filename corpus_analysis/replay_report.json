@@ -1,0 +1,786 @@
+{
+  "corpus_version": "size=258074241:mtime=1785269773",
+  "taxonomy_version": "v1",
+  "interpreter": "interpreter_baseline",
+  "timestamp": "2026-08-02T23:09:41.736029+00:00",
+  "total_fields": 632947,
+  "total_topic_fields_scored": 359282,
+  "gt_reject_or_special_fields": 259061,
+  "predicted_category_for_rejected_field": 0,
+  "both_unknown_fields": 14604,
+  "predicted_resolved_gt_unknown_fields": 0,
+  "coverage_pct": 100.0,
+  "mismatch_pct": 0.0,
+  "predicted_unknown_pct": 0.0,
+  "per_category": {
+    "academic_grade": {
+      "gt_count": 4323,
+      "match": 4323,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "age_18_or_older": {
+      "gt_count": 1730,
+      "match": 1730,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "age_confirmation": {
+      "gt_count": 14,
+      "match": 14,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "ai_tool_usage_disclosure": {
+      "gt_count": 38,
+      "match": 38,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "attention_check": {
+      "gt_count": 126,
+      "match": 126,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "availability_hours_per_week": {
+      "gt_count": 1308,
+      "match": 1308,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "availability_start_date": {
+      "gt_count": 694,
+      "match": 694,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "certifications": {
+      "gt_count": 2411,
+      "match": 2411,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "citizenship_status": {
+      "gt_count": 3440,
+      "match": 3440,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "compensation_range_acknowledgment": {
+      "gt_count": 46,
+      "match": 46,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "competing_offers_disclosure": {
+      "gt_count": 86,
+      "match": 86,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_attestation_general": {
+      "gt_count": 7882,
+      "match": 7882,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_background_check": {
+      "gt_count": 601,
+      "match": 601,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_gdpr_notice": {
+      "gt_count": 18,
+      "match": 18,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_privacy_policy": {
+      "gt_count": 1744,
+      "match": 1744,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_sms_communication": {
+      "gt_count": 1303,
+      "match": 1303,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "contract_length": {
+      "gt_count": 23,
+      "match": 23,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "country_of_origin": {
+      "gt_count": 189,
+      "match": 189,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "country_of_residence": {
+      "gt_count": 753,
+      "match": 753,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "cover_letter_upload": {
+      "gt_count": 11575,
+      "match": 11575,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "criminal_background_disclosure": {
+      "gt_count": 1624,
+      "match": 1624,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_company": {
+      "gt_count": 3187,
+      "match": 3187,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_employee_of_company": {
+      "gt_count": 2979,
+      "match": 2979,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_employer_name": {
+      "gt_count": 24,
+      "match": 24,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_job_title": {
+      "gt_count": 1812,
+      "match": 1812,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_role_title": {
+      "gt_count": 28,
+      "match": 28,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "current_salary": {
+      "gt_count": 1022,
+      "match": 1022,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "currently_enrolled_status": {
+      "gt_count": 67,
+      "match": 67,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "department_interest": {
+      "gt_count": 461,
+      "match": 461,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "education_degree": {
+      "gt_count": 5391,
+      "match": 5391,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "education_discipline": {
+      "gt_count": 3839,
+      "match": 3839,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "education_end_date": {
+      "gt_count": 2061,
+      "match": 2061,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "education_school": {
+      "gt_count": 4712,
+      "match": 4712,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "education_start_date": {
+      "gt_count": 1817,
+      "match": 1817,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_disability_status": {
+      "gt_count": 16164,
+      "match": 16164,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_gender_identity": {
+      "gt_count": 12369,
+      "match": 12369,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_generic_decline_option": {
+      "gt_count": 1183,
+      "match": 1183,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_hispanic_latino": {
+      "gt_count": 8100,
+      "match": 8100,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_race_ethnicity": {
+      "gt_count": 3779,
+      "match": 3779,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_sexual_orientation": {
+      "gt_count": 606,
+      "match": 606,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_transgender": {
+      "gt_count": 902,
+      "match": 902,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "eeo_veteran_status": {
+      "gt_count": 10887,
+      "match": 10887,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "email": {
+      "gt_count": 18951,
+      "match": 18951,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "employee_referral": {
+      "gt_count": 1311,
+      "match": 1311,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "employment_type": {
+      "gt_count": 319,
+      "match": 319,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "essay": {
+      "gt_count": 2322,
+      "match": 2322,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "event_attendance": {
+      "gt_count": 17,
+      "match": 17,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "export_control": {
+      "gt_count": 2196,
+      "match": 2196,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "field_of_study_relevance": {
+      "gt_count": 81,
+      "match": 81,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "first_name": {
+      "gt_count": 19371,
+      "match": 19371,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "github_url": {
+      "gt_count": 58,
+      "match": 58,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "graduation_date": {
+      "gt_count": 324,
+      "match": 324,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "how_heard_about_role": {
+      "gt_count": 7919,
+      "match": 7919,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "language_proficiency": {
+      "gt_count": 1245,
+      "match": 1245,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "last_name": {
+      "gt_count": 19198,
+      "match": 19198,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "linkedin_url": {
+      "gt_count": 12633,
+      "match": 12633,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "location_city": {
+      "gt_count": 12675,
+      "match": 12675,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "location_preference": {
+      "gt_count": 1325,
+      "match": 1325,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "mailing_address": {
+      "gt_count": 1595,
+      "match": 1595,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "marketing_communications_optin": {
+      "gt_count": 1345,
+      "match": 1345,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "military_branch": {
+      "gt_count": 780,
+      "match": 780,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "nationality": {
+      "gt_count": 197,
+      "match": 197,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "needs_sponsorship": {
+      "gt_count": 8787,
+      "match": 8787,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "nepotism_disclosure": {
+      "gt_count": 6565,
+      "match": 6565,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "notice_period": {
+      "gt_count": 968,
+      "match": 968,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "other_followup": {
+      "gt_count": 4723,
+      "match": 4723,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "personal_website": {
+      "gt_count": 6112,
+      "match": 6112,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "phone": {
+      "gt_count": 17300,
+      "match": 17300,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "phone_country_code": {
+      "gt_count": 15528,
+      "match": 15528,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "preferred_contact_method": {
+      "gt_count": 34,
+      "match": 34,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "preferred_first_name": {
+      "gt_count": 7523,
+      "match": 7523,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "preferred_name": {
+      "gt_count": 63,
+      "match": 63,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "preferred_pronouns": {
+      "gt_count": 141,
+      "match": 141,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "previously_applied_here": {
+      "gt_count": 656,
+      "match": 656,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "previously_employed_here": {
+      "gt_count": 10781,
+      "match": 10781,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "publication_list": {
+      "gt_count": 14,
+      "match": 14,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "qualifications_confirmation": {
+      "gt_count": 4465,
+      "match": 4465,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "relevant_industry_experience": {
+      "gt_count": 703,
+      "match": 703,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "resume_upload": {
+      "gt_count": 19391,
+      "match": 19391,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "salary_expectation": {
+      "gt_count": 2810,
+      "match": 2810,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "scholarship_program_affiliation": {
+      "gt_count": 11,
+      "match": 11,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "security_clearance": {
+      "gt_count": 5113,
+      "match": 5113,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "skill_experience_years": {
+      "gt_count": 748,
+      "match": 748,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "standardized_test_score": {
+      "gt_count": 4310,
+      "match": 4310,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "state": {
+      "gt_count": 1397,
+      "match": 1397,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "student_org_involvement": {
+      "gt_count": 22,
+      "match": 22,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "technical_skills": {
+      "gt_count": 513,
+      "match": 513,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "travel_willingness": {
+      "gt_count": 346,
+      "match": 346,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "visa_type": {
+      "gt_count": 529,
+      "match": 529,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "willing_to_relocate": {
+      "gt_count": 729,
+      "match": 729,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "willingness_to_travel": {
+      "gt_count": 41,
+      "match": 41,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "work_authorized": {
+      "gt_count": 11064,
+      "match": 11064,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "work_history_end_date": {
+      "gt_count": 518,
+      "match": 518,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "work_history_start_date": {
+      "gt_count": 518,
+      "match": 518,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "workplace_type": {
+      "gt_count": 1009,
+      "match": 1009,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "zip_code": {
+      "gt_count": 670,
+      "match": 670,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    }
+  },
+  "top_confusion_pairs": []
+}

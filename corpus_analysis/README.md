@@ -135,8 +135,56 @@ This is close to the overall in-sample coverage number below, meaning the taxono
 
 **Files added by this pass:** `oc_compact_full_v2.json` (full-volume compact corpus — **258MB, exceeds GitHub's 100MB limit, gitignored, NOT in the repo** — regenerate locally via `python build_compact_corpus_v2.py` before running anything that reads it, e.g. `auto_cluster_v2.py` or `heldout_validation.py`; source is `corpus/manifest.jsonl`, itself gitignored/regenerable via the harvester, see `corpus/README.md`), `auto_cluster_v2.py`/`clusters_v2.json` (full-volume clustering), `taxonomy_v1.py` (canonical enum), `ontology_debt.md`, `backfill_stable_keys.py`/`stable_keys_backfill.json` (versioned identity key for pre-existing decisions), `triage_real_vs_junk*.py`/`.json` (junk-page triage), `original_corpus_junk_exclusions.py` (27 retroactively-excluded companies from the ORIGINAL 767-job corpus), `apply_gap_decisions.py`/`cluster_decisions_v2.json` (the merged final decision set), `heldout_validation.py`/`heldout_validation_report.json`/`heldout_sample_for_manual_review.json` (Step 6).
 
-## Next step
+## P1.3 — replay harness (done)
 
-P1.3 — replay harness. Load `oc_compact_full_v2.json` + `cluster_decisions_v2.json` (the full-volume answer key, not the original 767-job one) as ground truth, write `interpret(field) → category` per §3.2 of `FORM_ENGINE_DESIGN.md`, score per-category coverage against the held-out numbers above as the target to beat/match.
+`replay.py` + `interpreter_baseline.py`. `replay.py` loads
+`oc_compact_full_v2.json`, runs any `interpret(field) -> {category,
+confidence, rule, key}` function over every field (default:
+`interpreter_baseline`, swappable via `--interpreter MODULE`), and scores it
+against `cluster_decisions_v2.json` via `interpreter_baseline.ground_truth_lookup()`
+— kept as a separate function from `interpret()` on purpose (see its
+docstring): they only share implementation today because the baseline *is*
+the key-derivation logic that built the answer key; that won't stay true
+once P1.4 introduces real multi-signal interpretation, and the report needs
+to be able to tell "the interpreter got smarter" apart from "we silently
+redefined ground truth."
+
+`interpreter_baseline.py` is a direct, byte-identical port of
+`auto_cluster_v2.py`'s deterministic rule-lookup (id → autocomplete → label
+→ section_fallback → known_pattern → options), restructured to classify one
+field instead of clustering a whole corpus. It's deliberately dumb — no new
+interpretation logic, just "what does pure rule-lookup already get us,"
+which is the number P1.4 needs to beat.
+
+**Real bug found and fixed during this build's own verification pass**: an
+early version of `candidate_keys()` stopped at the first rule producing any
+non-None key, without checking whether that (rule, key) pair actually
+formed a real cluster (`auto_cluster_v2.py` only clusters when ≥2 fields
+share a key — a field with a globally-unique `id` never becomes an `id`
+cluster and must fall through to try `label` next). This under-resolved by
+~3,500 fields relative to the real pipeline. Caught because replay's
+reported coverage came in under the known 99.2% reference figure — exactly
+the kind of divergence the replay design exists to catch. Fixed by checking
+candidate keys against the full `cluster_decisions_v2.json` key space
+(confirm ∪ reject ∪ special) before treating a rule as resolved.
+
+**Baseline report** (`replay_report.json`, full corpus, 632,947 fields):
+99.25% of resolvable fields (topic + reject/special ÷ the 622,995 fields
+`clusters_v2.json` actually clustered) match — consistent with, in fact
+very slightly ahead of, the existing 99.19% README figure (the baseline
+scores against the fully gap-decision-merged `cluster_decisions_v2.json`,
+which resolves a few more keys than the intermediate clustering pass alone).
+0% mismatch (expected — baseline and ground truth share derivation logic by
+construction). 14,604 fields remain genuinely unresolved by any rule (the
+corpus's own residual, same shape as the held-out validation's ~1% gap).
+Confusion-matrix and interpreter-swap machinery independently verified
+against a deliberately-corrupted scratch interpreter (forced
+first_name/last_name swap) — correctly surfaced as the #1 and #2 confusion
+pairs, ~19,300 each, then deleted (scratch-only, not a deliverable).
+
+**Next: P1.4** — the real multi-signal interpreter. Every future rule
+change gets scored by re-running `replay.py` against it; the KPI is
+per-category coverage moving without the confusion matrix showing new
+cross-category swaps.
 
 **Before P1.3/P1.4 generalize past Greenhouse (still true, unstarted):** see `decisions/0008-corpus-harvester-scale-and-scope-gap.md` — the volume gap it originally flagged (767 vs. real job count) is now resolved for Greenhouse, and the OPEN-CODING gap (this file's old "Next step") is now also resolved (see above). The ATS-scope gap is NOT: `pipeline/corpus_harvester.py` still has Greenhouse-specific logic (iframe-embed detection) that won't transfer as-is to Ashby/Lever/SmartRecruiters — each needs its own "how do I reach the real rendered form" investigation, even though the field-discovery JS itself (`_EXTRACTION_JS`) likely generalizes unchanged. Flagged, not started.
