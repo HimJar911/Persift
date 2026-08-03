@@ -182,9 +182,83 @@ against a deliberately-corrupted scratch interpreter (forced
 first_name/last_name swap) — correctly surfaced as the #1 and #2 confusion
 pairs, ~19,300 each, then deleted (scratch-only, not a deliverable).
 
-**Next: P1.4** — the real multi-signal interpreter. Every future rule
-change gets scored by re-running `replay.py` against it; the KPI is
-per-category coverage moving without the confusion matrix showing new
-cross-category swaps.
+## P1.4 — multi-signal interpreter (done)
+
+`interpreter_p14.py` + `category_mapping.py`. Real tiered interpretation
+per `FORM_ENGINE_DESIGN.md` §3.2: `autocomplete > id > label > placeholder
+> nearby_text/section`, first tier to resolve wins. Structural patterns
+(`honeypot`, `other_followup`, `react_select_required_shim`,
+`hidden_tracking_field`, plus a newly-found `hidden_non_interactive_field`
+class — see below) are detected FIRST and short-circuit normal
+interpretation, returning an `action` instead of a fake topic category.
+
+**Category vocabulary decision (the load-bearing design fork this task
+resolved):** `taxonomy_v1.py`'s 97 categories are an ONTOLOGY ("what is
+this field asking, semantically"); `resolveValue()`'s ~30 categories
+(`extension/filler_utils.js`) are a PRODUCT CAPABILITY INTERFACE ("what can
+the product currently fill"). They are not the same list and were never
+meant to be. `interpret()` emits the capability vocabulary (safe to wire
+into the live extension later without breaking the 3-way naming contract —
+`ARCHITECTURE.md` "Invariants"); `category_mapping.py` is the reviewed,
+per-category reconciliation table between the two (120 entries: 38 mapped
+to a real capability, 82 marked `UNSUPPORTED` — a real, first-class outcome,
+not a bug). `replay.py` was updated to translate ground truth through this
+mapping before scoring — comparing a capability-vocabulary prediction
+against raw ontology-vocabulary ground truth would show near-total mismatch
+for a flawless interpreter, since the two vocabularies use different names
+for the same fact in almost every overlapping case
+(`eeo_gender_identity`→`eeo_gender`, `linkedin_url`→`linkedin`, etc.).
+
+**Real bug found via replay's confusion matrix, not assumed:** 76,631 of
+80,635 `itype=hidden` fields (mostly Greenhouse's internal `gh_jid`/
+`gh_title` metadata inputs) had their `label` populated with the ENTIRE
+surrounding page text by a broken `preceding-text` label-extraction
+strategy — e.g. a hidden field's label containing a multi-paragraph OFCCP
+disability-disclosure block verbatim. Unguarded, tier 3's regex-over-label
+search found spurious substring matches inside that blob (4,120 fields
+wrongly classified `eeo_disability`→`portfolio` this way, since "website"
+appears somewhere in the glued page text). Fixed by treating ALL
+`itype=hidden` fields as structurally non-interactive (skip), not just the
+known tracking-parameter subset — an extraction-layer bug, flagged for a
+future harvester/extraction fix rather than worked around in interpretation
+(`FORM_ENGINE_DESIGN.md` §1.2).
+
+**Iterative confusion-matrix-driven tuning** (the build loop the P1.4 plan
+specified): 4 more real pattern-collision bugs found and fixed by reading
+actual corpus examples behind each top confusion pair, confirming via the
+corpus that each negative-guard addition was safe (checked zero false
+negatives against real ground-truth fields before adding):
+- `work_authorized` → `location_country` (2,373 fields): "authorized to
+  work **in the country** you reside" legitimately contains "country".
+- `needs_sponsorship` → `visa_status` (2,209 fields): "sponsorship for
+  employment **visa status**" legitimately contains "visa status".
+- `previously_employed_here` → `location_state`/`eeo_veteran` (1,191 +
+  1,412 fields): "employee of... any **state** government" / "civilian or
+  **military** employee of the US Government" — federal
+  prior-employment-disclosure questions, not location/veteran questions.
+- `needs_sponsorship` → `location_country` (864 fields, round 2): "in the
+  country for which this role is based" — same shape as the first fix, a
+  different phrasing.
+
+**Final result** (`replay_report.json`, full corpus): **87.25% coverage,
+0.73% mismatch, 12.02% predicted-unknown** on the 245,044 fields that both
+resolve to a real capability (P1.3's re-scored baseline, capability-vocabulary-
+aware, is in `replay_report_baseline.json` for comparison: 43.94%/56.06%/0% —
+the baseline emits ontology names, so nearly everything "mismatches" against
+capability-vocabulary ground truth by construction, which is exactly why the
+vocabulary distinction mattered). 114,238 fields have real answers the
+product can't act on yet (`UNSUPPORTED` ontology categories — a genuine
+scope/capability gap, not an interpreter failure). 540 real defects remain
+(interpreter assigned a category to a genuinely non-question field) —
+spot-checked, several are legitimate edge cases (bilingual Korean/Japanese
+labels correctly read in their English portion despite the whole field
+being marked `reject` for non-English scope) rather than bugs, and the rest
+trail off into low-count, diminishing-returns territory.
+
+**Next: P1.5** — fill → verify → retry. Also: porting the validated
+interpreter into the live extension (replacing `FIELD_PATTERNS`' in-browser
+logic) is explicitly NOT done in this pass — P1.4 was validated offline via
+replay first, on purpose, per the standing rule against "make this form
+pass" pressure; wiring it into `filler_utils.js` is separate follow-up work.
 
 **Before P1.3/P1.4 generalize past Greenhouse (still true, unstarted):** see `decisions/0008-corpus-harvester-scale-and-scope-gap.md` — the volume gap it originally flagged (767 vs. real job count) is now resolved for Greenhouse, and the OPEN-CODING gap (this file's old "Next step") is now also resolved (see above). The ATS-scope gap is NOT: `pipeline/corpus_harvester.py` still has Greenhouse-specific logic (iframe-embed detection) that won't transfer as-is to Ashby/Lever/SmartRecruiters — each needs its own "how do I reach the real rendered form" investigation, even though the field-discovery JS itself (`_EXTRACTION_JS`) likely generalizes unchanged. Flagged, not started.

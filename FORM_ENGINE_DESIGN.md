@@ -177,7 +177,7 @@ Adapters (`content/greenhouse.js`, `ashby.js`, upcoming `lever.js`, `smartrecrui
 
 ## 5. Build order
 
-LAUNCH_PLAN.md Phase 1 (Jul 8–15, dates now stale — see STATE.md for real progress): P1.1 rich extraction → P1.2 corpus harvester → **corpus open-coding (§3.6b, DONE Jul 20, extended to full volume Jul 29)** → **P1.3 replay harness (DONE Aug 2)** → P1.4 multi-signal interpreter (NEXT) → P1.5 verify/retry → P1.6–P1.8 adapters. Telemetry endpoint = P2.3 (rides auth). LLM fallback = post-pitch, post-corpus.
+LAUNCH_PLAN.md Phase 1 (Jul 8–15, dates now stale — see STATE.md for real progress): P1.1 rich extraction → P1.2 corpus harvester → **corpus open-coding (§3.6b, DONE Jul 20, extended to full volume Jul 29)** → **P1.3 replay harness (DONE Aug 2)** → **P1.4 multi-signal interpreter (DONE Aug 2)** → P1.5 verify/retry (NEXT) → P1.6–P1.8 adapters. Telemetry endpoint = P2.3 (rides auth). LLM fallback = post-pitch, post-corpus.
 
 ## 6. Open questions (decide during Phase 1, not silently)
 
