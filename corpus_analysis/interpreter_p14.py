@@ -1,9 +1,18 @@
-"""P1.4 — the real multi-signal interpreter.
+"""P1.4/P1.5 — the real multi-signal interpreter (Python implementation).
+
+This is ONE of two implementations of corpus_analysis/INTERPRETER_SPEC.md
+— the other is extension/filler_utils.js's classifyField() (JS runtime).
+Read that spec doc first; it's the source of truth for tier order, matching
+rules, and confidence values. This file must satisfy it, but is not itself
+the spec — a later spec change requires updating BOTH implementations and
+re-verifying they agree (see INTERPRETER_SPEC.md's own framing for why this
+split exists: treating either implementation as "the real one" that the
+other gets "ported" from left no natural trigger to keep them in sync).
 
 Per FORM_ENGINE_DESIGN.md §3.2, interpret(field) is a pure function (no DOM,
 no globals, no network) walking a tiered priority chain:
 
-    autocomplete > name/id > label > placeholder > nearby_text/section
+    autocomplete > id > label > placeholder > nearby_text/section
 
 Each tier is tried in order; the first tier that resolves the field wins.
 Confidence reflects HOW TRUSTWORTHY THE SIGNAL TYPE generally is (which
@@ -15,16 +24,31 @@ exist yet; these are placeholder per-tier numbers.
 
 interpret() emits categories in resolveValue()'s CAPABILITY vocabulary
 (extension/filler_utils.js), not taxonomy_v1's ontology vocabulary — see
-category_mapping.py's module docstring for the full reasoning. Internally,
-several tiers reason in ontology terms (e.g. the label tier ports
-FIELD_PATTERNS, which already speaks resolveValue's vocabulary directly;
-the corpus-derived id/autocomplete tiers speak ontology and get translated
-via category_mapping.capability_for()).
+category_mapping.py's module docstring for the full reasoning.
+
+Tiers 1 (autocomplete) and 2 (id) are SELF-CONTAINED fixed lookup tables
+(_AUTOCOMPLETE_TO_CAPABILITY, _ID_PATTERN_TO_CAPABILITY below), matching
+INTERPRETER_SPEC.md's tables exactly — NOT a lookup against
+cluster_decisions_v2.json via ground_truth_lookup(). An earlier version of
+this file did call ground_truth_lookup() for these tiers (reusing
+interpreter_baseline.py's offline corpus-answer-key lookup); that approach
+was dropped while writing the spec doc because a live JS runtime has no
+portable equivalent to a 275KB offline answer-key file — the spec's
+tables are hand-written and small specifically so BOTH implementations can
+carry them verbatim.
+
+Tier 3 (label) still speaks resolveValue's vocabulary directly via
+_FIELD_PATTERNS (itself originally ported FROM extension/filler_utils.js,
+now the shared reference both implementations must carry the same 5
+corpus-verified negative-guard fixes for — see INTERPRETER_SPEC.md's tier
+3 section). Corpus-derived label additions beyond _FIELD_PATTERNS reason in
+ontology terms and get translated via category_mapping.capability_for().
 
 Structural patterns (honeypot, other_followup, react_select_required_shim,
-hidden_tracking_field) are NOT topic categories — detect_structural_pattern()
-runs first and short-circuits normal interpretation, returning an `action`
-instead of a `category` (FORM_ENGINE_DESIGN.md §7 / taxonomy_v1.STRUCTURAL_PATTERNS).
+hidden_tracking_field, hidden_non_interactive_field) are NOT topic
+categories — detect_structural_pattern() runs first and short-circuits
+normal interpretation, returning an `action` instead of a `category`
+(FORM_ENGINE_DESIGN.md §7 / taxonomy_v1.STRUCTURAL_PATTERNS).
 
 interpreter_baseline.py is NOT modified or replaced by this file — it stays
 the frozen day-zero reference `replay.py` can always re-run for comparison.
@@ -33,13 +57,7 @@ the frozen day-zero reference `replay.py` can always re-run for comparison.
 import re
 
 from category_mapping import capability_for
-from interpreter_baseline import (
-    _AUTOCOMPLETE_SPEC_TOKENS,
-    _GENERIC_LABEL_TEXT,
-    _is_react_select_shim,
-    normalize_id,
-    normalize_label,
-)
+from interpreter_baseline import _is_react_select_shim
 
 # --- Confidence per tier. Placeholder numbers, not calibrated — see module
 # docstring. Represents trust in the SIGNAL TYPE, not per-prediction
@@ -199,13 +217,38 @@ _FIELD_PATTERNS = {
                                                r"permanent.*auth", r"eligible.*long",
                                                r"work.*without.*requiring",
                                                r"citizen or permanent resident"],
-                                  "neg": [r"sponsor.*require", r"explain", r"detail", r"describe"]},
+                                  # 'disab'/'impairment'/'health condition' guard added
+                                  # during P1.5's spec-compliance rewrite verification:
+                                  # "do you have a disability... or LONG-TERM health
+                                  # condition" legitimately matches "long.?term" but is an
+                                  # eeo_disability question, not a work-authorization
+                                  # question (248 fields, surfaced only after narrowing
+                                  # tiers 1-2 to spec-portable lookups routed more fields
+                                  # through the label tier). Confirmed zero real
+                                  # work_authorized_longterm fields mention
+                                  # disability/impairment/health-condition language.
+                                  "neg": [r"sponsor.*require", r"explain", r"detail", r"describe",
+                                          r"disab", r"impairment", r"health condition"]},
     "needs_sponsorship":        {"patterns": [r"require.*sponsor", r"need.*sponsor",
                                                r"visa sponsor", r"immigration support",
                                                r"immigration assistance", r"work authorization support",
                                                r"now or in the future.*sponsor",
                                                r"sponsor.*now or in the future"],
-                                  "neg": [r"explain", r"detail", r"describe", r"list", r"status", r"type"]},
+                                  # 'status'/'type' REMOVED from neg during P1.5's
+                                  # spec-compliance verification: real needs_sponsorship
+                                  # questions routinely explain sponsorship using phrasing
+                                  # like "...require sponsorship for employment VISA
+                                  # STATUS (e.g., H-1B visa STATUS)" — the word "status"
+                                  # appears as part of describing what sponsorship means,
+                                  # not because the question is asking about status.
+                                  # These guards were over-blocking 2,732 of 8,787 real
+                                  # needs_sponsorship fields (31%). Confirmed via the
+                                  # corpus that removing them causes zero new confusion
+                                  # with visa_status (checked: no real visa_status field
+                                  # matches needs_sponsorship's positive patterns, so
+                                  # visa_status doesn't need this guard to stay
+                                  # distinguishable).
+                                  "neg": [r"explain", r"detail", r"describe", r"list"]},
     "visa_status":               {"patterns": [r"visa status", r"work authorization status",
                                                r"immigration status", r"current.*visa",
                                                r"type of.*visa", r"type of.*authorization",
@@ -277,7 +320,16 @@ _FIELD_PATTERNS = {
     "internship_field":          {"patterns": [r"^what field.*internship", r"^internship.*field",
                                                r"^area.*internship", r"^internship.*area"]},
     "previously_employed":       {"patterns": [r"previously employed", r"worked (here|with us|for us)",
-                                               r"former.*employee", r"worked for.*company"]},
+                                               r"former.*employee", r"worked for.*company",
+                                               # added during P1.5 verification: "have you
+                                               # ever... been employed by <Company>" is a
+                                               # very common real phrasing (3,021 corpus
+                                               # fields) the original patterns above never
+                                               # covered. Confirmed via corpus this only
+                                               # ever matches previously_employed/
+                                               # previously_employed_here fields, no
+                                               # collisions with any other category.
+                                               r"ever.*(been employed|worked)"]},
     "referral":                  {"patterns": [r"who referred", r"\breferral\b", r"referred by"],
                                   "neg": [r"hear about", r"learn about"]},
     "cover_letter":               {"patterns": [r"cover.?letter"]},
@@ -417,32 +469,84 @@ def _tier_section_nearby(field):
 
 
 # ============================================================================
-# Tiers 1-2 — autocomplete, id. Corpus-derived deterministic signals
-# (reused from interpreter_baseline.py's already-working logic), remapped
-# through category_mapping.py since interpreter_baseline speaks ontology
-# vocabulary (it looks up cluster_decisions_v2.json directly) and interpret()
-# must emit capability vocabulary.
+# Tiers 1-2 — autocomplete, id. Per INTERPRETER_SPEC.md v1: BOTH tiers are
+# self-contained fixed lookups here, matching the spec's tables exactly —
+# NOT a call into ground_truth_lookup()/cluster_decisions_v2.json.
+#
+# An earlier version of this file DID call ground_truth_lookup() for these
+# two tiers, reusing interpreter_baseline.py's offline corpus-answer-key
+# lookup. That was flagged as a real spec-compliance gap while writing
+# INTERPRETER_SPEC.md (P1.5): a live JS runtime has no equivalent to a
+# 275KB cluster_decisions_v2.json lookup table, so a "port" of that
+# approach into the browser was never going to be possible. Both
+# implementations now use the SAME small, portable, hand-written tables
+# below (copied verbatim from INTERPRETER_SPEC.md) — kept in sync with the
+# spec doc explicitly, not derived from cluster_decisions_v2.json anymore.
 # ============================================================================
+
+_AUTOCOMPLETE_TO_CAPABILITY = {
+    "given-name": "first_name",
+    "family-name": "last_name",
+    "name": "full_name",
+    "nickname": "preferred_name",
+    "email": "email",
+    "tel": "phone",
+    "tel-national": "phone",
+    "tel-country-code": "phone",
+    "tel-area-code": "phone",
+    "tel-local": "phone",
+    "street-address": "location_address",
+    "address-line1": "location_address",
+    "address-line2": "location_address",
+    "address-level1": "location_state",
+    "address-level2": "location_city",
+    "postal-code": "location_zip",
+    "country": "location_country",
+    "country-name": "location_country",
+    "url": "portfolio",
+    # "organization" deliberately omitted — the closest ontology category
+    # (current_company) is UNSUPPORTED per category_mapping.py, no live
+    # capability exists to emit.
+}
+
 
 def _tier_autocomplete(field):
     ac = (field.get("ac") or "").strip().lower()
-    if ac not in _AUTOCOMPLETE_SPEC_TOKENS:
-        return None
-    from interpreter_baseline import ground_truth_lookup
-    gt = ground_truth_lookup(field)
-    if gt["bucket"] == "confirm" and gt["rule"] == "autocomplete":
-        return capability_for(gt["category"])
-    return None
+    return _AUTOCOMPLETE_TO_CAPABILITY.get(ac)
+
+
+# id patterns per INTERPRETER_SPEC.md's tier 2 table — small, hand-written,
+# auditable. Checked as a case-insensitive substring against the id after
+# stripping a trailing "-N"/"_N" suffix (same suffix-stripping convention
+# as normalize_id(), reused here for consistency, not because this tier
+# depends on normalize_id()'s denylist behavior).
+_ID_PATTERN_TO_CAPABILITY = [
+    (re.compile(r"first_?name|fname", re.I), "first_name"),
+    (re.compile(r"last_?name|lname", re.I), "last_name"),
+    (re.compile(r"email", re.I), "email"),
+    (re.compile(r"phone|mobile", re.I), "phone"),
+    (re.compile(r"linkedin", re.I), "linkedin"),
+    (re.compile(r"github", re.I), "github"),
+    # id='cover_letter' added during P1.5's spec-compliance verification —
+    # 10,718 fields have literally id="cover_letter" but label text that's
+    # either non-informative ("Attach") or non-English ("파일 첨부",
+    # "Anhängen" — a file-upload button's own localized text, not the
+    # question), so tier 3 (label) can never catch these; the id IS the
+    # only reliable signal. Note this is deliberately checked AFTER the
+    # tighter patterns above (github before this) since 'cover_letter'
+    # would not otherwise collide with them.
+    (re.compile(r"cover_?letter", re.I), "cover_letter"),
+]
 
 
 def _tier_id(field):
-    id_key = normalize_id(field.get("id"))
-    if id_key is None:
+    field_id = field.get("id") or ""
+    if not field_id:
         return None
-    from interpreter_baseline import ground_truth_lookup
-    gt = ground_truth_lookup(field)
-    if gt["bucket"] == "confirm" and gt["rule"] == "id":
-        return capability_for(gt["category"])
+    stem = re.sub(r"[-_]{1,2}\d+$", "", field_id.strip())
+    for pattern, capability in _ID_PATTERN_TO_CAPABILITY:
+        if pattern.search(stem):
+            return capability
     return None
 
 

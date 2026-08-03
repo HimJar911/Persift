@@ -255,10 +255,98 @@ labels correctly read in their English portion despite the whole field
 being marked `reject` for non-English scope) rather than bugs, and the rest
 trail off into low-count, diminishing-returns territory.
 
-**Next: P1.5** — fill → verify → retry. Also: porting the validated
-interpreter into the live extension (replacing `FIELD_PATTERNS`' in-browser
-logic) is explicitly NOT done in this pass — P1.4 was validated offline via
-replay first, on purpose, per the standing rule against "make this form
-pass" pressure; wiring it into `filler_utils.js` is separate follow-up work.
+## P1.5 (done) — spec-compliance rewrite + live wiring
+
+Same session, immediately following P1.4. Building P1.5's plan surfaced a
+real problem in how P1.4 was structured: `interpreter_p14.py`'s tiers 1-2
+(autocomplete, id) called `ground_truth_lookup()` — an offline lookup
+against the 275KB `cluster_decisions_v2.json` answer key. That has no
+portable equivalent in a browser, so P1.4 as originally built could never
+actually be wired into the live extension without either shipping that
+whole answer key to every user or redesigning those two tiers. Caught
+before any live-extension work started, not after.
+
+**Resolution: `corpus_analysis/INTERPRETER_SPEC.md` (new).** The
+authoritative, implementation-independent specification both a Python
+implementation (`interpreter_p14.py`, offline, scored by `replay.py`) and
+a JS implementation (`extension/filler_utils.js`'s `classifyField()`,
+runtime) must satisfy — neither is "the real one" the other gets ported
+from. Tiers 1-2 were rewritten as small, self-contained, hand-written
+lookup tables (an autocomplete-spec-token map, and a handful of
+substring-matched id patterns) instead of a corpus-answer-key lookup —
+genuinely portable to JS, at the cost of covering fewer fields directly
+per-tier (many now fall through to tier 3 instead).
+
+**Re-running replay after the rewrite surfaced real, fixable bugs** — the
+same confusion-matrix discipline as P1.4's original build:
+- `eeo_disability` → `work_authorized_longterm` (248 fields): "long-term
+  health condition" matched `work_authorized_longterm`'s `long.?term`
+  pattern. Fixed with a corpus-verified negative guard.
+- `needs_sponsorship`'s `status`/`type` negative guards were over-blocking
+  **2,732 of 8,787 real fields (31%)** — real sponsorship questions
+  routinely explain themselves via phrasing like "...visa **status** (e.g.,
+  H-1B visa status)", which the guard treated as if it were a
+  `visa_status` question. Removed; confirmed zero new confusion introduced.
+- `id="cover_letter"` (10,718 fields, mostly non-English button labels like
+  "Attach"/"파일 첨부"/"Anhängen" where no label-tier pattern could ever
+  catch it) — added to the id-tier table.
+- `previously_employed`'s patterns never covered the very common "have you
+  ever... been employed by `<Company>`" phrasing (3,021 fields) — added,
+  confirmed zero collisions with any other category.
+- `eeo_disability`'s broader "accommodations during interview" gap (~5,000
+  fields) was investigated but NOT fixed — checked and found "accommodat"
+  alone is ambiguous (2,207 of 2,473 matching fields are NOT
+  `eeo_disability`), so a blanket pattern would risk real false positives.
+  Left as a known, deliberately-unaddressed gap rather than force a guess.
+
+**Result after the rewrite + fixes:** **88.4% coverage, 0.59% mismatch,
+11.01% predicted-unknown** — better on both axes than the original P1.4
+build's 87.25%/0.73%, despite the narrower, JS-portable tiers 1-2. Full
+spec: `INTERPRETER_SPEC.md`. `interpreter_p14.py`'s docstring and inline
+comments updated to reflect the new tier 1-2 approach and each fix's
+rationale.
+
+**Live wiring — `extension/filler_utils.js`.** `classifyField()` rewritten
+to implement `INTERPRETER_SPEC.md` directly: structural-pattern detection
+(`detectStructuralPattern()`) runs first, then the 5 tiers in order,
+signaling structural actions via a reserved `__structural_<action>__`
+pseudo-category so `runPass()`/`fillField()` can branch without treating
+them as ordinary `resolveValue()` capabilities. All 6 `FIELD_PATTERNS`
+negative-guard fixes from this session (P1.4 + P1.5) ported into the live
+table, matching `interpreter_p14.py` exactly.
+
+**Real bug caught by the offline/live agreement check itself, not
+assumed away:** the JS `react_select_required_shim` structural check
+originally tested `field.htmlType === 'text'` — but `htmlType` (the raw
+HTML type/tagName) and `inputType` (the semantic
+text/combobox/radio/checkbox/file/native_select classification
+`collectFields()` produces, matching the corpus's `itype` field) are
+different properties in this codebase, and the shim's actual field shape
+never has `htmlType === 'text'`. The check silently never fired until
+corrected to test `inputType` (passed into `classifyField`/
+`detectStructuralPattern` as a parameter, not read off the field object).
+Found via direct comparison against `interpreter_p14.py`'s output on real
+corpus fields — 9 of an initial 60-field sample disagreed, all the same
+shape. **After the fix: 360/360 agreement across two independently-seeded
+samples** (60 + 300 real fields), verified via a scratch Node harness that
+loaded the live `filler_utils.js` and ran its `classifyField()` against
+the same fields `interpreter_p14.py` was scored on.
+
+**Verify/retry — `extension/filler_utils.js`.** Per `FORM_ENGINE_DESIGN.md`
+§3.4: after `fillField()` reports success, `isInputFilled()` re-checks the
+actual DOM state (catches React re-renders silently reverting a write). On
+verification failure, `retryFill()` attempts exactly ONE alternate
+mechanical strategy — currently built for `combobox` only
+(`fillReactComboboxKeyboard`: keyboard navigation instead of click events)
+since that's the one case with an alternate strategy actually implemented;
+other input types log and give up rather than fabricate an untested
+strategy. **Standing invariant, verified structurally not just by
+convention:** `retryFill()` never calls `classifyField()` — confirmed via
+direct grep, `classifyField` is invoked exactly twice in the whole file
+(both in `runPass()`, before any fill attempt). Retry re-derives its fill
+value via the same `resolveValue(classified, ...)` call `fillField()`
+already made (a pure function of the unchanged `classified` string), so a
+retried field is guaranteed to get the identical answer, never a
+re-interpreted one.
 
 **Before P1.3/P1.4 generalize past Greenhouse (still true, unstarted):** see `decisions/0008-corpus-harvester-scale-and-scope-gap.md` — the volume gap it originally flagged (767 vs. real job count) is now resolved for Greenhouse, and the OPEN-CODING gap (this file's old "Next step") is now also resolved (see above). The ATS-scope gap is NOT: `pipeline/corpus_harvester.py` still has Greenhouse-specific logic (iframe-embed detection) that won't transfer as-is to Ashby/Lever/SmartRecruiters — each needs its own "how do I reach the real rendered form" investigation, even though the field-discovery JS itself (`_EXTRACTION_JS`) likely generalizes unchanged. Flagged, not started.

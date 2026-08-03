@@ -2,18 +2,18 @@
   "corpus_version": "size=258074241:mtime=1785269773",
   "taxonomy_version": "v1",
   "interpreter": "interpreter_p14",
-  "timestamp": "2026-08-02T23:56:54.157151+00:00",
+  "timestamp": "2026-08-03T00:46:16.600429+00:00",
   "total_fields": 632947,
   "total_topic_fields_scored": 245044,
   "gt_reject_or_special_fields": 373299,
   "gt_unsupported_ontology_category_fields": 114238,
   "predicted_category_for_rejected_field": 540,
   "predicted_category_for_unsupported_field": 24076,
-  "both_unknown_fields": 12214,
-  "predicted_resolved_gt_unknown_fields": 2390,
-  "coverage_pct": 87.25,
-  "mismatch_pct": 0.73,
-  "predicted_unknown_pct": 12.02,
+  "both_unknown_fields": 12185,
+  "predicted_resolved_gt_unknown_fields": 2419,
+  "coverage_pct": 88.4,
+  "mismatch_pct": 0.59,
+  "predicted_unknown_pct": 11.01,
   "per_category": {
     "compensation": {
       "gt_count": 2810,
@@ -33,50 +33,50 @@
     },
     "degree": {
       "gt_count": 5391,
-      "match": 4982,
+      "match": 4936,
       "mismatch": 0,
-      "predicted_unknown": 409,
-      "coverage_pct": 92.41,
+      "predicted_unknown": 455,
+      "coverage_pct": 91.56,
       "mismatch_pct": 0.0
     },
     "eeo_disability": {
       "gt_count": 16164,
-      "match": 11169,
+      "match": 11079,
       "mismatch": 56,
-      "predicted_unknown": 4939,
-      "coverage_pct": 69.1,
+      "predicted_unknown": 5029,
+      "coverage_pct": 68.54,
       "mismatch_pct": 0.35
     },
     "eeo_gender": {
       "gt_count": 12369,
-      "match": 12351,
-      "mismatch": 0,
-      "predicted_unknown": 18,
-      "coverage_pct": 99.85,
-      "mismatch_pct": 0.0
+      "match": 12290,
+      "mismatch": 27,
+      "predicted_unknown": 52,
+      "coverage_pct": 99.36,
+      "mismatch_pct": 0.22
     },
     "eeo_hispanic": {
       "gt_count": 8100,
-      "match": 8100,
+      "match": 8099,
       "mismatch": 0,
-      "predicted_unknown": 0,
-      "coverage_pct": 100.0,
+      "predicted_unknown": 1,
+      "coverage_pct": 99.99,
       "mismatch_pct": 0.0
     },
     "eeo_race": {
       "gt_count": 3779,
-      "match": 3694,
+      "match": 3680,
       "mismatch": 0,
-      "predicted_unknown": 85,
-      "coverage_pct": 97.75,
+      "predicted_unknown": 99,
+      "coverage_pct": 97.38,
       "mismatch_pct": 0.0
     },
     "eeo_veteran": {
       "gt_count": 10887,
-      "match": 10884,
+      "match": 10876,
       "mismatch": 0,
-      "predicted_unknown": 3,
-      "coverage_pct": 99.97,
+      "predicted_unknown": 11,
+      "coverage_pct": 99.9,
       "mismatch_pct": 0.0
     },
     "email": {
@@ -113,10 +113,10 @@
     },
     "graduation_date": {
       "gt_count": 2385,
-      "match": 2335,
+      "match": 2329,
       "mismatch": 22,
-      "predicted_unknown": 28,
-      "coverage_pct": 97.9,
+      "predicted_unknown": 34,
+      "coverage_pct": 97.65,
       "mismatch_pct": 0.92
     },
     "last_name": {
@@ -145,10 +145,10 @@
     },
     "location_city": {
       "gt_count": 12675,
-      "match": 11954,
+      "match": 9356,
       "mismatch": 2,
-      "predicted_unknown": 719,
-      "coverage_pct": 94.31,
+      "predicted_unknown": 3317,
+      "coverage_pct": 73.81,
       "mismatch_pct": 0.02
     },
     "location_country": {
@@ -177,19 +177,19 @@
     },
     "major": {
       "gt_count": 3839,
-      "match": 3821,
+      "match": 3819,
       "mismatch": 6,
-      "predicted_unknown": 12,
-      "coverage_pct": 99.53,
+      "predicted_unknown": 14,
+      "coverage_pct": 99.48,
       "mismatch_pct": 0.16
     },
     "needs_sponsorship": {
       "gt_count": 8787,
-      "match": 5831,
-      "mismatch": 698,
-      "predicted_unknown": 2258,
-      "coverage_pct": 66.36,
-      "mismatch_pct": 7.94
+      "match": 8650,
+      "mismatch": 122,
+      "predicted_unknown": 15,
+      "coverage_pct": 98.44,
+      "mismatch_pct": 1.39
     },
     "phone": {
       "gt_count": 17300,
@@ -209,27 +209,27 @@
     },
     "preferred_name": {
       "gt_count": 7523,
-      "match": 7222,
+      "match": 7120,
       "mismatch": 156,
-      "predicted_unknown": 145,
-      "coverage_pct": 96.0,
+      "predicted_unknown": 247,
+      "coverage_pct": 94.64,
       "mismatch_pct": 2.07
     },
     "previously_employed": {
       "gt_count": 10781,
-      "match": 605,
+      "match": 3586,
       "mismatch": 228,
-      "predicted_unknown": 9948,
-      "coverage_pct": 5.61,
+      "predicted_unknown": 6967,
+      "coverage_pct": 33.26,
       "mismatch_pct": 2.11
     },
     "previously_employed_here": {
       "gt_count": 2979,
       "match": 0,
-      "mismatch": 56,
-      "predicted_unknown": 2923,
+      "mismatch": 248,
+      "predicted_unknown": 2731,
       "coverage_pct": 0.0,
-      "mismatch_pct": 1.88
+      "mismatch_pct": 8.32
     },
     "pronouns": {
       "gt_count": 141,
@@ -249,10 +249,10 @@
     },
     "school": {
       "gt_count": 4712,
-      "match": 4712,
+      "match": 4666,
       "mismatch": 0,
-      "predicted_unknown": 0,
-      "coverage_pct": 100.0,
+      "predicted_unknown": 46,
+      "coverage_pct": 99.02,
       "mismatch_pct": 0.0
     },
     "start_date": {
@@ -298,9 +298,9 @@
   },
   "top_confusion_pairs": [
     {
-      "ground_truth": "needs_sponsorship",
-      "predicted": "visa_status",
-      "count": 576
+      "ground_truth": "previously_employed_here",
+      "predicted": "previously_employed",
+      "count": 248
     },
     {
       "ground_truth": "preferred_name",
@@ -341,11 +341,6 @@
       "ground_truth": "work_authorized_longterm",
       "predicted": "location_country",
       "count": 76
-    },
-    {
-      "ground_truth": "previously_employed_here",
-      "predicted": "previously_employed",
-      "count": 56
     },
     {
       "ground_truth": "eeo_disability",
@@ -396,6 +391,11 @@
       "ground_truth": "years_experience",
       "predicted": "school",
       "count": 11
+    },
+    {
+      "ground_truth": "years_experience",
+      "predicted": "internship_start",
+      "count": 10
     }
   ]
 }

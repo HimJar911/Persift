@@ -129,9 +129,18 @@ const FIELD_PATTERNS = {
   location_city:            { patterns: [/\bcity\b/i, /\btown\b/i],
                               neg: [/country/i, /state/i, /zip/i, /postal/i] },
   location_state:           { patterns: [/\bstate\b/i, /\bprovince\b/i],
-                              neg: [/country/i, /city/i, /zip/i] },
+                              // government/employee guard: corpus-verified during
+                              // P1.4/P1.5 (INTERPRETER_SPEC.md tier 3) — "employee of...
+                              // any STATE or local government" legitimately matches
+                              // \bstate\b but is a previously_employed_here question.
+                              neg: [/country/i, /city/i, /zip/i, /government/i, /employee/i] },
   location_country:         { patterns: [/\bcountry\b/i],
-                              neg: [/city/i, /state/i] },
+                              // authoriz/eligib/legally/sponsor guards: corpus-verified —
+                              // "authorized to work in the COUNTRY you reside" and "require
+                              // sponsorship... in the COUNTRY for which this role is based"
+                              // both legitimately match \bcountry\b but are
+                              // work_authorized/needs_sponsorship questions.
+                              neg: [/city/i, /state/i, /authoriz/i, /eligib/i, /legally/i, /sponsor/i] },
   location_address:         { patterns: [/street.?address/i, /\baddress\b/i],
                               neg: [/city/i, /state/i, /country/i, /zip/i] },
   location_zip:             { patterns: [/\bzip\b/i, /postal.?code/i] },
@@ -150,17 +159,32 @@ const FIELD_PATTERNS = {
                                          /permanent.*auth/i, /eligible.*long/i,
                                          /work.*without.*requiring/i,
                                          /citizen or permanent resident/i],
-                              neg: [/sponsor.*require/i, /explain/i, /detail/i, /describe/i] },
+                              // disab/impairment/health condition guard: corpus-verified —
+                              // "disability... or LONG-TERM health condition" legitimately
+                              // matches long.?term but is an eeo_disability question.
+                              neg: [/sponsor.*require/i, /explain/i, /detail/i, /describe/i,
+                                    /disab/i, /impairment/i, /health condition/i] },
   needs_sponsorship:        { patterns: [/require.*sponsor/i, /need.*sponsor/i,
                                          /visa sponsor/i, /immigration support/i,
                                          /immigration assistance/i, /work authorization support/i,
                                          /now or in the future.*sponsor/i,
                                          /sponsor.*now or in the future/i],
-                              neg: [/explain/i, /detail/i, /describe/i, /list/i, /status/i, /type/i] },
+                              // status/type REMOVED: corpus-verified these were
+                              // over-blocking 31% (2,732/8,787) of real needs_sponsorship
+                              // fields — real questions routinely self-explain via "...visa
+                              // STATUS (e.g., H-1B visa status)", which isn't a
+                              // visa_status question. Confirmed zero new confusion from
+                              // removing this guard.
+                              neg: [/explain/i, /detail/i, /describe/i, /list/i] },
   visa_status:              { patterns: [/visa status/i, /work authorization status/i,
                                          /immigration status/i, /current.*visa/i,
                                          /type of.*visa/i, /type of.*authorization/i,
-                                         /work auth.*type/i] },
+                                         /work auth.*type/i],
+                              // now or in the future/will you require/require sponsor
+                              // guard: corpus-verified — "sponsorship for employment VISA
+                              // STATUS" legitimately matches "visa status" but is a
+                              // needs_sponsorship question.
+                              neg: [/now or in the future/i, /will you require/i, /require.*sponsor/i] },
   immigration_explanation:  { patterns: [/explain.*work auth/i, /describe.*visa/i,
                                          /detail.*immigration/i, /work authorization.*detail/i,
                                          /please (explain|describe).*(auth|visa|immigration)/i,
@@ -176,7 +200,11 @@ const FIELD_PATTERNS = {
                               neg: [/gender/i, /veteran/i, /disability/i, /hispanic/i] },
   eeo_hispanic:             { patterns: [/hispanic/i, /latino/i] },
   eeo_veteran:              { patterns: [/veteran/i, /military/i, /armed forces/i, /protected veteran/i],
-                              neg: [/disability/i, /gender/i] },
+                              // government/civilian guard: corpus-verified — "civilian or
+                              // MILITARY employee of the US Government" legitimately
+                              // matches "military" but is a federal prior-employment
+                              // disclosure question, not an EEO veteran-status question.
+                              neg: [/disability/i, /gender/i, /government/i, /civilian/i] },
   eeo_disability:           { patterns: [/disability/i, /disabled/i, /disability status/i],
                               neg: [/veteran/i, /gender/i] },
 
@@ -211,7 +239,12 @@ const FIELD_PATTERNS = {
   internship_field:         { patterns: [/^what field.*internship/i, /^internship.*field/i,
                                          /^area.*internship/i, /^internship.*area/i] },
   previously_employed:      { patterns: [/previously employed/i, /worked (here|with us|for us)/i,
-                                         /former.*employee/i, /worked for.*company/i] },
+                                         /former.*employee/i, /worked for.*company/i,
+                                         // corpus-verified: "have you EVER... BEEN EMPLOYED
+                                         // BY <Company>" is very common real phrasing the
+                                         // patterns above never covered (3,021 corpus
+                                         // fields). No collisions with any other category.
+                                         /ever.*(been employed|worked)/i] },
   referral:                 { patterns: [/who referred/i, /\breferral\b/i, /referred by/i],
                               neg: [/hear about/i, /learn about/i] },
   cover_letter:             { patterns: [/cover.?letter/i] },
@@ -526,20 +559,175 @@ function enrichField(el, groupEls) {
   };
 }
 
-// Classifies a field — returns "category__inputType" or null
-function classifyField(label, inputType) {
-  if (!label || !inputType) return null;
-  // Strip asterisks, required markers, and trailing punctuation before matching
-  const searchText = label.replace(/[*†‡]/g, '').trim().toLowerCase();
+// ── Interpreter (JS runtime implementation of corpus_analysis/INTERPRETER_SPEC.md) ──
+// This implements the SAME specification as corpus_analysis/interpreter_p14.py
+// (the offline/replay implementation) — see that spec doc for the tier order,
+// each tier's matching rule, and the rationale behind every negative guard
+// below. Neither implementation is derived from the other; a spec change
+// requires updating both and re-verifying they agree on real fields.
 
+// Structural patterns — checked FIRST, short-circuit everything below.
+// Returns { action, pattern } or null. `action` values: 'skip',
+// 'self_resolves', 'resolve_from_preceding_field'.
+const HIDDEN_TRACKING_ID_STEMS = ['gclid', 'ft_source', 'ft_campaign', 'lt_source', 'lead_source', 'gaclientid'];
+const HONEYPOT_LABEL_RE = /leave this field blank/i;
+const OTHER_FOLLOWUP_LABEL_RE = /^(if (you selected |applicable,? )?other,?\s*(above,?\s*)?please (specify|explain|elaborate)|if (yes|applicable),?\s*please (explain|list|describe))/i;
+const REACT_SELECT_SHIM_GENERIC_TEXT = new Set(['select', 'select...', '선택...', '選択...', '選擇......']);
+
+// `inputType` here is the SEMANTIC input type (collectFields()'s
+// getInputType() output: text/textarea/combobox/radio/checkbox/file/
+// native_select — matches the corpus's `itype` field), NOT
+// field.htmlType (the raw HTML `type`/tagName attribute, matching the
+// corpus's `htype` field). Mixing these two up was a real bug caught
+// during P1.5's offline/live agreement check (INTERPRETER_SPEC.md's
+// Verification step 2) — the react-select-shim check below originally
+// tested field.htmlType === 'text', which is never true for the shim's
+// actual field shape (htmlType reads '' on these), so the JS
+// implementation silently never detected shims at all until this fix.
+function detectStructuralPattern(field, inputType) {
+  const label = (field.label || '').trim();
+  const fieldId = (field.id || '').trim().toLowerCase();
+  const htmlType = field.htmlType || '';
+
+  // honeypot — anti-bot trap (id=edit-url, or label literally instructs
+  // "leave this field blank" — corpus_analysis/README.md).
+  if (fieldId === 'edit-url' || HONEYPOT_LABEL_RE.test(label)) {
+    return { action: 'skip', pattern: 'honeypot' };
+  }
+
+  // hidden fields — never user-facing, not askable/fillable regardless of
+  // what `label` contains. MUST run before the label tier: a real
+  // extraction-artifact bug (found during P1.4) glues entire surrounding
+  // page text onto some hidden fields' labels, causing spurious tier-3
+  // matches if not guarded here first. This one DOES read htmlType (the
+  // raw HTML type attribute) — getInputType() has no 'hidden' semantic
+  // type at all (falls through to 'text'), so htmlType is the only signal
+  // that actually distinguishes a hidden input.
+  if (htmlType === 'hidden') {
+    const stem = fieldId.replace(/[-_]{1,2}\d+$/, '');
+    const isTracking = HIDDEN_TRACKING_ID_STEMS.some(t => stem === t || fieldId.includes(t));
+    return { action: 'skip', pattern: isTracking ? 'hidden_tracking_field' : 'hidden_non_interactive_field' };
+  }
+
+  // react_select_required_shim — hidden required-input trailing a custom
+  // combobox; resolves itself once the combobox it shims is filled.
+  const rawLabel = label.toLowerCase();
+  const labelEmptyOrChrome = !label || REACT_SELECT_SHIM_GENERIC_TEXT.has(rawLabel);
+  if (labelEmptyOrChrome && !(field.placeholder || '').trim() && inputType === 'text' && field.required === true) {
+    return { action: 'self_resolves', pattern: 'react_select_required_shim' };
+  }
+
+  // other_followup — free-text follow-up to a preceding "Other" choice;
+  // resolve from the nearest preceding field, not this field's own label.
+  if (label && OTHER_FOLLOWUP_LABEL_RE.test(label)) {
+    return { action: 'resolve_from_preceding_field', pattern: 'other_followup' };
+  }
+
+  return null;
+}
+
+// Tier 1 — autocomplete. Fixed HTML-autocomplete-spec-token -> capability map.
+const AUTOCOMPLETE_TO_CAPABILITY = {
+  'given-name': 'first_name',
+  'family-name': 'last_name',
+  'name': 'full_name',
+  'nickname': 'preferred_name',
+  'email': 'email',
+  'tel': 'phone', 'tel-national': 'phone', 'tel-country-code': 'phone',
+  'tel-area-code': 'phone', 'tel-local': 'phone',
+  'street-address': 'location_address', 'address-line1': 'location_address',
+  'address-line2': 'location_address',
+  'address-level1': 'location_state',
+  'address-level2': 'location_city',
+  'postal-code': 'location_zip',
+  'country': 'location_country', 'country-name': 'location_country',
+  'url': 'portfolio',
+};
+
+// Tier 2 — id. Small, hand-written, auditable substring patterns (NOT a
+// lookup against the offline corpus answer key — see INTERPRETER_SPEC.md
+// for why that approach doesn't port to a live runtime).
+const ID_PATTERN_TO_CAPABILITY = [
+  [/first_?name|fname/i, 'first_name'],
+  [/last_?name|lname/i, 'last_name'],
+  [/email/i, 'email'],
+  [/phone|mobile/i, 'phone'],
+  [/linkedin/i, 'linkedin'],
+  [/github/i, 'github'],
+  // id="cover_letter" fields often have non-informative/non-English label
+  // text (e.g. "Attach", "파일 첨부") that tier 3 can never catch — the id
+  // is the only reliable signal (corpus-verified: 10,718 fields).
+  [/cover_?letter/i, 'cover_letter'],
+];
+
+// Tiers 3-5 share this matcher — same FIELD_PATTERNS table applied to
+// whichever text source the tier is trying (label, placeholder, section,
+// or nearbyText).
+function matchFieldPatterns(text) {
+  if (!text) return null;
+  const searchText = text.replace(/[*†‡]/g, '').trim().toLowerCase();
   for (const [category, def] of Object.entries(FIELD_PATTERNS)) {
     if (!def.patterns.length) continue;
-    const matched = def.patterns.some(p => p.test(searchText));
-    if (!matched) continue;
     const blocked = def.neg && def.neg.some(p => p.test(searchText));
     if (blocked) continue;
-    return `${category}__${inputType}`;
+    const matched = def.patterns.some(p => p.test(searchText));
+    if (matched) return category;
   }
+  return null;
+}
+
+const MIN_FALLBACK_TEXT_LEN = 15;
+
+// Classifies a field — returns "category__inputType" or null.
+// `field` is the enriched Field object (label/id/autocomplete/placeholder/
+// section/nearbyText/htmlType/required/el/...) from collectFields()/enrichField().
+function classifyField(field, inputType) {
+  if (!inputType) return null;
+
+  const structural = detectStructuralPattern(field, inputType);
+  if (structural) {
+    // Structural patterns aren't topic categories — signal via a reserved
+    // pseudo-category so callers (runPass/fillField) can branch on it
+    // without treating it as an ordinary resolveValue() capability.
+    return `__structural_${structural.action}__${inputType}`;
+  }
+
+  const ac = (field.autocomplete || '').trim().toLowerCase();
+  if (AUTOCOMPLETE_TO_CAPABILITY[ac]) {
+    return `${AUTOCOMPLETE_TO_CAPABILITY[ac]}__${inputType}`;
+  }
+
+  const fieldId = field.id || '';
+  if (fieldId) {
+    const stem = fieldId.replace(/[-_]{1,2}\d+$/, '');
+    for (const [pattern, capability] of ID_PATTERN_TO_CAPABILITY) {
+      if (pattern.test(stem)) return `${capability}__${inputType}`;
+    }
+  }
+
+  const label = field.label || '';
+  if (label.trim()) {
+    const cap = matchFieldPatterns(label);
+    if (cap) return `${cap}__${inputType}`;
+    return null; // label present but unmatched — placeholder/fallback tiers
+                 // are for when label is EMPTY, not a second guess at an
+                 // already-present-but-unmatched label (matches
+                 // INTERPRETER_SPEC.md tier 4/5's "only when label is empty" rule)
+  }
+
+  const placeholder = field.placeholder || '';
+  if (placeholder.trim()) {
+    const cap = matchFieldPatterns(placeholder);
+    if (cap) return `${cap}__${inputType}`;
+  } else {
+    for (const text of [field.section, field.nearbyText]) {
+      if (text && text.trim().length >= MIN_FALLBACK_TEXT_LEN) {
+        const cap = matchFieldPatterns(text);
+        if (cap) return `${cap}__${inputType}`;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -776,6 +964,54 @@ async function fillReactCombobox(container, value, synonyms) {
   ['mousedown', 'mouseup', 'click'].forEach(type =>
     match.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
   );
+  await humanDelay(150, 250);
+  return true;
+}
+
+// Alternate strategy for a React combobox fill failure — keyboard
+// navigation instead of click events, per P1.5's verify/retry design
+// (FORM_ENGINE_DESIGN.md §3.4: "on failure, one alternate strategy").
+// Reuses the SAME value/synonyms already resolved by the first attempt —
+// per the standing retry invariant, this only changes HOW the value gets
+// written in, never WHAT value is being written (see INTERPRETER_SPEC.md /
+// P1.5 plan's Step 4).
+async function fillReactComboboxKeyboard(container, value, synonyms) {
+  const el = container.querySelector('[role="combobox"]');
+  if (!el) return false;
+
+  el.focus();
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await humanDelay(150, 250);
+
+  const listbox = await waitFor(() => {
+    if (el.getAttribute('aria-expanded') !== 'true') return null;
+    const id = el.getAttribute('aria-controls') || el.getAttribute('aria-owns');
+    return id ? document.getElementById(id) : null;
+  }, 2000);
+  if (!listbox) return false;
+
+  const options = Array.from(listbox.querySelectorAll('[role="option"]'));
+  const candidates = [value, ...(synonyms || [])];
+  let matchIndex = -1;
+  for (const candidate of candidates) {
+    const lower = candidate.toLowerCase();
+    matchIndex = options.findIndex(o => {
+      const t = o.textContent.trim().toLowerCase();
+      return t === lower || t.includes(lower) || lower.includes(t);
+    });
+    if (matchIndex !== -1) break;
+  }
+
+  if (matchIndex === -1) {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    return false;
+  }
+
+  for (let i = 0; i < matchIndex; i++) {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await humanDelay(40, 80);
+  }
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   await humanDelay(150, 250);
   return true;
 }
@@ -1282,6 +1518,50 @@ async function fillField(field, classified, profile, context) {
   }
 }
 
+// Verify/retry (FORM_ENGINE_DESIGN.md §3.4). Called ONLY after fillField()
+// has already run and isInputFilled() found the write didn't stick (React
+// re-renders can silently revert a write without erroring).
+//
+// STANDING INVARIANT (P1.5 plan's Step 4): retry changes HOW a field gets
+// filled, never WHAT it's filled as. This function re-derives `fillValue`
+// via the SAME resolveValue(classified, ...) call fillField() already
+// made — resolveValue is a pure function of (classified, profile, context),
+// so calling it again returns the identical answer, not a new guess. It
+// never re-invokes classifyField() or considers a different category.
+// Only ONE alternate mechanical strategy is attempted (per §3.4), and only
+// for input types that actually have one built — for anything else,
+// retry logs and gives up rather than fabricating an untested strategy.
+async function retryFill(field, classified, profile, context) {
+  const [category, inputType] = classified.split('__');
+  const resolved = resolveValue(classified, profile, context);
+  if (!resolved) return false;
+
+  const { value, synonyms } = resolved;
+  let fillValue = value;
+  if (category === 'compensation' && resolved.numericFallback
+      && (inputType === 'combobox' || inputType === 'native_select')) {
+    fillValue = resolved.numericFallback;
+  }
+
+  const container = (field.groupEls
+    ? field.groupEls[0].closest('fieldset, div, li') || document.body
+    : field.el.closest('div, fieldset') || document.body
+  );
+
+  if (inputType === 'combobox') {
+    return await fillReactComboboxKeyboard(container, fillValue, synonyms);
+  }
+
+  // No alternate strategy built yet for other input types — the first
+  // fillField() attempt IS each of their only strategy today (e.g.
+  // fillRadioGroup/fillCheckboxGroup/fillNativeSelect have no second
+  // mechanical approach implemented). Logged distinctly from a successful
+  // retry so it's visible in telemetry-precursor logs which input types
+  // still need a real alternate strategy built.
+  console.log(`filler: no alternate retry strategy for inputType=${inputType} — giving up on this field`);
+  return false;
+}
+
 // Waits for DOM to stabilize after fills trigger conditional field reveals.
 // Scoped to formEl only — ignores mutations from outside the form.
 // Disconnects before resolving so pass 2 fills don't re-trigger it.
@@ -1313,18 +1593,21 @@ async function runPass(profile, context, atsConfig, seenEls) {
       continue;
     }
 
-    // Handle file inputs — classify by label, upload if known doc type, skip otherwise
+    // Handle file inputs — classify by field signals (id/label/etc), upload
+    // if known doc type, skip otherwise. Tries classification even when
+    // label is empty/non-informative (e.g. "Attach") — id alone can carry
+    // the signal (see classifyField's tier 2, id="cover_letter" case).
     if (field.inputType === 'file') {
-      if (field.label) {
-        const classified = classifyField(field.label, 'file');
-        if (classified) {
+      if (field.label || field.id) {
+        const classified = classifyField(field, 'file');
+        if (classified && !classified.startsWith('__structural_')) {
           const [category] = classified.split('__');
           const resolved = resolveValue(classified, profile, context);
           if (resolved) {
             await fillFileInput(field.el, resolved.value);
           }
-        } else {
-          console.log('filler: unclassified file input —', field.label.slice(0, 80));
+        } else if (!classified) {
+          console.log('filler: unclassified file input —', (field.label || field.id || '').slice(0, 80));
         }
       }
       seenEls.add(field.el);
@@ -1337,12 +1620,51 @@ async function runPass(profile, context, atsConfig, seenEls) {
     newCount++;
 
     // Try classifier
-    let classified = classifyField(field.label, field.inputType);
+    let classified = classifyField(field, field.inputType);
+
+    // Structural patterns are never resolveValue() capabilities — branch
+    // before treating `classified` as an ordinary category (see
+    // INTERPRETER_SPEC.md; classifyField signals these via a reserved
+    // "__structural_<action>__" pseudo-category).
+    if (classified && classified.startsWith('__structural_')) {
+      const action = classified.slice('__structural_'.length).split('__')[0];
+      // 'skip' (honeypot / hidden fields) and 'self_resolves'
+      // (react-select required-input shim) both mean: do nothing, move on.
+      // 'resolve_from_preceding_field' (other_followup) has no resolution
+      // mechanism built yet (FORM_ENGINE_DESIGN.md §7 — needs its own
+      // structural handling, not a plain profile lookup) — logged
+      // distinctly rather than silently treated the same as a real skip.
+      console.log(
+        action === 'resolve_from_preceding_field'
+          ? 'filler: other_followup field — no resolution mechanism yet, skipping'
+          : `filler: structural pattern (${action}) — skipping`,
+        '|', field.label.slice(0, 60)
+      );
+      seenEls.add(field.el);
+      await humanDelay(80, 150);
+      continue;
+    }
 
     if (classified) {
-      const ok = await fillField(field, classified, profile, context);
+      let ok = await fillField(field, classified, profile, context);
+      let verified = ok && isInputFilled(field.el);
+
+      // Verify/retry (FORM_ENGINE_DESIGN.md §3.4): fillField() returning
+      // true only means "a fill mechanism ran without throwing," NOT that
+      // the value actually stuck — React re-renders can silently revert a
+      // write. Re-check the DOM; on failure, try exactly ONE alternate
+      // strategy (retryFill(), same resolved value, different mechanism —
+      // see its own docstring for the standing invariant), then accept
+      // whatever the outcome is and move on to the next field either way.
+      if (ok && !verified) {
+        console.log('filler: fill reported success but verification failed — retrying —', classified, '|', field.label.slice(0, 60));
+        const retryOk = await retryFill(field, classified, profile, context);
+        verified = retryOk && isInputFilled(field.el);
+        ok = retryOk;
+      }
+
       console.log(
-        ok ? 'filler: filled' : 'filler: fill failed',
+        verified ? 'filler: filled (verified)' : (ok ? 'filler: filled (unverified)' : 'filler: fill failed'),
         '—', classified, '|', field.label.slice(0, 60)
       );
     } else {
