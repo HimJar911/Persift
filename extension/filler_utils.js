@@ -1298,7 +1298,16 @@ function resolveValue(classifiedCategory, profile, context) {
         ? { value: profile.preferred_name, synonyms: [] }
         : profile.first_name ? { value: profile.first_name, synonyms: [] } : null;
     case 'pronouns':
-      return profile.pronouns ? { value: profile.pronouns, synonyms: [] } : null;
+      // DECLINE_SYNONYMS added to match eeo_gender/eeo_race's existing
+      // treatment (found missing during live testing, Myriad360 job
+      // 8646163002): if the user's own profile value IS a decline choice
+      // (e.g. "prefer not to say"), this helps match it to whatever
+      // wording the specific form uses for its decline/not-listed option.
+      // Still returns null (skip) when profile.pronouns is empty — no new
+      // auto-select-on-missing-data behavior invented, matching how every
+      // other optional field in this switch behaves.
+      return profile.pronouns
+        ? { value: profile.pronouns, synonyms: DECLINE_SYNONYMS } : null;
 
     // Work authorization
     case 'work_authorized': {
