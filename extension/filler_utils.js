@@ -742,8 +742,24 @@ function isInputFilled(el) {
   if (el.type === 'radio' || el.type === 'checkbox') return el.checked;
   if (el.tagName === 'SELECT') return !!el.value;
   if (el.getAttribute('role') === 'combobox') {
-    const singleValue = el.closest('.select__container, .select__wrapper, div')
-      ?.querySelector('.select__single-value');
+    // Search from .select__control — the SAME ancestor class the fill
+    // mechanisms (fillReactCombobox/fillReactComboboxKeyboard/
+    // fillTypeaheadCombobox) already reliably find via
+    // el.closest('.select__control') with no fallback needed, confirming
+    // it's real, present DOM structure. The previous version searched for
+    // .select__container/.select__wrapper (unverified/guessed class
+    // names, never used anywhere else in this file) with a bare `div`
+    // fallback — closest() with a comma-list matches whichever selector
+    // is geometrically nearest, so if any plain div sat between the
+    // combobox and its real container, that div won and the search
+    // stopped before ever reaching a real .select__single-value node.
+    // Live-verified this session (Myriad360 job 8646163002): every
+    // combobox that filled successfully (confirmed via
+    // fillReactCombobox's own successful click-selection) still logged
+    // "verification failed" — the fill worked, this check just couldn't
+    // find the value it wrote.
+    const control = el.closest('.select__control');
+    const singleValue = (control || el.closest('div'))?.querySelector('.select__single-value');
     return !!(singleValue?.textContent?.trim());
   }
   return !!el.value;
@@ -995,8 +1011,25 @@ async function fillReactComboboxKeyboard(container, value, synonyms) {
   const el = container.querySelector('[role="combobox"]');
   if (!el) return { ok: false, reason: 'DOM_NO_COMBOBOX_ELEMENT' };
 
+  const control = el.closest('.select__control');
+  if (!control) return { ok: false, reason: 'DOM_NO_SELECT_CONTROL' };
+
+  // React-Select controls open on CLICK, not on focus+ArrowDown alone —
+  // an earlier version of this function skipped the click sequence
+  // (fillReactCombobox's primary path already does this), which meant the
+  // "keyboard alternate strategy" could never actually open a closed
+  // combobox and always failed DOM_LISTBOX_NEVER_OPENED on retry. Found
+  // live (Myriad360 job 8646163002): every combobox that needed a retry
+  // failed identically at this exact step, which is what exposed the bug —
+  // the reason vocabulary added earlier this session is what made this
+  // diagnosable at all instead of a bare "fill failed". The actual
+  // alternate strategy this function provides is arrow-key + Enter OPTION
+  // SELECTION, not an alternate way to open the control — opening still
+  // needs the click.
+  ['mousedown', 'mouseup', 'click'].forEach(type =>
+    control.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
+  );
   el.focus();
-  el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   await humanDelay(150, 250);
 
   const listbox = await waitFor(() => {
@@ -1705,9 +1738,18 @@ async function runPass(profile, context, atsConfig, seenEls) {
       // fillReactCombobox/fillNativeSelect/fillRadioGroup/fillCheckboxGroup's
       // return shapes for the reason vocabulary (DOM_*/INTERACTION_* prefixes
       // = which pipeline stage failed).
+      // firstReason is undefined whenever the first fillField() call
+      // returned ok:true (a mechanism reported success) — that's a
+      // meaningfully different case from a DOM_*/INTERACTION_* failure
+      // reason, not an unknown/missing one, so it gets its own label
+      // rather than defaulting to a generic "unknown" (found live: the
+      // "unknown" label was ambiguous between "no reason was ever set"
+      // and "the reason IS that it reported success," which matters for
+      // diagnosing why a retry then failed differently).
       let reasonSuffix = '';
       if (!verified) {
-        if (retryReason) reasonSuffix = ` [first: ${firstReason || 'unknown'}, retry: ${retryReason}]`;
+        const firstLabel = firstReason || 'VERIFY_FAILED_AFTER_REPORTED_SUCCESS';
+        if (retryReason) reasonSuffix = ` [first: ${firstLabel}, retry: ${retryReason}]`;
         else if (firstReason) reasonSuffix = ` [${firstReason}]`;
       }
 
