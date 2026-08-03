@@ -2,18 +2,18 @@
   "corpus_version": "size=258074241:mtime=1785269773",
   "taxonomy_version": "v1",
   "interpreter": "interpreter_p14",
-  "timestamp": "2026-08-03T01:21:23.970683+00:00",
+  "timestamp": "2026-08-03T02:41:30.738261+00:00",
   "total_fields": 632947,
-  "total_topic_fields_scored": 245044,
-  "gt_reject_or_special_fields": 373299,
-  "gt_unsupported_ontology_category_fields": 114238,
+  "total_topic_fields_scored": 250055,
+  "gt_reject_or_special_fields": 368288,
+  "gt_unsupported_ontology_category_fields": 109227,
   "predicted_category_for_rejected_field": 540,
-  "predicted_category_for_unsupported_field": 24043,
-  "both_unknown_fields": 12185,
-  "predicted_resolved_gt_unknown_fields": 2419,
-  "coverage_pct": 88.4,
-  "mismatch_pct": 0.59,
-  "predicted_unknown_pct": 11.01,
+  "predicted_category_for_unsupported_field": 23641,
+  "both_unknown_fields": 11828,
+  "predicted_resolved_gt_unknown_fields": 2776,
+  "coverage_pct": 87.63,
+  "mismatch_pct": 0.6,
+  "predicted_unknown_pct": 11.78,
   "per_category": {
     "compensation": {
       "gt_count": 2810,
@@ -21,6 +21,38 @@
       "mismatch": 0,
       "predicted_unknown": 131,
       "coverage_pct": 95.34,
+      "mismatch_pct": 0.0
+    },
+    "consent_background_check": {
+      "gt_count": 601,
+      "match": 413,
+      "mismatch": 0,
+      "predicted_unknown": 188,
+      "coverage_pct": 68.72,
+      "mismatch_pct": 0.0
+    },
+    "consent_gdpr_notice": {
+      "gt_count": 18,
+      "match": 18,
+      "mismatch": 0,
+      "predicted_unknown": 0,
+      "coverage_pct": 100.0,
+      "mismatch_pct": 0.0
+    },
+    "consent_privacy_policy": {
+      "gt_count": 1744,
+      "match": 967,
+      "mismatch": 0,
+      "predicted_unknown": 777,
+      "coverage_pct": 55.45,
+      "mismatch_pct": 0.0
+    },
+    "consent_sms_communication": {
+      "gt_count": 1303,
+      "match": 842,
+      "mismatch": 0,
+      "predicted_unknown": 461,
+      "coverage_pct": 64.62,
       "mismatch_pct": 0.0
     },
     "cover_letter": {
@@ -182,6 +214,14 @@
       "predicted_unknown": 14,
       "coverage_pct": 99.48,
       "mismatch_pct": 0.16
+    },
+    "marketing_communications_optin": {
+      "gt_count": 1345,
+      "match": 245,
+      "mismatch": 55,
+      "predicted_unknown": 1045,
+      "coverage_pct": 18.22,
+      "mismatch_pct": 4.09
     },
     "needs_sponsorship": {
       "gt_count": 8787,
@@ -348,6 +388,11 @@
       "count": 56
     },
     {
+      "ground_truth": "marketing_communications_optin",
+      "predicted": "consent_sms_communication",
+      "count": 55
+    },
+    {
       "ground_truth": "portfolio",
       "predicted": "github",
       "count": 29
@@ -391,11 +436,6 @@
       "ground_truth": "years_experience",
       "predicted": "school",
       "count": 11
-    },
-    {
-      "ground_truth": "years_experience",
-      "predicted": "internship_start",
-      "count": 10
     }
   ]
 }

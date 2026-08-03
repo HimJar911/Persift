@@ -119,7 +119,22 @@ const FIELD_PATTERNS = {
   full_name:                { patterns: [/^name$/i, /full.?name/i, /your name/i],
                               neg: [/first/i, /last/i, /preferred/i, /company/i] },
   email:                    { patterns: [/e-?mail/i],
-                              neg: [/confirm/i, /emergency/i, /reference/i] },
+                              // sms/whatsapp/newsletter/recruitment notif/job openings guards:
+                              // corpus-verified — consent_sms_communication and
+                              // marketing_communications_optin labels routinely mention
+                              // "email" as one channel among several ("contact you via SMS,
+                              // WhatsApp, phone, or email") or as the literal first word
+                              // ("Email me about other job openings...") — these are consent
+                              // questions, not requests for an email address. Zero real
+                              // email-capability fields mention these terms.
+                              // gdpr/controller of personal data guards: corpus-verified —
+                              // long GDPR-notice legal text mentions "email" incidentally
+                              // among a data-controller disclosure. Zero real email fields
+                              // mention these terms.
+                              neg: [/confirm/i, /emergency/i, /reference/i,
+                                    /sms/i, /whatsapp/i, /newsletter/i,
+                                    /recruitment notif/i, /job openings/i,
+                                    /gdpr/i, /controller of personal data/i] },
   phone:                    { patterns: [/\bphone\b/i, /mobile/i, /\btel\b/i],
                               // word-boundary added to /phone/i: unbounded, it matched
                               // the substring in "phonetic" (live-test-verified,
@@ -127,7 +142,10 @@ const FIELD_PATTERNS = {
                               // phonetic pronunciation" wrongly classified as phone
                               // since phone is defined before preferred_name and
                               // classifyField is first-match-wins).
-                              neg: [/emergency/i, /fax/i, /reference/i] },
+                              // sms/whatsapp guard: corpus-verified — consent_sms_communication
+                              // labels mention "phone" as one contact channel among several.
+                              // Zero real phone-capability fields mention sms/whatsapp.
+                              neg: [/emergency/i, /fax/i, /reference/i, /sms/i, /whatsapp/i] },
   linkedin:                 { patterns: [/linked.?in/i] },
   github:                   { patterns: [/git.?hub/i] },
   portfolio:                { patterns: [/portfolio/i, /personal.?site/i, /\bwebsite\b/i],
@@ -148,7 +166,11 @@ const FIELD_PATTERNS = {
                               // work_authorized/needs_sponsorship questions.
                               neg: [/city/i, /state/i, /authoriz/i, /eligib/i, /legally/i, /sponsor/i] },
   location_address:         { patterns: [/street.?address/i, /\baddress\b/i],
-                              neg: [/city/i, /state/i, /country/i, /zip/i] },
+                              // sms guard: corpus-verified — consent_sms_communication labels
+                              // mention "email address" as part of describing contact channels,
+                              // which matches \baddress\b. Zero real location_address fields
+                              // mention sms.
+                              neg: [/city/i, /state/i, /country/i, /zip/i, /sms/i] },
   location_zip:             { patterns: [/\bzip\b/i, /postal.?code/i] },
   preferred_name:           { patterns: [/preferred.{0,10}name/i, /goes.?by/i, /nickname/i] },
   pronouns:                 { patterns: [/pronoun/i] },
@@ -265,6 +287,40 @@ const FIELD_PATTERNS = {
                                          /transcript.*grad(uate)?/i,
                                          /graduate.*transcript/i],
                               neg: [/undergrad/i, /unofficial/i] },
+
+  // Consent — SEMANTIC CLASSIFICATION ONLY. These 5 categories are answered
+  // by a separate policy layer (extension/consent_policy.js), NOT by
+  // resolveValue()'s profile-lookup switch — see fillField()'s dispatch.
+  // Corpus-verified (checked every pattern against every other confirmed
+  // category before adding, same discipline as every other fix this
+  // session): each neg guard below closes a real, found collision, not a
+  // hypothetical one.
+  consent_background_check: { patterns: [/background check/i, /criminal background/i,
+                                         /criminal history check/i, /consent.*prior employer/i],
+                              // 'condition of employment...willing to submit' guard: corpus-
+                              // verified — this exact phrasing (176 instances, single source
+                              // template) is ground-truth-labeled qualifications_confirmation,
+                              // not consent_background_check — a subtly different question
+                              // shape ("are you willing to submit to X as a condition of
+                              // employment" reads as an eligibility question, not a live
+                              // consent request).
+                              neg: [/condition of employment.*willing to submit/i] },
+  consent_privacy_policy:   { patterns: [/privacy policy/i, /privacy disclosure/i,
+                                         /use.*personal data.*recruitment/i,
+                                         /privacy acknowledg/i],
+                              // 'consent to receive text messages' / 'personal information of
+                              // a third party' guards: corpus-verified — both are real,
+                              // single-source collisions (SMS consent text and a third-party-
+                              // data nepotism disclosure that happen to mention "Privacy
+                              // Policy" in passing).
+                              neg: [/consent to receive text messages/i,
+                                    /provide the personal information of a third party/i] },
+  consent_gdpr_notice:      { patterns: [/\bgdpr\b/i, /data protection regulation/i,
+                                         /controller of personal data/i] },
+  consent_sms_communication: { patterns: [/(sms|text message|whatsapp).{0,60}(consent|allow|contact|update)/i,
+                                          /(consent|allow|contact|update).{0,60}(sms|text message|whatsapp)/i] },
+  marketing_communications_optin: { patterns: [/(future recruitment|job openings|marketing|newsletter).{0,60}(email.*me|notify|subscribe)/i,
+                                               /(email.*me|notify|subscribe).{0,60}(future recruitment|job openings|marketing|newsletter)/i] },
 };
 
 const QUESTION_ALIASES = [
@@ -1509,7 +1565,15 @@ function _normalizeFillResult(result) {
 
 async function fillField(field, classified, profile, context) {
   const [category, inputType] = classified.split('__');
-  const resolved = resolveValue(classified, profile, context);
+
+  // Answer dispatcher: consent categories are answered by the policy
+  // layer (extension/consent_policy.js), never by resolveValue()'s
+  // profile-lookup switch — see that file's module docstring for why
+  // this split exists. resolveValue() itself is NOT touched/extended for
+  // consent; this is the one place that decides which resolver runs.
+  const resolved = isConsentCategory(category)
+    ? resolveConsentAnswer(category)
+    : resolveValue(classified, profile, context);
 
   if (!resolved) {
     console.log('filler: [PROFILE_VALUE_MISSING] no value resolved for:', classified, '|', field.label.slice(0, 50));
@@ -1609,7 +1673,15 @@ async function fillField(field, classified, profile, context) {
 // retry logs and gives up rather than fabricating an untested strategy.
 async function retryFill(field, classified, profile, context) {
   const [category, inputType] = classified.split('__');
-  const resolved = resolveValue(classified, profile, context);
+  // Same dispatcher as fillField() — retry must re-derive the answer via
+  // the SAME resolver the first attempt used, per the standing invariant
+  // (retry changes HOW a field is filled, never WHAT it's filled as). If
+  // this called resolveValue() directly for a consent category, it would
+  // always return null (consent categories aren't in resolveValue()'s
+  // switch), silently breaking retry for every consent field.
+  const resolved = isConsentCategory(category)
+    ? resolveConsentAnswer(category)
+    : resolveValue(classified, profile, context);
   if (!resolved) return { ok: false, reason: 'PROFILE_VALUE_MISSING' };
 
   const { value, synonyms } = resolved;

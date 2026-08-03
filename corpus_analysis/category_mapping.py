@@ -158,15 +158,15 @@ _MAPPINGS = [
     Mapping("resume_upload", UNSUPPORTED, "Resume upload is handled by ATS-adapter lifecycle code (content/greenhouse.js 'resume-upload-first'), not resolveValue — out of this mapping's scope, not a gap.", True),
 
     # --- Consent / disclosures / compliance.
-    Mapping("consent_attestation_general", UNSUPPORTED, "General attestation checkboxes are handled by the standing 'auto-check consent/background-check boxes' rule (FORM_ENGINE_DESIGN.md §1.6), which is an ACTION not a resolveValue capability lookup.", True),
-    Mapping("consent_background_check", UNSUPPORTED, "Same as consent_attestation_general — auto-check action, not a resolveValue lookup.", True),
-    Mapping("consent_ccpa_share_sale", UNSUPPORTED, "Same auto-check-action shape.", True),
-    Mapping("consent_sms_communication", UNSUPPORTED, "Same auto-check-action shape.", True),
-    Mapping("ccpa_california_disclosure", UNSUPPORTED, "Same auto-check-action shape.", True),
+    Mapping("consent_attestation_general", UNSUPPORTED, "Deliberately still excluded from the consent-policy build (session after P1.5's live-test fixes) — checked its real corpus labels and found it's contaminated with unrelated fact-based questions (education status, work authorization) that already have their own dedicated categories, same shape as the documented department_interest/location_preference false-merge. Needs its own cleanup/re-split pass before any policy-answering logic touches it; the other 5 consent categories were split out and built (see corpus_analysis/CONSENT_POLICY_SPEC.md) precisely because they checked out clean and this one didn't.", True),
+    Mapping("consent_background_check", "consent_background_check", "POLICY-backed capability, not a profile-fact one — resolveValue() does NOT have a case for this; extension/consent_policy.js's dispatcher answers it (default: accept, per that file's CONSENT_DEFAULT_IMPLEMENTATION table and rationale). Decided during the consent-policy build (session after P1.5's live-test fixes) — see corpus_analysis/CONSENT_POLICY_SPEC.md.", True),
+    Mapping("consent_ccpa_share_sale", UNSUPPORTED, "Same auto-check-action shape, but zero confirmed corpus instances found — not built (see corpus_analysis/CONSENT_POLICY_SPEC.md's exclusions).", True),
+    Mapping("consent_sms_communication", "consent_sms_communication", "POLICY-backed capability — extension/consent_policy.js answers it (default: decline, optional opt-in). See corpus_analysis/CONSENT_POLICY_SPEC.md.", True),
+    Mapping("ccpa_california_disclosure", UNSUPPORTED, "Same auto-check-action shape, but zero confirmed corpus instances found — not built (see corpus_analysis/CONSENT_POLICY_SPEC.md's exclusions).", True),
     Mapping("criminal_background_disclosure", UNSUPPORTED, "No profile field for criminal history; typically a yes/no with no reliable default — do not auto-answer.", True),
     Mapping("nepotism_disclosure", UNSUPPORTED, "No profile field for family-employed-here disclosure.", True),
     Mapping("pep_disclosure", UNSUPPORTED, "Politically-exposed-person disclosure, no profile field.", True),
-    Mapping("marketing_communications_optin", UNSUPPORTED, "Same auto-check-action shape as other consent categories, but opt-IN (not required) — likely wants a deliberate default (probably decline), not yet decided.", True),
+    Mapping("marketing_communications_optin", "marketing_communications_optin", "POLICY-backed capability — extension/consent_policy.js answers it (default: decline, explicitly promotional/voluntary opt-in). Was previously flagged 'not yet decided'; now decided, see corpus_analysis/CONSENT_POLICY_SPEC.md.", True),
     Mapping("age_18_or_older", UNSUPPORTED, "No age/DOB capability exists in the live profile schema.", True),
 
     # --- Location / department preference, work history.
@@ -202,8 +202,8 @@ _MAPPINGS = [
 # they were added AFTER the original 118, not yet formally merged into
 # TOPIC_CATEGORIES.
 _MAPPINGS += [
-    Mapping("consent_privacy_policy", UNSUPPORTED, "Same auto-check-action shape as other consent categories.", True),
-    Mapping("consent_gdpr_notice", UNSUPPORTED, "Same auto-check-action shape as other consent categories.", True),
+    Mapping("consent_privacy_policy", "consent_privacy_policy", "POLICY-backed capability — extension/consent_policy.js answers it (default: accept, required acknowledgment). See corpus_analysis/CONSENT_POLICY_SPEC.md.", True),
+    Mapping("consent_gdpr_notice", "consent_gdpr_notice", "POLICY-backed capability — extension/consent_policy.js answers it (default: accept, required data-processing acknowledgment). See corpus_analysis/CONSENT_POLICY_SPEC.md.", True),
     # visa_type already mapped above (it's also listed in TOPIC_CATEGORIES's
     # docstring context) — not duplicated here.
 ]

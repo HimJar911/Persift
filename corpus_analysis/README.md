@@ -349,4 +349,81 @@ already made (a pure function of the unchanged `classified` string), so a
 retried field is guaranteed to get the identical answer, never a
 re-interpreted one.
 
+## First live-test bugfix rounds (same session, after P1.5)
+
+Three rounds of real hands-on-Chrome testing (Myriad360, Greenhouse job
+`8646163002`) surfaced what offline replay/parity checking can't:
+- **Round 1**: `phone`'s unbounded `/phone/i` matched the substring in
+  "phonetic," misclassifying a preferred-name question. Fixed with a word
+  boundary. Also added layer-prefixed reason codes (`DOM_*`/
+  `INTERACTION_*`/`PROFILE_VALUE_MISSING`/`CLASSIFICATION_NO_MATCH`) to
+  every fill mechanism's return value, since the original logs reported
+  outcomes ("fill failed") with zero information about causes.
+- **Round 2**: every combobox needing a retry failed identically
+  (`DOM_LISTBOX_NEVER_OPENED`) — the new reason codes made this
+  diagnosable as ONE bug instead of 7 mysteries. Root cause:
+  `fillReactComboboxKeyboard` (the retry's alternate strategy) never
+  clicked `.select__control` to open the combobox — React-Select opens on
+  click, not focus+ArrowDown. Fixed. Investigating that surfaced a SECOND
+  bug: `isInputFilled()`'s combobox check searched
+  `.select__container, .select__wrapper, div` (unverified/guessed class
+  names with a bare `div` fallback that silently won when a plain
+  wrapper sat in between) instead of `.select__control` (the
+  confirmed-real ancestor the fill mechanisms already use). Fixed.
+- **Round 3**: confirmed both fixes — every previously-retrying combobox
+  now fills and verifies on the first try. Two remaining gaps: `pronouns`
+  had no `DECLINE_SYNONYMS` treatment (unlike `eeo_gender`/`eeo_race`) —
+  fixed, same pattern, still correctly skips when the profile has no
+  value. A voluntary consent question fell through unclassified — see
+  next section.
+
+**Two new permanent tools built this pass** (per review-round feedback:
+every live bug should become a standing check, not a one-off fix):
+`corpus_analysis/interpreter_regressions.json` +
+`corpus_analysis/check_regressions.js` (every real bug becomes a
+permanent `{label, expected_capability}` entry, checked against BOTH
+implementations — verified the checker actually fails when a fix is
+reverted) and `corpus_analysis/check_js_python_parity.js` (promotes
+P1.5's scratch offline/live agreement script into a permanent,
+re-runnable tool).
+
+New ADR: [decisions/0010](../decisions/0010-verification-is-mechanical-not-semantic.md)
+— `isInputFilled()` verification confirms *a* value landed, not that
+it's *correct*. Acknowledged, not fixed.
+
+## Consent-question policy layer (same session, after round 3)
+
+The voluntary-consent field from round 3 led to checking the corpus for
+the broader category (not just that one wording) — found
+`FORM_ENGINE_DESIGN.md` §1.6's July design ("auto-answer consent
+questions") was never actually built. Real corpus volume: ~3,993+
+instances across 5 clean categories. `consent_attestation_general`
+excluded — corpus-verified contaminated with unrelated fact-based
+questions (education status, work authorization), needs its own
+cleanup/re-split pass first.
+
+**Two design drafts rejected before landing on the right architecture.**
+First put `accept`/`decline` inside the interpreter's structural-pattern
+detection — rejected: the interpreter answers "what is this field
+asking" (semantic, testable), not "what should we do about it" (policy,
+the corpus has zero signal for this). Second put the answer inside
+`resolveValue()`'s switch — also rejected: that function means "given a
+category, retrieve the PROFILE value" for every case; consent answers
+aren't profile facts. **Final: a one-line dispatcher in `fillField()`**
+routes consent categories to a new `resolveConsentAnswer()`
+(`extension/consent_policy.js`) instead of `resolveValue()`.
+`detect_structural_pattern()`/`resolveValue()` are both untouched by this
+feature. Full design + the category→default table:
+`corpus_analysis/CONSENT_POLICY_SPEC.md`.
+
+**Real bugs found adding the 5 detection patterns** (corpus-verified
+before AND after, same discipline as every fix this session):
+`email`/`phone`/`location_address` were stealing hundreds of real
+consent fields (560+300 fields lost to `email` alone) because consent
+labels routinely mention "email"/"phone"/"address" as one channel among
+several ("contact via SMS, WhatsApp, phone, or email"). Fixed with
+corpus-verified negative guards. Final: mismatch back to 0.6% (spiked to
+0.99% before the guards), coverage up to 87.63% (from 87.25%
+pre-consent).
+
 **Before P1.3/P1.4 generalize past Greenhouse (still true, unstarted):** see `decisions/0008-corpus-harvester-scale-and-scope-gap.md` — the volume gap it originally flagged (767 vs. real job count) is now resolved for Greenhouse, and the OPEN-CODING gap (this file's old "Next step") is now also resolved (see above). The ATS-scope gap is NOT: `pipeline/corpus_harvester.py` still has Greenhouse-specific logic (iframe-embed detection) that won't transfer as-is to Ashby/Lever/SmartRecruiters — each needs its own "how do I reach the real rendered form" investigation, even though the field-discovery JS itself (`_EXTRACTION_JS`) likely generalizes unchanged. Flagged, not started.

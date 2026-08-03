@@ -165,7 +165,17 @@ _FIELD_PATTERNS = {
     "full_name":                {"patterns": [r"^name$", r"full.?name", r"your name"],
                                   "neg": [r"first", r"last", r"preferred", r"company"]},
     "email":                    {"patterns": [r"e-?mail"],
-                                  "neg": [r"confirm", r"emergency", r"reference"]},
+                                  # sms/whatsapp/newsletter/recruitment notif/job openings
+                                  # guards: corpus-verified — consent_sms_communication and
+                                  # marketing_communications_optin labels routinely mention
+                                  # "email" as one channel among several. Zero real
+                                  # email-capability fields mention these terms.
+                                  # gdpr/controller of personal data guards: corpus-verified —
+                                  # long GDPR-notice legal text mentions "email" incidentally.
+                                  "neg": [r"confirm", r"emergency", r"reference",
+                                          r"sms", r"whatsapp", r"newsletter",
+                                          r"recruitment notif", r"job openings",
+                                          r"gdpr", r"controller of personal data"]},
     "phone":                    {"patterns": [r"\bphone\b", r"mobile", r"\btel\b"],
                                   # word-boundary added to phone: unbounded, it matched
                                   # the substring in "phonetic" (live-test-verified,
@@ -175,7 +185,9 @@ _FIELD_PATTERNS = {
                                   # this tier is first-match-wins). Ported from the same
                                   # fix in extension/filler_utils.js's FIELD_PATTERNS per
                                   # INTERPRETER_SPEC.md's shared-table requirement.
-                                  "neg": [r"emergency", r"fax", r"reference"]},
+                                  # sms/whatsapp guard: corpus-verified — consent_sms_communication
+                                  # labels mention "phone" as one contact channel among several.
+                                  "neg": [r"emergency", r"fax", r"reference", r"sms", r"whatsapp"]},
     "linkedin":                 {"patterns": [r"linked.?in"]},
     "github":                   {"patterns": [r"git.?hub"]},
     "portfolio":                {"patterns": [r"portfolio", r"personal.?site", r"\bwebsite\b"],
@@ -209,7 +221,9 @@ _FIELD_PATTERNS = {
                                   # zero real location_country fields mention sponsorship.
                                   "neg": [r"city", r"state", r"authoriz", r"eligib", r"legally", r"sponsor"]},
     "location_address":         {"patterns": [r"street.?address", r"\baddress\b"],
-                                  "neg": [r"city", r"state", r"country", r"zip"]},
+                                  # sms guard: corpus-verified — consent_sms_communication labels
+                                  # mention "email address" describing contact channels.
+                                  "neg": [r"city", r"state", r"country", r"zip", r"sms"]},
     "location_zip":             {"patterns": [r"\bzip\b", r"postal.?code"]},
     "preferred_name":           {"patterns": [r"preferred.{0,10}name", r"goes.?by", r"nickname"]},
     "pronouns":                 {"patterns": [r"pronoun"]},
@@ -351,6 +365,36 @@ _FIELD_PATTERNS = {
                                                r"transcript.*grad(uate)?",
                                                r"graduate.*transcript"],
                                   "neg": [r"undergrad", r"unofficial"]},
+
+    # Consent — SEMANTIC CLASSIFICATION ONLY, matching extension/
+    # filler_utils.js's FIELD_PATTERNS byte-for-byte per
+    # INTERPRETER_SPEC.md's shared-spec discipline. These 5 categories are
+    # answered by extension/consent_policy.js's policy layer at runtime,
+    # NOT by any resolveValue()-equivalent here — this Python
+    # implementation is offline/replay-only and never fills anything, so
+    # it only needs to classify correctly, same as every other category.
+    # Corpus-verified: each neg guard closes a real, found collision.
+    "consent_background_check": {"patterns": [r"background check", r"criminal background",
+                                               r"criminal history check", r"consent.*prior employer"],
+                                  # 'condition of employment...willing to submit' guard:
+                                  # corpus-verified — this exact phrasing (176 instances,
+                                  # single source template) is ground-truth-labeled
+                                  # qualifications_confirmation, not consent_background_check.
+                                  "neg": [r"condition of employment.*willing to submit"]},
+    "consent_privacy_policy":    {"patterns": [r"privacy policy", r"privacy disclosure",
+                                               r"use.*personal data.*recruitment",
+                                               r"privacy acknowledg"],
+                                  # 'consent to receive text messages' / 'personal information
+                                  # of a third party' guards: corpus-verified single-source
+                                  # collisions (SMS consent, nepotism disclosure).
+                                  "neg": [r"consent to receive text messages",
+                                          r"provide the personal information of a third party"]},
+    "consent_gdpr_notice":       {"patterns": [r"\bgdpr\b", r"data protection regulation",
+                                               r"controller of personal data"]},
+    "consent_sms_communication": {"patterns": [r"(sms|text message|whatsapp).{0,60}(consent|allow|contact|update)",
+                                               r"(consent|allow|contact|update).{0,60}(sms|text message|whatsapp)"]},
+    "marketing_communications_optin": {"patterns": [r"(future recruitment|job openings|marketing|newsletter).{0,60}(email.*me|notify|subscribe)",
+                                                     r"(email.*me|notify|subscribe).{0,60}(future recruitment|job openings|marketing|newsletter)"]},
 }
 
 # --- Corpus-derived additions: label phrasing found via taxonomy_v1's 97

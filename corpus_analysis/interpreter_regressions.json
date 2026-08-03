@@ -40,5 +40,35 @@
     "expected_capability": "preferred_name",
     "source": "live_test_myriad360_8646163002",
     "note": "phone's unbounded /phone/i pattern matched the substring in 'phonetic', and phone is checked before preferred_name (first-match-wins), so this field was wrongly filled with the user's phone number. Found on the FIRST live browser test, not the corpus. Fixed with a word boundary: \\bphone\\b."
+  },
+  {
+    "label": "Are you willing to undergo a background check, in accordance with local law/regulations?*",
+    "expected_capability": "consent_background_check",
+    "source": "consent_policy_build",
+    "note": "New capability (was UNSUPPORTED) — added as part of the consent-policy layer (extension/consent_policy.js). Answered by the policy dispatcher, not resolveValue(). Confirms this label is correctly SEMANTICALLY classified consent_background_check; does not assert anything about the accept/decline answer, which replay never sees."
+  },
+  {
+    "label": "Applicant Privacy Acknowledgement *",
+    "expected_capability": "consent_privacy_policy",
+    "source": "consent_policy_build",
+    "note": "New capability (was UNSUPPORTED). Regression coverage matters here specifically because 'email' had to gain a gdpr/controller-of-personal-data negative guard to stop stealing consent_gdpr_notice fields, and email/phone gained sms/whatsapp/newsletter/job-openings guards to stop stealing these — this entry (and the two below) guard against those guards ever being silently removed."
+  },
+  {
+    "label": "AtriCure retains personal data for as long as necessary to evaluate applications and manage recruitment activities, in accordance with applicable data protection laws. By selecting “Consent” below, you confirm that you have been informed of your rights under GDPR and that you consent to the processing of your data for talent acquisition purposes.",
+    "expected_capability": "consent_gdpr_notice",
+    "source": "consent_policy_build",
+    "note": "New capability (was UNSUPPORTED). Was misclassified 'email' before email's gdpr/controller-of-personal-data negative guards were added (this exact label's real, unabridged corpus text mentions data-controller/GDPR legal language that has no 'email' substring itself, but the CLASS of long GDPR-notice text this represents did collide with email in other real corpus instances)."
+  },
+  {
+    "label": "Do you allow us to provide you TEXT/SMS updates of your interview process? We may engage with a service provider to do so.*",
+    "expected_capability": "consent_sms_communication",
+    "source": "consent_policy_build",
+    "note": "New capability (was UNSUPPORTED). Real corpus phrasing like 'contact you via SMS, WhatsApp, phone, or email' was being stolen by email/phone/location_address's bare patterns (560+178+131 fields respectively) before sms/whatsapp negative guards were added to all three."
+  },
+  {
+    "label": "Email me about other job openings within the Booking Holding’s entities and recruitment-related newsletters*",
+    "expected_capability": "marketing_communications_optin",
+    "source": "consent_policy_build",
+    "note": "New capability (was UNSUPPORTED). This exact label starts with the word 'Email', which was being caught by email's bare pattern (300 fields) before the newsletter/recruitment-notif/job-openings negative guards were added."
   }
 ]
