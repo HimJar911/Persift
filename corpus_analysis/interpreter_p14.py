@@ -166,7 +166,15 @@ _FIELD_PATTERNS = {
                                   "neg": [r"first", r"last", r"preferred", r"company"]},
     "email":                    {"patterns": [r"e-?mail"],
                                   "neg": [r"confirm", r"emergency", r"reference"]},
-    "phone":                    {"patterns": [r"phone", r"mobile", r"\btel\b"],
+    "phone":                    {"patterns": [r"\bphone\b", r"mobile", r"\btel\b"],
+                                  # word-boundary added to phone: unbounded, it matched
+                                  # the substring in "phonetic" (live-test-verified,
+                                  # Myriad360 job 8646163002 — "preferred name/nickname...
+                                  # phonetic pronunciation" wrongly classified as phone
+                                  # since phone is checked before preferred_name and
+                                  # this tier is first-match-wins). Ported from the same
+                                  # fix in extension/filler_utils.js's FIELD_PATTERNS per
+                                  # INTERPRETER_SPEC.md's shared-table requirement.
                                   "neg": [r"emergency", r"fax", r"reference"]},
     "linkedin":                 {"patterns": [r"linked.?in"]},
     "github":                   {"patterns": [r"git.?hub"]},

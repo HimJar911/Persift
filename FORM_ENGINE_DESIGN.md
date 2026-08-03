@@ -98,7 +98,9 @@ New canonical categories: `consent_background_check` / `consent_privacy_policy` 
 
 ### 3.4 Fill → Verify → Retry
 
-Section-3 fill mechanisms survive unchanged (native-setter text fill, native select, React combobox via aria-controls, typeahead, radio/checkbox groups, intl-tel-input, file upload). New: after each fill, **re-check the DOM** (`isInputFilled` on the element / group) because React re-renders silently revert writes; on failure, one alternate strategy (e.g. combobox click-select → keyboard navigation), then record `verified: false` and move on.
+Section-3 fill mechanisms survive unchanged (native-setter text fill, native select, React combobox via aria-controls, typeahead, radio/checkbox groups, intl-tel-input, file upload). New: after each fill, **re-check the DOM** (`isInputFilled` on the element / group) because React re-renders silently revert writes; on failure, one alternate strategy (e.g. combobox click-select → keyboard navigation), then record `verified: false` and move on. Built in P1.5 (Aug 2 2026): `extension/filler_utils.js`'s `runPass`/`retryFill`.
+
+**Known limitation, not yet fixed — see [decisions/0010](decisions/0010-verification-is-mechanical-not-semantic.md):** `isInputFilled()` verification is mechanical, not semantic. It confirms a value landed in the field, not that it's the *correct* value for what the field is asking — a misclassified field with a resolvable profile value logs identically to a correctly-classified one. Read `verified: true` as necessary, not sufficient, evidence of correctness.
 
 ### 3.5 Telemetry
 

@@ -120,7 +120,13 @@ const FIELD_PATTERNS = {
                               neg: [/first/i, /last/i, /preferred/i, /company/i] },
   email:                    { patterns: [/e-?mail/i],
                               neg: [/confirm/i, /emergency/i, /reference/i] },
-  phone:                    { patterns: [/phone/i, /mobile/i, /\btel\b/i],
+  phone:                    { patterns: [/\bphone\b/i, /mobile/i, /\btel\b/i],
+                              // word-boundary added to /phone/i: unbounded, it matched
+                              // the substring in "phonetic" (live-test-verified,
+                              // Myriad360 job 8646163002 — "preferred name/nickname...
+                              // phonetic pronunciation" wrongly classified as phone
+                              // since phone is defined before preferred_name and
+                              // classifyField is first-match-wins).
                               neg: [/emergency/i, /fax/i, /reference/i] },
   linkedin:                 { patterns: [/linked.?in/i] },
   github:                   { patterns: [/git.?hub/i] },
@@ -901,9 +907,18 @@ async function fillTextField(container, value) {
   return true;
 }
 
+// Fill mechanisms return { ok, reason? } instead of a bare boolean —
+// `reason` (present only when ok is false) states WHICH layer/step failed,
+// prefixed by category (DOM_/INTERACTION_), so a console log downstream can
+// state a cause instead of just an outcome. Added after a real live test
+// (Myriad360, job 8646163002) showed multiple combobox fields silently
+// logging "fill failed" with zero information about what actually
+// happened inside the fill mechanism — 3 early-return points had no
+// diagnostic output at all. See fillField()'s dispatch for how this
+// propagates up to runPass()'s log line.
 async function fillNativeSelect(container, value, synonyms) {
   const el = container.querySelector('select');
-  if (!el) return false;
+  if (!el) return { ok: false, reason: 'DOM_NO_SELECT_ELEMENT' };
 
   const candidates = [value, ...(synonyms || [])];
   for (const candidate of candidates) {
@@ -915,18 +930,19 @@ async function fillNativeSelect(container, value, synonyms) {
     if (opt) {
       el.value = opt.value;
       el.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
+      return { ok: true };
     }
   }
-  return false;
+  console.log('filler: native select no match for:', value, '| options:', Array.from(el.options).map(o => o.text.trim()));
+  return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
 }
 
 async function fillReactCombobox(container, value, synonyms) {
   const el = container.querySelector('[role="combobox"]');
-  if (!el) return false;
+  if (!el) return { ok: false, reason: 'DOM_NO_COMBOBOX_ELEMENT' };
 
   const control = el.closest('.select__control');
-  if (!control) return false;
+  if (!control) return { ok: false, reason: 'DOM_NO_SELECT_CONTROL' };
 
   ['mousedown', 'mouseup', 'click'].forEach(type =>
     control.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
@@ -940,7 +956,7 @@ async function fillReactCombobox(container, value, synonyms) {
     return id ? document.getElementById(id) : null;
   }, 2000);
 
-  if (!listbox) return false;
+  if (!listbox) return { ok: false, reason: 'DOM_LISTBOX_NEVER_OPENED' };
 
   const options = Array.from(listbox.querySelectorAll('[role="option"]'));
   const candidates = [value, ...(synonyms || [])];
@@ -958,14 +974,14 @@ async function fillReactCombobox(container, value, synonyms) {
   if (!match) {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     console.log('filler: combobox no match for:', value, '| options:', options.map(o => o.textContent.trim()));
-    return false;
+    return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
   }
 
   ['mousedown', 'mouseup', 'click'].forEach(type =>
     match.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))
   );
   await humanDelay(150, 250);
-  return true;
+  return { ok: true };
 }
 
 // Alternate strategy for a React combobox fill failure — keyboard
@@ -977,7 +993,7 @@ async function fillReactCombobox(container, value, synonyms) {
 // P1.5 plan's Step 4).
 async function fillReactComboboxKeyboard(container, value, synonyms) {
   const el = container.querySelector('[role="combobox"]');
-  if (!el) return false;
+  if (!el) return { ok: false, reason: 'DOM_NO_COMBOBOX_ELEMENT' };
 
   el.focus();
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -988,7 +1004,7 @@ async function fillReactComboboxKeyboard(container, value, synonyms) {
     const id = el.getAttribute('aria-controls') || el.getAttribute('aria-owns');
     return id ? document.getElementById(id) : null;
   }, 2000);
-  if (!listbox) return false;
+  if (!listbox) return { ok: false, reason: 'DOM_LISTBOX_NEVER_OPENED' };
 
   const options = Array.from(listbox.querySelectorAll('[role="option"]'));
   const candidates = [value, ...(synonyms || [])];
@@ -1004,7 +1020,8 @@ async function fillReactComboboxKeyboard(container, value, synonyms) {
 
   if (matchIndex === -1) {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    return false;
+    console.log('filler: combobox (keyboard) no match for:', value, '| options:', options.map(o => o.textContent.trim()));
+    return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
   }
 
   for (let i = 0; i < matchIndex; i++) {
@@ -1013,13 +1030,13 @@ async function fillReactComboboxKeyboard(container, value, synonyms) {
   }
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   await humanDelay(150, 250);
-  return true;
+  return { ok: true };
 }
 
 // Type-to-search combobox — options load dynamically as you type (e.g. school field)
 async function fillTypeaheadCombobox(container, value) {
   const el = container.querySelector('[role="combobox"]');
-  if (!el) return false;
+  if (!el) return { ok: false, reason: 'DOM_NO_COMBOBOX_ELEMENT' };
 
   const control = el.closest('.select__control');
   if (control) {
@@ -1046,7 +1063,7 @@ async function fillTypeaheadCombobox(container, value) {
 
   if (!listbox) {
     console.log('filler: typeahead — listbox did not populate for:', value);
-    return false;
+    return { ok: false, reason: 'DOM_LISTBOX_NEVER_OPENED' };
   }
 
   const options = Array.from(listbox.querySelectorAll('[role="option"]'));
@@ -1058,20 +1075,20 @@ async function fillTypeaheadCombobox(container, value) {
 
   if (!match) {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    console.log('filler: typeahead — no match for:', value);
-    return false;
+    console.log('filler: typeahead — no match for:', value, '| options:', options.map(o => o.textContent.trim()));
+    return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
   }
 
   ['mousedown', 'mouseup', 'click'].forEach(t =>
     match.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }))
   );
   await humanDelay(150, 250);
-  return true;
+  return { ok: true };
 }
 
 async function fillRadioGroup(container, value, synonyms) {
   const radios = Array.from(container.querySelectorAll('input[type="radio"]'));
-  if (!radios.length) return false;
+  if (!radios.length) return { ok: false, reason: 'DOM_NO_RADIOS_IN_CONTAINER' };
 
   const candidates = [value, ...(synonyms || [])];
   for (const candidate of candidates) {
@@ -1083,19 +1100,21 @@ async function fillRadioGroup(container, value, synonyms) {
       return text.includes(lower) || lower.includes(text);
     });
     if (match) {
-      if (match.checked) return true;
+      if (match.checked) return { ok: true };
       await clickElement(match);
-      return true;
+      return { ok: true };
     }
   }
-  return false;
+  console.log('filler: radio group no match for:', value, '| options:', radios.map(r => (r.closest('label')?.textContent || r.value || '').trim()));
+  return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
 }
 
 async function fillCheckboxGroup(container, values) {
   const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
-  if (!checkboxes.length) return false;
+  if (!checkboxes.length) return { ok: false, reason: 'DOM_NO_CHECKBOXES_IN_CONTAINER' };
 
   let anyFilled = false;
+  let anyUnmatched = false;
   for (const value of (Array.isArray(values) ? values : [values])) {
     const lower = value.toLowerCase();
     const match = checkboxes.find(cb => {
@@ -1107,9 +1126,15 @@ async function fillCheckboxGroup(container, values) {
     if (match && !match.checked) {
       await clickElement(match);
       anyFilled = true;
+    } else if (!match) {
+      anyUnmatched = true;
     }
   }
-  return anyFilled;
+  if (!anyFilled && anyUnmatched) {
+    console.log('filler: checkbox group no match for:', values, '| options:', checkboxes.map(cb => (cb.closest('label')?.textContent || cb.value || '').trim()));
+    return { ok: false, reason: 'INTERACTION_NO_OPTION_MATCHED' };
+  }
+  return { ok: anyFilled };
 }
 
 // intl-tel-input phone field — fill country code then phone number
@@ -1431,13 +1456,22 @@ function resolveValue(classifiedCategory, profile, context) {
 // ── Section 5: Main Loop ──────────────────────────────────────────────────────
 
 // Fills a single field given its classified category, input type, element, and group
+// Normalizes fillIntlPhone's plain-boolean return (it has no real failure
+// path modeled today — always returns true) into the { ok, reason } shape
+// every other fill mechanism now uses, so fillField()'s dispatch and
+// runPass()'s logging don't need to special-case it.
+function _normalizeFillResult(result) {
+  if (typeof result === 'boolean') return { ok: result };
+  return result;
+}
+
 async function fillField(field, classified, profile, context) {
   const [category, inputType] = classified.split('__');
   const resolved = resolveValue(classified, profile, context);
 
   if (!resolved) {
-    console.log('filler: no value resolved for:', classified, '|', field.label.slice(0, 50));
-    return false;
+    console.log('filler: [PROFILE_VALUE_MISSING] no value resolved for:', classified, '|', field.label.slice(0, 50));
+    return { ok: false, reason: 'PROFILE_VALUE_MISSING' };
   }
 
   const { value, synonyms } = resolved;
@@ -1445,13 +1479,13 @@ async function fillField(field, classified, profile, context) {
   // Special case: school uses typeahead combobox
   if (category === 'school' && inputType === 'combobox') {
     const container = field.el.closest('div, fieldset') || document.body;
-    return await fillTypeaheadCombobox(container, value);
+    return _normalizeFillResult(await fillTypeaheadCombobox(container, value));
   }
 
   // Special case: phone uses intl-tel-input
   if (category === 'phone') {
     const container = field.el.closest('div, fieldset') || document.body;
-    return await fillIntlPhone(container, profile.location_country || 'United States', value);
+    return _normalizeFillResult(await fillIntlPhone(container, profile.location_country || 'United States', value));
   }
 
   // Special case: graduation_date — check if there are two comboboxes (month + year)
@@ -1464,7 +1498,7 @@ async function fillField(field, classified, profile, context) {
       await fillReactCombobox(c1, resolved.month, []);
       await humanDelay(100, 200);
       await fillReactCombobox(c2, resolved.year, []);
-      return true;
+      return { ok: true };
     }
   }
 
@@ -1489,7 +1523,7 @@ async function fillField(field, classified, profile, context) {
     case 'textarea': {
       if (field.el instanceof HTMLInputElement || field.el instanceof HTMLTextAreaElement) {
         _fillTextEl(field.el, fillValue);
-        return true;
+        return { ok: true };
       }
       // contenteditable div (rich text editors like cover letter)
       if (field.el.isContentEditable || field.el.getAttribute('contenteditable') === 'true') {
@@ -1497,13 +1531,13 @@ async function fillField(field, classified, profile, context) {
         field.el.innerText = fillValue;
         field.el.dispatchEvent(new Event('input',  { bubbles: true }));
         field.el.dispatchEvent(new Event('change', { bubbles: true }));
-        return true;
+        return { ok: true };
       }
       // Try finding an input/textarea inside the container as a last resort
       const inner = container.querySelector('input[type="text"], input:not([type]), textarea');
-      if (inner) { _fillTextEl(inner, fillValue); return true; }
-      console.log('filler: skipping non-input element for text fill —', field.label.slice(0, 50));
-      return false;
+      if (inner) { _fillTextEl(inner, fillValue); return { ok: true }; }
+      console.log('filler: [DOM_NO_TEXT_TARGET] skipping non-input element for text fill —', field.label.slice(0, 50));
+      return { ok: false, reason: 'DOM_NO_TEXT_TARGET' };
     }
     case 'native_select':
       return await fillNativeSelect(container, fillValue, synonyms);
@@ -1514,7 +1548,7 @@ async function fillField(field, classified, profile, context) {
     case 'checkbox':
       return await fillCheckboxGroup(container, Array.isArray(fillValue) ? fillValue : [fillValue]);
     default:
-      return false;
+      return { ok: false, reason: 'CLASSIFICATION_UNKNOWN_INPUT_TYPE' };
   }
 }
 
@@ -1534,7 +1568,7 @@ async function fillField(field, classified, profile, context) {
 async function retryFill(field, classified, profile, context) {
   const [category, inputType] = classified.split('__');
   const resolved = resolveValue(classified, profile, context);
-  if (!resolved) return false;
+  if (!resolved) return { ok: false, reason: 'PROFILE_VALUE_MISSING' };
 
   const { value, synonyms } = resolved;
   let fillValue = value;
@@ -1558,8 +1592,8 @@ async function retryFill(field, classified, profile, context) {
   // mechanical approach implemented). Logged distinctly from a successful
   // retry so it's visible in telemetry-precursor logs which input types
   // still need a real alternate strategy built.
-  console.log(`filler: no alternate retry strategy for inputType=${inputType} — giving up on this field`);
-  return false;
+  console.log(`filler: [RETRY_NO_ALTERNATE_STRATEGY] no alternate retry strategy for inputType=${inputType} — giving up on this field`);
+  return { ok: false, reason: 'RETRY_NO_ALTERNATE_STRATEGY' };
 }
 
 // Waits for DOM to stabilize after fills trigger conditional field reveals.
@@ -1646,11 +1680,12 @@ async function runPass(profile, context, atsConfig, seenEls) {
     }
 
     if (classified) {
-      let ok = await fillField(field, classified, profile, context);
+      let { ok, reason: firstReason } = await fillField(field, classified, profile, context);
       let verified = ok && isInputFilled(field.el);
+      let retryReason = null;
 
       // Verify/retry (FORM_ENGINE_DESIGN.md §3.4): fillField() returning
-      // true only means "a fill mechanism ran without throwing," NOT that
+      // ok:true only means "a fill mechanism ran without throwing," NOT that
       // the value actually stuck — React re-renders can silently revert a
       // write. Re-check the DOM; on failure, try exactly ONE alternate
       // strategy (retryFill(), same resolved value, different mechanism —
@@ -1658,13 +1693,26 @@ async function runPass(profile, context, atsConfig, seenEls) {
       // whatever the outcome is and move on to the next field either way.
       if (ok && !verified) {
         console.log('filler: fill reported success but verification failed — retrying —', classified, '|', field.label.slice(0, 60));
-        const retryOk = await retryFill(field, classified, profile, context);
-        verified = retryOk && isInputFilled(field.el);
-        ok = retryOk;
+        const retryResult = await retryFill(field, classified, profile, context);
+        verified = retryResult.ok && isInputFilled(field.el);
+        ok = retryResult.ok;
+        retryReason = retryResult.reason || null;
+      }
+
+      // Reason(s) appended to the outcome log — this is the actual "self
+      // healing" surface: seeing WHY a fill failed (or, if it failed twice,
+      // why the retry also failed) instead of just that it failed. See
+      // fillReactCombobox/fillNativeSelect/fillRadioGroup/fillCheckboxGroup's
+      // return shapes for the reason vocabulary (DOM_*/INTERACTION_* prefixes
+      // = which pipeline stage failed).
+      let reasonSuffix = '';
+      if (!verified) {
+        if (retryReason) reasonSuffix = ` [first: ${firstReason || 'unknown'}, retry: ${retryReason}]`;
+        else if (firstReason) reasonSuffix = ` [${firstReason}]`;
       }
 
       console.log(
-        verified ? 'filler: filled (verified)' : (ok ? 'filler: filled (unverified)' : 'filler: fill failed'),
+        (verified ? 'filler: filled (verified)' : (ok ? 'filler: filled (unverified)' : 'filler: fill failed')) + reasonSuffix,
         '—', classified, '|', field.label.slice(0, 60)
       );
     } else {
@@ -1689,8 +1737,13 @@ async function runPass(profile, context, atsConfig, seenEls) {
         }
         console.log('filler: custom answer —', field.label.slice(0, 60), '→', ca.answer.slice(0, 40));
       } else {
-        // Tier 2: log and skip
-        console.log('filler: no match —', field.label.slice(0, 80), '| type:', field.inputType);
+        // Tier 2: log and skip. Tagged CLASSIFICATION_NO_MATCH to distinguish
+        // this ("never classified — no pattern/tier matched") from
+        // PROFILE_VALUE_MISSING ("classified correctly, but the profile has
+        // no answer for this category") — same "nothing got filled" surface
+        // outcome, different root cause, previously indistinguishable at a
+        // glance from the log text alone.
+        console.log('filler: [CLASSIFICATION_NO_MATCH] no match —', field.label.slice(0, 80), '| type:', field.inputType);
       }
     }
 

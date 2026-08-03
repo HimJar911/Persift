@@ -1,0 +1,44 @@
+[
+  {
+    "label": "Are you authorized to work in the country you reside or where you are living?*",
+    "expected_capability": "work_authorized",
+    "source": "corpus_replay_p14_tuning",
+    "note": "location_country's \\bcountry\\b pattern matched this before the 'authoriz/eligib/legally/sponsor' negative guard was added. 2,373 corpus fields affected."
+  },
+  {
+    "label": "Will you now or in the future require sponsorship for employment visa status in the country for which this role is based?*",
+    "expected_capability": "needs_sponsorship",
+    "source": "corpus_replay_p14_tuning",
+    "note": "location_country's \\bcountry\\b pattern matched this (round 2, different phrasing) before the 'sponsor' negative guard was added. 864 corpus fields affected."
+  },
+  {
+    "label": "Are you a current or former civilian or military employee of the United States Government? (If yes, when/where were you last employed and what was you",
+    "expected_capability": "previously_employed",
+    "source": "corpus_replay_p14_tuning",
+    "note": "Originally added to assert previously_employed_here — real current behavior (post P1.5's 'ever'-pattern addition, verified against this exact corpus label) correctly routes it to the near-duplicate previously_employed capability instead (category_mapping.py documents these as legitimately near-duplicate ontology categories, not a bug). Regression coverage here is really about the location_state/eeo_veteran negative guards this label originally motivated: without them, 'military'/'civilian' would wrongly match location_state or eeo_veteran instead of any previously_employed* capability. If this label ever stops resolving to a previously_employed* capability at all, that's the real regression to catch."
+  },
+  {
+    "label": "Will you now or in the future require sponsorship for employment visa status (e.g., H-1B visa status)?*",
+    "expected_capability": "needs_sponsorship",
+    "source": "corpus_replay_p14_tuning",
+    "note": "Matched visa_status's 'visa status' pattern before the 'now or in the future/will you require/require sponsor' negative guard was added. 2,209 corpus fields affected."
+  },
+  {
+    "label": "Do you consider yourself to have a disability, impairment or long-term health condition",
+    "expected_capability": "eeo_disability",
+    "source": "p15_spec_rewrite_tuning",
+    "note": "Matched work_authorized_longterm's long.?term pattern (via 'long-term health condition') before the 'disab/impairment/health condition' negative guard was added. 248 corpus fields affected. Found after P1.5's tier 1-2 spec-compliance rewrite routed more fields through the label tier."
+  },
+  {
+    "label": "Are you currently, or have you ever in the past, been employed by Studs?*",
+    "expected_capability": "previously_employed",
+    "source": "p15_spec_rewrite_tuning",
+    "note": "previously_employed's original patterns never covered 'have you ever... been employed by <Company>' phrasing. Added ever.*(been employed|worked) pattern. 3,021 corpus fields affected."
+  },
+  {
+    "label": "What is your preferred name/nickname? Please feel free to include phonetic pronunciation",
+    "expected_capability": "preferred_name",
+    "source": "live_test_myriad360_8646163002",
+    "note": "phone's unbounded /phone/i pattern matched the substring in 'phonetic', and phone is checked before preferred_name (first-match-wins), so this field was wrongly filled with the user's phone number. Found on the FIRST live browser test, not the corpus. Fixed with a word boundary: \\bphone\\b."
+  }
+]

@@ -149,6 +149,14 @@ fields before being added):
 - `previously_employed` extended with `ever.*(been employed|worked)` —
   3,021 corpus fields used this phrasing and were previously uncaught
   (post-v1, P1.5)
+- `phone`'s `/phone/i` pattern given a word boundary (`\bphone\b`) — found
+  via the FIRST LIVE test (not the corpus): "preferred name/nickname...
+  phonetic pronunciation" matched the unbounded pattern via the substring
+  "phon**etic**" and got wrongly classified `phone` instead of
+  `preferred_name`. Zero real corpus `phone` fields relied on the
+  unbounded match (confirmed via replay: no coverage/mismatch change after
+  the fix). See `decisions/` and `corpus_analysis/interpreter_regressions.json`
+  for the permanent regression-test entry this bug produced.
 
 See `interpreter_p14.py`'s inline comments for each fix's full rationale
 and corpus verification method.
