@@ -66,6 +66,12 @@ const CONSENT_DEFAULT_IMPLEMENTATION = {
     requiredByEmployer: false,
     overridable: true,
   },
+  consent_demographic_survey: {
+    default: 'decline',
+    rationale: 'Explicitly voluntary participation in a demographic/diversity survey, not required to apply — user has not opted in, so do not opt them in on their behalf.',
+    requiredByEmployer: false,
+    overridable: true,
+  },
 };
 
 // Candidate value+synonym lists for fuzzy-matching against a real form's

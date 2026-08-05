@@ -70,5 +70,11 @@
     "expected_capability": "marketing_communications_optin",
     "source": "consent_policy_build",
     "note": "New capability (was UNSUPPORTED). This exact label starts with the word 'Email', which was being caught by email's bare pattern (300 fields) before the newsletter/recruitment-notif/job-openings negative guards were added."
+  },
+  {
+    "label": "Myriad360 values diversity in all its forms. To ensure that we comply with reporting requirements and to learn more about how we can increase diversity in our candidate pool, we invite you to voluntarily provide demographic information in a confidential survey at the end of this application. If you choose to fill it out, the responses will be used in aggregate to help us identify areas for improvement in our process. Your responses or whether you complete this survey will not be associated with your specific application and cannot in any way be used in the hiring decision. Would you like to participate?",
+    "expected_capability": "consent_demographic_survey",
+    "source": "live_test_myriad360_8646163002",
+    "note": "New capability (was CLASSIFICATION_NO_MATCH). Found on the second live browser test of the same job — this exact wording was known from corpus analysis as a one-off (1 company) during the original consent-policy build and deliberately deferred then; added after being confirmed live rather than staying theoretical. Pattern written against the semantic class ('voluntary'/'confidential' + 'demographic'/'diversity' + 'survey'), not this literal sentence, with a negative guard against eeo_gender/eeo_race/eeo_hispanic/eeo_veteran/eeo_disability's keywords so it can never shadow those per-attribute question fields."
   }
 ]

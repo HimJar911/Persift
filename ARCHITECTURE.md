@@ -78,7 +78,7 @@ grep -rn "'matched'\|'preparing'\|'ready'\|'submitting'\|'awaiting_review'\|'sub
 
 The dual-home bug class is STRUCTURALLY FIXED. The governing rule: a fact is a **COLUMN** if anything but the form-filler reasons about it (matcher/metrics/ML); **JSONB** if only stored and handed back whole. **No field in both.**
 
-- **COLUMNS on `users`** (system reasons about them): `university`, `major`, `gpa`, `graduation_date` (DATE, canonical), `needs_sponsorship`, `visa_type`, `location_city`, `location_state`, `location_preference`, `resume_text`, `tier`, `email`. Read by `matcher._fetch_active_users` and `get_user_profile`.
+- **COLUMNS on `users`** (system reasons about them): `university`, `major`, `gpa`, `graduation_date` (DATE, canonical), `needs_sponsorship`, `visa_type`, `location_city`, `location_state`, `location_preference`, `resume_text`, `tier`, `email`. Read by `matcher._fetch_active_users` and `get_user_profile`. **`location_preference` has no actual reader anywhere in the codebase (confirmed Aug 5 2026 by grep) — work-model matching (Remote/Hybrid/On Site) really happens via `users.preferences.work_models` (JSONB, not a COLUMN), which `pipeline/matcher.py`'s filter #2 reads with case-sensitive matching against `jobs.work_model`'s real Title-Case values. Don't assume `location_preference` does anything until it's wired to a real consumer.**
 - **`users.application_settings` (JSONB)** — form-fill carry-along ONLY: first_name, last_name, phone, linkedin_url, github_url, preferred_name, degree, location_country, eeo_*, work_authorized, previous_employers, desired_hourly/salary_* (comp fallback), custom_answers.
 
 **Consumers of the moved fields (all updated Jul 1):**

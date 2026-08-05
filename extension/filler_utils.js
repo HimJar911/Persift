@@ -321,6 +321,17 @@ const FIELD_PATTERNS = {
                                           /(consent|allow|contact|update).{0,60}(sms|text message|whatsapp)/i] },
   marketing_communications_optin: { patterns: [/(future recruitment|job openings|marketing|newsletter).{0,60}(email.*me|notify|subscribe)/i,
                                                /(email.*me|notify|subscribe).{0,60}(future recruitment|job openings|marketing|newsletter)/i] },
+  // Umbrella "would you like to participate" consent that precedes a
+  // voluntary demographic/diversity survey — distinct from the individual
+  // eeo_gender/eeo_race/etc. question fields (those ask for a specific
+  // attribute; this asks permission to be asked at all). Corpus showed
+  // this exact Myriad360 wording as a one-off (1 company) when the other 5
+  // consent categories were built, so it was deliberately deferred rather
+  // than pattern-matched against a single example — written broad here,
+  // against the semantic class, now that it's been seen live.
+  consent_demographic_survey: { patterns: [/(voluntar|confidential).{0,80}(demographic|diversity).{0,40}survey/i,
+                                           /(demographic|diversity).{0,40}survey.{0,80}(voluntar|confidential|participat)/i],
+                              neg: [/\b(gender|race|racial|ethnicity|hispanic|latino|veteran|disability)\b/i] },
 };
 
 const QUESTION_ALIASES = [

@@ -395,6 +395,15 @@ _FIELD_PATTERNS = {
                                                r"(consent|allow|contact|update).{0,60}(sms|text message|whatsapp)"]},
     "marketing_communications_optin": {"patterns": [r"(future recruitment|job openings|marketing|newsletter).{0,60}(email.*me|notify|subscribe)",
                                                      r"(email.*me|notify|subscribe).{0,60}(future recruitment|job openings|marketing|newsletter)"]},
+    # Umbrella "would you like to participate" consent that precedes a
+    # voluntary demographic/diversity survey — distinct from the individual
+    # eeo_gender/eeo_race/etc. question fields. Corpus showed this exact
+    # Myriad360 wording as a one-off (1 company) when the other 5 consent
+    # categories were built, deliberately deferred then; written broad here
+    # against the semantic class now that it's been seen live.
+    "consent_demographic_survey": {"patterns": [r"(voluntar|confidential).{0,80}(demographic|diversity).{0,40}survey",
+                                                 r"(demographic|diversity).{0,40}survey.{0,80}(voluntar|confidential|participat)"],
+                                    "neg": [r"\b(gender|race|racial|ethnicity|hispanic|latino|veteran|disability)\b"]},
 }
 
 # --- Corpus-derived additions: label phrasing found via taxonomy_v1's 97
