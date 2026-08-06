@@ -58,6 +58,8 @@ class JobResult:
     page_fingerprint: str | None
     debug_log_ref: str | None
     field_failures: list[FieldFailure]
+    page_block_detected: bool = False
+    page_block_reason: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +113,21 @@ async def _read_storage(sw) -> dict:
     return await sw.evaluate(
         "() => new Promise(resolve => chrome.storage.local.get(null, resolve))"
     )
+
+
+async def _poll_until_tab_open(sw, context, timeout_s: float = 20.0):
+    """Waits for phase to leave 'fetching'/'idle' and a non-extension page to
+    appear in the context — the earliest point a block-signature check can
+    run, per the plan's "checked right after each tab opens, before the
+    extension starts filling." Returns the Page, or None if no tab ever
+    opened within timeout_s (e.g. the claim itself returned no job)."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        candidates = [p for p in context.pages if not p.url.startswith("chrome-extension://")]
+        if candidates:
+            return candidates[-1]
+        await asyncio.sleep(0.5)
+    return None
 
 
 async def _poll_for_terminal(sw, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[str, dict]:
@@ -328,11 +345,30 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
     debug_log_ref = None
     page_fingerprint = None
     fields_filled = fields_total = None
+    page_block_detected = False
+    page_block_reason = None
 
     try:
         await _seed_user_job(ctx.user_id, job_id, ats)
         await _reset_extension_state(ctx.service_worker, ctx.user_id)
         await _trigger_poll(ctx.service_worker)
+
+        # Block-signature check "right after each tab opens, before the
+        # extension starts filling" (per the plan's Circuit Breaker section)
+        # — this is the earliest point a Page object exists to check at all,
+        # so it has to happen here in job_driver.py, not in the outer runner
+        # loop which only sees the job after it's already finished.
+        early_page = await _poll_until_tab_open(ctx.service_worker, ctx.context)
+        if early_page is not None:
+            try:
+                await early_page.wait_for_load_state("domcontentloaded", timeout=15_000)
+                html = await early_page.content()
+                if looks_blocked(html, None):
+                    page_block_detected = True
+                    page_block_reason = "block signature detected on initial tab load"
+                    logger.warning("Page block signature detected for job %s", job_id)
+            except Exception:
+                logger.warning("Block-check failed to read page content for job %s", job_id, exc_info=True)
 
         outcome, storage = await _poll_for_terminal(ctx.service_worker)
         phase_reached = storage.get("phase")
@@ -409,6 +445,15 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
             except Exception:
                 pass
 
+    # A page-level block signature overrides whatever terminal outcome the
+    # extension itself reported — if the tab we saw was a CAPTCHA/Cloudflare
+    # challenge, "failed"/"needs_review_non_submit" would misattribute the
+    # cause to the extension when it's really a bot-detection wall. Recorded
+    # as skipped_blocked so it's excluded from real failure-class clustering.
+    if page_block_detected:
+        outcome = "skipped_blocked"
+        failure_reason = page_block_reason
+
     await db_state.update_job_outcome(
         ctx.run_id, job_id, ats, outcome=outcome, phase_reached=phase_reached,
         failure_reason=failure_reason, fields_filled=fields_filled,
@@ -421,5 +466,6 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
         failure_reason=failure_reason, fields_filled=fields_filled,
         fields_total=fields_total, page_fingerprint=page_fingerprint,
         debug_log_ref=debug_log_ref, field_failures=field_failures,
+        page_block_detected=page_block_detected, page_block_reason=page_block_reason,
     )
     return result
