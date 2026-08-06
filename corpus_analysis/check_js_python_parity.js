@@ -12,7 +12,16 @@
 // must independently satisfy the same spec, and this is how you verify
 // they still do after an edit.
 //
-// Run: node corpus_analysis/check_js_python_parity.js [sampleSize] [seed]
+// Run: node corpus_analysis/check_js_python_parity.js [sampleSize] [seed] [--json-out=<path>]
+//
+// --json-out=<path> is an additive harness-support flag (test_pipeline/checkpoint/
+// gate.py needs this, added up front per joyful-sprouting-swan.md's gate.py
+// spec, not as a "fix" to this script's own behavior). Writes a structured
+// JSON summary to <path> in addition to the normal console output — console
+// output and exit code are completely unchanged, this is purely additive.
+// gate.py runs this script twice against the SAME fixed seed (pre-fix and
+// post-fix against a scratch copy) and diffs the two JSON summaries: post
+// must not introduce any disagreement that wasn't already present pre-fix.
 'use strict';
 
 const fs = require('fs');
@@ -21,8 +30,14 @@ const vm = require('vm');
 const { execFileSync } = require('child_process');
 
 const BASE = __dirname;
-const sampleSize = parseInt(process.argv[2], 10) || 200;
-const seed = parseInt(process.argv[3], 10) || Date.now();
+
+const rawArgs = process.argv.slice(2);
+const positionalArgs = rawArgs.filter(function (a) { return a.indexOf('--') !== 0; });
+const jsonOutArg = rawArgs.filter(function (a) { return a.indexOf('--json-out=') === 0; })[0];
+const jsonOutPath = jsonOutArg ? jsonOutArg.slice('--json-out='.length) : null;
+
+const sampleSize = parseInt(positionalArgs[0], 10) || 200;
+const seed = parseInt(positionalArgs[1], 10) || Date.now();
 
 // ---- Load the JS implementation in a minimal sandbox ----
 const src = fs.readFileSync(path.join(BASE, '..', 'extension', 'filler_utils.js'), 'utf8');
@@ -107,6 +122,34 @@ if (disagreements.length) {
     console.log(`    js:     category=${d.js.category} action=${d.js.action}`);
   });
   if (disagreements.length > 20) console.log(`  ... and ${disagreements.length - 20} more`);
+}
+
+if (jsonOutPath) {
+  const disagreementSummaries = disagreements.map(function (d) {
+    const label = d.field.label || '';
+    const id = d.field.id || '';
+    const itype = d.field.itype || '';
+    return {
+      key: [label, id, itype].join('|'),
+      label: label,
+      id: id,
+      itype: itype,
+      python: d.python,
+      js: d.js,
+    };
+  });
+  const summary = {
+    sampleSize: pyResults.length,
+    seed: seed,
+    agree: agree,
+    total: pyResults.length,
+    // Keyed by a stable identity (label+id+itype) rather than array index —
+    // gate.py diffs two separate runs' disagreement sets, and array order
+    // isn't guaranteed to be meaningful for that comparison even though
+    // sample content is (same seed = same sample() draw).
+    disagreements: disagreementSummaries,
+  };
+  fs.writeFileSync(jsonOutPath, JSON.stringify(summary, null, 2), 'utf8');
 }
 
 process.exit(disagreements.length > 0 ? 1 : 0);
