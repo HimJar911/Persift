@@ -164,8 +164,11 @@ async def _select_phase_b(count: int) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 class _SharedState:
-    def __init__(self, checkpoint_every: int) -> None:
-        self.circuit_breaker = CircuitBreaker(checkpoint_every=checkpoint_every)
+    def __init__(self, checkpoint_every: int, streak_threshold: int | None = None) -> None:
+        kwargs = {"checkpoint_every": checkpoint_every}
+        if streak_threshold is not None:
+            kwargs["streak_threshold"] = streak_threshold
+        self.circuit_breaker = CircuitBreaker(**kwargs)
         self.completed = 0
         self.write_lock = asyncio.Lock()
         self.stop_requested = False
@@ -384,6 +387,7 @@ async def run_harness(
     checkpoint_every: int,
     resume_run_id: int | None,
     api_base_url: str,
+    streak_threshold: int | None = None,
 ) -> None:
     await init_db()
     try:
@@ -419,7 +423,7 @@ async def run_harness(
 
         failures_path = failures_path_for_run(run_id)
         attempts_path = attempts_path_for_run(run_id)
-        state = _SharedState(checkpoint_every=checkpoint_every)
+        state = _SharedState(checkpoint_every=checkpoint_every, streak_threshold=streak_threshold)
         start_time = time.monotonic()
 
         async with async_playwright() as p:
@@ -464,12 +468,17 @@ def main() -> None:
     parser.add_argument("--checkpoint-every", type=int, default=50)
     parser.add_argument("--resume-run-id", type=int, default=None)
     parser.add_argument("--api-base-url", default=_DEFAULT_API_BASE)
+    parser.add_argument(
+        "--streak-threshold", type=int, default=None,
+        help="Circuit-breaker block_streak threshold (default: circuit_breaker.py's own default, 10). "
+             "Phase 1 smoke test per the plan lowers this to 3.",
+    )
     args = parser.parse_args()
 
     asyncio.run(run_harness(
         ats=args.ats, count=args.count, workers=args.workers,
         checkpoint_every=args.checkpoint_every, resume_run_id=args.resume_run_id,
-        api_base_url=args.api_base_url,
+        api_base_url=args.api_base_url, streak_threshold=args.streak_threshold,
     ))
 
 
