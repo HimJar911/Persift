@@ -45,3 +45,12 @@ __pycache__/
 
 # Claude Code local config
 .claude/
+
+# Self-healing test pipeline (test_pipeline/) working/generated data — per
+# joyful-sprouting-swan.md's "VM data lifecycle" decision, only code (git
+# commits) and interpreter_regressions.json entries are permanent artifacts;
+# everything below is throwaway working state, not a project deliverable.
+test_pipeline_scratch/
+test_pipeline_profiles/
+failures/
+checkpoints/
