@@ -238,6 +238,28 @@ async def get_recent_outcomes_in_order(run_id: int, sample_phase: str, limit: in
     return [r["outcome"] for r in rows]
 
 
+async def get_recent_outcomes_with_timestamps(run_id: int, sample_phase: str, limit: int) -> list[dict]:
+    """Same as get_recent_outcomes_in_order but also returns ended_at —
+    completion.py's criterion #2 needs to filter the consecutive-clean
+    window to only jobs that finished AFTER the last accepted fix's commit
+    timestamp, which get_recent_outcomes_in_order alone can't support.
+    Kept as a separate function rather than changing that one's return
+    shape, since it's already relied on elsewhere with the simpler
+    contract."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT outcome, ended_at FROM harness_job_state
+            WHERE run_id = $1 AND sample_phase = $2 AND ended_at IS NOT NULL
+            ORDER BY ended_at DESC
+            LIMIT $3
+            """,
+            run_id, sample_phase, limit,
+        )
+    return [{"outcome": r["outcome"], "ended_at": r["ended_at"]} for r in rows]
+
+
 async def get_jobs_completed_since(run_id: int, since: datetime) -> list[dict]:
     """All job_state rows with ended_at > since — the accumulation window a
     checkpoint pass clusters over. `since` is the previous checkpoint's
