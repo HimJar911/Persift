@@ -325,6 +325,19 @@ def _check_no_regression_conflicts(scratch_dir: Path, guard_regex_py: str, categ
     return (len(conflicts) == 0), conflicts
 
 
+# Files gate.py's checkers need to read but that are NOT git-tracked
+# (corpus_analysis/oc_compact_full_v2.json is .gitignore'd — 258MB, exceeds
+# GitHub's 100MB limit, "regenerable... not source"). A fresh git worktree
+# has no copy of these at all, so check_js_python_parity.js fails outright
+# with FileNotFoundError when run against one (confirmed live while testing
+# the --json-out flag). Never modified by any drafted fix, so a symlink
+# back to the real repo's copy is correct and avoids a 258MB copy per
+# checkpoint.
+_SYMLINK_INTO_SCRATCH = [
+    "corpus_analysis/oc_compact_full_v2.json",
+]
+
+
 def _create_scratch_worktree(run_id: int, checkpoint_n: int) -> Path:
     scratch_dir = PROJECT_DIR / "test_pipeline_scratch" / f"run_{run_id}_checkpoint_{checkpoint_n}"
     if scratch_dir.exists():
@@ -333,6 +346,25 @@ def _create_scratch_worktree(run_id: int, checkpoint_n: int) -> Path:
         ["git", "worktree", "add", "--detach", str(scratch_dir), "HEAD"],
         cwd=PROJECT_DIR, check=True, capture_output=True, text=True,
     )
+
+    for relpath in _SYMLINK_INTO_SCRATCH:
+        real_path = PROJECT_DIR / relpath
+        link_path = scratch_dir / relpath
+        if not real_path.exists():
+            logger.warning("Cannot symlink %s into scratch worktree — source doesn't exist locally.", relpath)
+            continue
+        try:
+            if link_path.exists() or link_path.is_symlink():
+                link_path.unlink()
+            link_path.symlink_to(real_path)
+        except OSError:
+            logger.warning(
+                "Could not symlink %s into scratch worktree (Windows may need admin/dev-mode for "
+                "symlinks) — falling back to a copy.", relpath, exc_info=True,
+            )
+            import shutil
+            shutil.copy2(real_path, link_path)
+
     return scratch_dir
 
 
