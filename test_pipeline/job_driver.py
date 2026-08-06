@@ -60,6 +60,7 @@ class JobResult:
     field_failures: list[FieldFailure]
     page_block_detected: bool = False
     page_block_reason: str | None = None
+    all_attempts: list[dict] = dataclasses.field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +225,7 @@ _FIND_BY_LABEL_JS = r"""
         const text = norm(labelEl ? labelEl.textContent : (el.getAttribute('aria-label') || el.placeholder));
         if (text && (text === target || text.startsWith(target) || target.startsWith(text))) {
             let value = '';
+            let role = el.getAttribute('role') || '';
             if (el.tagName === 'SELECT') {
                 value = el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : '';
             } else if (el.type === 'checkbox' || el.type === 'radio') {
@@ -234,9 +236,48 @@ _FIND_BY_LABEL_JS = r"""
                     const control = el.closest('.select__control');
                     const sv = control ? control.querySelector('.select__single-value') : null;
                     value = sv ? sv.textContent : '';
+                    if (control) role = role || 'combobox';
                 }
             }
-            return { found: true, landed: !!value && value.trim().length > 0 };
+            // Structural signals mirroring filler_utils.js's enrichField(),
+            // captured independently here (not reused from the extension)
+            // so cluster.py's structural-fingerprint grouping has real data
+            // to key on for BOTH failures and successes, not just label
+            // text — per the plan's clustering spec (autocomplete/id/role/
+            // html_type/options_hash, checked before label similarity).
+            let optionsHash = '';
+            try {
+                let optionTexts = [];
+                if (el.tagName === 'SELECT') {
+                    optionTexts = Array.from(el.options).map(o => o.text.trim());
+                } else {
+                    const control = el.closest('.select__control');
+                    if (control) {
+                        // Options only populate once opened — best-effort only,
+                        // same known limitation as enrichField()'s options field.
+                        optionTexts = [];
+                    }
+                }
+                if (optionTexts.length) {
+                    let hash = 0;
+                    const joined = optionTexts.join('|');
+                    for (let i = 0; i < joined.length; i++) {
+                        hash = ((hash << 5) - hash + joined.charCodeAt(i)) | 0;
+                    }
+                    optionsHash = hash.toString(16);
+                }
+            } catch (e) { /* best-effort only */ }
+
+            return {
+                found: true,
+                landed: !!value && value.trim().length > 0,
+                autocomplete: el.getAttribute('autocomplete') || '',
+                id: el.id || '',
+                role: role,
+                html_type: el.type || el.tagName.toLowerCase(),
+                options_hash: optionsHash,
+                required: !!el.required,
+            };
         }
     }
     return { found: false, landed: false };
@@ -263,31 +304,54 @@ def _parse_attempt_lines(debug_log: list) -> list[dict]:
     return attempts
 
 
-async def _verify_fields(page, debug_log: list) -> tuple[int, int, list[dict]]:
-    """Returns (fields_filled, fields_total, landed_empty_gaps), where
-    fields_total is the count of fields the extension's own logs claim it
-    attempted (any outcome), and fields_filled is how many the harness's
-    independent DOM re-check confirms actually landed a value."""
+async def _verify_fields(page, debug_log: list) -> tuple[int, int, list[dict], list[dict]]:
+    """Returns (fields_filled, fields_total, landed_empty_gaps, all_attempts).
+
+    all_attempts carries every field the extension's logs claim it
+    attempted, enriched with the harness's own independently-read structural
+    signals (autocomplete/id/role/html_type/options_hash) and landed-value
+    verdict — for BOTH successful and failed fields. This is the real data
+    source cluster.py's structural-fingerprint grouping and paired-success
+    lookup need; earlier drafts of this module only captured structure for
+    failures, which left cluster.py with nothing to diff a failing field's
+    structure against (the plan explicitly wants "800 React-Select
+    comboboxes succeed, 20 fail — what do those 20 share that the 800
+    don't," which is impossible without structural data on the 800 too)."""
     attempts = _parse_attempt_lines(debug_log)
     if not attempts:
-        return 0, 0, []
+        return 0, 0, [], []
 
     landed_empty = []
+    all_attempts = []
     filled_count = 0
     for a in attempts:
         try:
             result = await page.evaluate(_FIND_BY_LABEL_JS, a["label"])
         except Exception:
             result = {"found": False, "landed": False}
-        if result.get("landed"):
+
+        landed = bool(result.get("landed"))
+        enriched = {
+            **a,
+            "landed": landed,
+            "autocomplete": result.get("autocomplete", ""),
+            "id": result.get("id", ""),
+            "role": result.get("role", ""),
+            "html_type": result.get("html_type", ""),
+            "options_hash": result.get("options_hash", ""),
+            "required": bool(result.get("required", False)),
+        }
+        all_attempts.append(enriched)
+
+        if landed:
             filled_count += 1
         elif a["self_reported_verified"]:
             # The extension logged success but the harness's own independent
             # DOM read disagrees — a real "verification gap" class, distinct
             # from a plain fill failure the extension already knew about.
-            landed_empty.append({**a, "reason_code": "VERIFICATION_LANDED_EMPTY"})
+            landed_empty.append({**enriched, "reason_code": "VERIFICATION_LANDED_EMPTY"})
 
-    return filled_count, len(attempts), landed_empty
+    return filled_count, len(attempts), landed_empty, all_attempts
 
 
 # ---------------------------------------------------------------------------
@@ -347,6 +411,7 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
     fields_filled = fields_total = None
     page_block_detected = False
     page_block_reason = None
+    all_attempts: list[dict] = []
 
     try:
         await _seed_user_job(ctx.user_id, job_id, ats)
@@ -405,30 +470,59 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
 
         if page is not None:
             page_fingerprint = await _compute_page_fingerprint(page)
+            debug_log = storage.get("debug_log", [])
 
-            if outcome == "mechanically_verified":
-                debug_log = storage.get("debug_log", [])
-                fields_filled, fields_total, landed_empty = await _verify_fields(page, debug_log)
-                if landed_empty:
+            # Run field verification whenever there are attempt lines to
+            # check, not only on outcome == 'mechanically_verified' — a
+            # 'failed' job can still have partial attempts logged before
+            # whatever killed it (e.g. resume upload succeeded, form fields
+            # were filling, then a later field caused the failure). Without
+            # this, every failed job silently loses all its structural field
+            # data, leaving cluster.py nothing to cluster for the run's most
+            # important outcome class.
+            if debug_log:
+                fields_filled, fields_total, landed_empty, all_attempts = await _verify_fields(page, debug_log)
+
+                if outcome == "mechanically_verified" and landed_empty:
                     # A field the extension logged as verified lands empty
                     # under the harness's own independent DOM re-check — a
                     # distinct "verification failure" bug class per the
                     # plan (extension thought it succeeded but didn't).
                     outcome = "failed"
                     failure_reason = "VERIFICATION_LANDED_EMPTY"
-                    for gap in landed_empty:
-                        field_failures.append(FieldFailure(
-                            reason_code="VERIFICATION_LANDED_EMPTY",
-                            category_attempted=gap.get("category"),
-                            autocomplete="",
-                            id="",
-                            role="",
-                            html_type="",
-                            options_hash="",
-                            label=gap.get("label", ""),
-                            section="",
-                            required=False,
-                        ))
+
+                for gap in landed_empty:
+                    field_failures.append(FieldFailure(
+                        reason_code="VERIFICATION_LANDED_EMPTY",
+                        category_attempted=gap.get("category"),
+                        autocomplete=gap.get("autocomplete", ""),
+                        id=gap.get("id", ""),
+                        role=gap.get("role", ""),
+                        html_type=gap.get("html_type", ""),
+                        options_hash=gap.get("options_hash", ""),
+                        label=gap.get("label", ""),
+                        section="",
+                        required=gap.get("required", False),
+                    ))
+
+                # Fields the extension itself already reported as a fill
+                # failure (not the harness's own verification gap) — real
+                # structural data now available via the same enrichment.
+                if outcome != "mechanically_verified":
+                    for a in all_attempts:
+                        if not a["self_reported_verified"] and not a["landed"]:
+                            field_failures.append(FieldFailure(
+                                reason_code=a.get("reason") or "EXTENSION_REPORTED_FAILURE",
+                                category_attempted=a.get("category"),
+                                autocomplete=a.get("autocomplete", ""),
+                                id=a.get("id", ""),
+                                role=a.get("role", ""),
+                                html_type=a.get("html_type", ""),
+                                options_hash=a.get("options_hash", ""),
+                                label=a.get("label", ""),
+                                section="",
+                                required=a.get("required", False),
+                            ))
 
         if outcome != "mechanically_verified":
             debug_log = storage.get("debug_log", [])
@@ -467,5 +561,6 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
         fields_total=fields_total, page_fingerprint=page_fingerprint,
         debug_log_ref=debug_log_ref, field_failures=field_failures,
         page_block_detected=page_block_detected, page_block_reason=page_block_reason,
+        all_attempts=all_attempts,
     )
     return result

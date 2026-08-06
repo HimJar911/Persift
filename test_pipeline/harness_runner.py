@@ -22,7 +22,8 @@ import test_pipeline.db_state as db_state
 from db import close_db, init_db
 from test_pipeline.circuit_breaker import CircuitBreaker
 from test_pipeline.failure_log import (
-    FieldFailure, JobFailureRecord, append_failure, failures_path_for_run,
+    FieldAttempt, FieldFailure, JobAttemptRecord, JobFailureRecord,
+    append_attempt_record, append_failure, attempts_path_for_run, failures_path_for_run,
 )
 from test_pipeline.job_driver import WorkerContext, run_job
 
@@ -224,6 +225,7 @@ async def _worker(
     user_id: str,
     api_base_url: str,
     failures_path: Path,
+    attempts_path: Path,
 ) -> None:
     """Each worker claims its own jobs directly from harness_job_state via
     db_state.claim_next_pending()'s FOR UPDATE SKIP LOCKED — not drained
@@ -311,6 +313,29 @@ async def _worker(
                     )
                     append_failure(failures_path, record)
 
+                # Attempt record: every outcome, not just failures — see
+                # failure_log.py's module docstring for why. Skipped only
+                # when there's genuinely nothing to record (e.g. the tab
+                # never opened, no debug_log at all).
+                if result.all_attempts:
+                    attempt_record = JobAttemptRecord(
+                        harness_version=HARNESS_VERSION, run_id=run_id,
+                        job_id=result.job_id, ats=result.ats, sample_phase=job["sample_phase"],
+                        outcome=result.outcome,
+                        attempts=[
+                            FieldAttempt(
+                                self_reported_verified=a["self_reported_verified"],
+                                landed=a["landed"], category=a["category"], label=a["label"],
+                                reason=a.get("reason"), autocomplete=a.get("autocomplete", ""),
+                                id=a.get("id", ""), role=a.get("role", ""),
+                                html_type=a.get("html_type", ""), options_hash=a.get("options_hash", ""),
+                                required=a.get("required", False),
+                            )
+                            for a in result.all_attempts
+                        ],
+                    )
+                    append_attempt_record(attempts_path, attempt_record)
+
                 logger.info(
                     "[w%d %d] %s (%s) -> %s%s",
                     worker_id, state.completed, job.get("company_name", ""), job["job_id"],
@@ -393,13 +418,14 @@ async def run_harness(
             return
 
         failures_path = failures_path_for_run(run_id)
+        attempts_path = attempts_path_for_run(run_id)
         state = _SharedState(checkpoint_every=checkpoint_every)
         start_time = time.monotonic()
 
         async with async_playwright() as p:
             worker_tasks = [
                 asyncio.create_task(
-                    _worker(w, p, state, run_id, user_ids[w - 1], api_base_url, failures_path)
+                    _worker(w, p, state, run_id, user_ids[w - 1], api_base_url, failures_path, attempts_path)
                 )
                 for w in range(1, workers + 1)
             ]
