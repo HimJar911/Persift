@@ -116,15 +116,33 @@ async def _read_storage(sw) -> dict:
     )
 
 
+def _is_real_job_page(url: str) -> bool:
+    """Excludes both extension pages and the browser's own placeholder tabs
+    (about:blank, chrome://newtab/) — real bug found live: a fresh
+    persistent context's default about:blank tab was being returned as if
+    it were the job's real tab, because the original filter only excluded
+    chrome-extension:// URLs. This produced a false 90s timeout on jobs
+    that actually completed correctly in ~12s when re-run manually — the
+    harness was polling chrome.storage.local (fine) but the block-check /
+    field-verification / page-fingerprint logic downstream all silently
+    operated on about:blank instead of the real tab."""
+    if not url or url == "about:blank":
+        return False
+    if url.startswith("chrome-extension://") or url.startswith("chrome://"):
+        return False
+    return True
+
+
 async def _poll_until_tab_open(sw, context, timeout_s: float = 20.0):
-    """Waits for phase to leave 'fetching'/'idle' and a non-extension page to
-    appear in the context — the earliest point a block-signature check can
-    run, per the plan's "checked right after each tab opens, before the
-    extension starts filling." Returns the Page, or None if no tab ever
-    opened within timeout_s (e.g. the claim itself returned no job)."""
+    """Waits for phase to leave 'fetching'/'idle' and a REAL (non-blank,
+    non-extension) page to appear in the context — the earliest point a
+    block-signature check can run, per the plan's "checked right after
+    each tab opens, before the extension starts filling." Returns the
+    Page, or None if no real tab ever opened within timeout_s (e.g. the
+    claim itself returned no job)."""
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        candidates = [p for p in context.pages if not p.url.startswith("chrome-extension://")]
+        candidates = [p for p in context.pages if _is_real_job_page(p.url)]
         if candidates:
             return candidates[-1]
         await asyncio.sleep(0.5)
@@ -217,12 +235,36 @@ _FIND_BY_LABEL_JS = r"""
     // actually correctly filled (needs_sponsorship, Apexcompanies job
     // 5113246008, confirmed live). A prefix match, both sides trimmed after
     // slicing, is robust to that boundary difference.
-    const norm = s => (s || '').trim().toLowerCase().slice(0, 60).trim();
+    //
+    // Second real bug found live (Oklo job 5743023004, "Are you legally
+    // authorized to work in the United States?"): filler_utils.js's
+    // getLabelForEl() reads via .innerText (rendered text, collapses
+    // line-break whitespace to a space) and checks aria-labelledby BEFORE
+    // el.labels — this independent re-check used el.labels only (which is
+    // empty for aria-labelledby-associated inputs, a real and common
+    // Greenhouse pattern) and .textContent (raw DOM text, preserves a
+    // literal "\n" between the question and a trailing "*"). Both gaps
+    // together produced a false MISS on a field that was actually
+    // correctly filled. Fixed: check aria-labelledby first (same priority
+    // order as getLabelForEl), and collapse all internal whitespace runs
+    // to a single space before comparing, not just trim the ends.
+    const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 60).trim();
     const target = norm(labelText);
     const candidates = document.querySelectorAll('input, select, textarea, [role="combobox"]');
     for (const el of candidates) {
-        const labelEl = el.labels && el.labels[0];
-        const text = norm(labelEl ? labelEl.textContent : (el.getAttribute('aria-label') || el.placeholder));
+        let rawText = '';
+        const labelledBy = el.getAttribute('aria-labelledby');
+        if (labelledBy) {
+            rawText = labelledBy.split(' ')
+                .map(id => { const e = document.getElementById(id); return e ? e.innerText : ''; })
+                .filter(Boolean)
+                .join(' ');
+        }
+        if (!rawText) {
+            const labelEl = el.labels && el.labels[0];
+            rawText = labelEl ? labelEl.innerText : (el.getAttribute('aria-label') || el.placeholder || '');
+        }
+        const text = norm(rawText);
         if (text && (text === target || text.startsWith(target) || target.startsWith(text))) {
             let value = '';
             let role = el.getAttribute('role') || '';
@@ -459,12 +501,15 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
 
         # The job's tab: each worker context runs exactly one job at a time
         # (one persistent context per worker, per harness_runner.py's
-        # per-worker isolation), so the most-recently-opened non-extension
-        # page in this context is unambiguously the job's tab. Playwright
-        # Page objects carry no Chrome-internal tab-id property to match
-        # against storage['current_tab_id'] directly, so recency is the
-        # only reliable signal here, not an id lookup.
-        candidate_pages = [p for p in ctx.context.pages if not p.url.startswith("chrome-extension://")]
+        # per-worker isolation), so the most-recently-opened real (non-blank,
+        # non-extension) page in this context is unambiguously the job's
+        # tab. Playwright Page objects carry no Chrome-internal tab-id
+        # property to match against storage['current_tab_id'] directly, so
+        # recency is the only reliable signal here, not an id lookup. Uses
+        # the same _is_real_job_page() filter as _poll_until_tab_open — see
+        # its docstring for the real bug this guards against (a fresh
+        # context's about:blank tab being mistaken for the job's real tab).
+        candidate_pages = [p for p in ctx.context.pages if _is_real_job_page(p.url)]
         if candidate_pages:
             page = candidate_pages[-1]
 
