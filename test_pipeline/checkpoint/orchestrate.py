@@ -1,0 +1,248 @@
+"""Ties cluster.py -> propose_fix.py -> gate.py -> report.py together into
+one checkpoint pass, and applies the safe subset of fixes automatically.
+
+**Auto-apply scope, confirmed with the user 2026-08-06**: a proposed fix is
+auto-applied to the REAL repo (git apply + commit, no scratch copy involved
+for this step) only if ALL of the following hold:
+    1. It's a ProposedFix (not NeedsHumanDecision/NoGeneralizedFix) — i.e.
+       propose_fix.py's narrow negative-guard-only scope already applies.
+    2. Its negative_guard_check_passed is True (no conflict with an
+       existing regression entry).
+    3. gate.py's three checks all pass (regression 100%, zero new parity
+       disagreements, replay coverage doesn't drop).
+    4. Fewer than AUTO_APPLY_CAP_PER_CHECKPOINT fixes have already been
+       auto-applied THIS checkpoint.
+
+Everything else — any NeedsHumanDecision, any NoGeneralizedFix, any
+ProposedFix that fails its guardrail or gate, or any ProposedFix beyond the
+cap — is left for human review in the checkpoint report. The cap exists as
+insurance against a subtle gate blind spot compounding across many fixes
+in one unattended pass, same "start conservative" instinct as the circuit
+breaker's concurrency default — cheap on the common case, bounds the
+downside on an uncommon one.
+
+Public API:
+    CheckpointResult          — everything that happened this checkpoint (dataclass)
+    run_checkpoint(run_id, checkpoint_n, since, jobs_processed_this_batch,
+                    occurrence_threshold_pct, cumulative_accepted_fixes) -> CheckpointResult
+"""
+
+import dataclasses
+import logging
+import subprocess
+from pathlib import Path
+
+import test_pipeline.db_state as db_state
+from test_pipeline.checkpoint.cluster import Cluster, cluster_failures
+from test_pipeline.checkpoint.gate import GateResult, run_gate
+from test_pipeline.checkpoint.propose_fix import (
+    NeedsHumanDecision, NoGeneralizedFix, ProposedFix,
+    cleanup_scratch_worktree, propose_fixes_for_clusters,
+)
+from test_pipeline.checkpoint.report import write_checkpoint_report
+from test_pipeline.failure_log import (
+    attempts_path_for_run, count_lines, failures_path_for_run,
+    read_attempt_records, read_failures_since,
+)
+
+logger = logging.getLogger(__name__)
+
+PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+
+AUTO_APPLY_CAP_PER_CHECKPOINT = 3
+
+
+@dataclasses.dataclass
+class AppliedFix:
+    fix: ProposedFix
+    commit_sha: str
+
+
+@dataclasses.dataclass
+class CheckpointResult:
+    checkpoint_n: int
+    clusters: list[Cluster]
+    proposed_fixes: list[ProposedFix]
+    needs_human_decision: list[NeedsHumanDecision]
+    no_generalized_fix: list[NoGeneralizedFix]
+    gate_results: dict  # id(ProposedFix) -> GateResult
+    applied_fixes: list[AppliedFix]
+    report_path: Path
+    halted_for_review: bool
+
+
+def _apply_fix_to_real_repo(fix: ProposedFix) -> str:
+    """Applies fix.diff_js and fix.diff_py directly to the real repo files
+    (NOT the scratch copy — that was only ever for gating) and commits.
+    Returns the new commit SHA. Uses `git apply` against unified diffs
+    gate.py/propose_fix.py already produced via `git diff` in the scratch
+    worktree, which apply cleanly against the real files since the scratch
+    worktree was branched from the same HEAD the real repo is still at
+    (true as long as no other commit landed on filler_utils.js/
+    interpreter_p14.py between checkpoint start and this apply — a real,
+    small race window, accepted here since checkpoints already serialize:
+    the harness's own worker loop is paused while this function runs)."""
+    for diff_text, relpath in ((fix.diff_js, "extension/filler_utils.js"),
+                                 (fix.diff_py, "corpus_analysis/interpreter_p14.py")):
+        if not diff_text.strip():
+            continue
+        proc = subprocess.run(
+            ["git", "apply", "--whitespace=nowarn", "-"],
+            cwd=PROJECT_DIR, input=diff_text, capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"git apply failed for {relpath}: {proc.stderr}")
+
+    _append_regression_entry(fix.regression_entry, fix.category)
+
+    subprocess.run(
+        ["git", "add", "extension/filler_utils.js", "corpus_analysis/interpreter_p14.py",
+         "corpus_analysis/interpreter_regressions.json"],
+        cwd=PROJECT_DIR, check=True, capture_output=True, text=True,
+    )
+    commit_msg = (
+        f"Self-healing pipeline: auto-applied negative guard on {fix.category!r} "
+        f"(term={fix.guard_term!r})\n\n"
+        f"{fix.rationale}\n\n"
+        f"Gate-clean (100% regressions, 0 new parity disagreements, replay coverage "
+        f"held), auto-applied under the harness's capped auto-apply policy "
+        f"(max {AUTO_APPLY_CAP_PER_CHECKPOINT}/checkpoint). design_layer_tag="
+        f"interpreter_pattern_collision.\n\n"
+        f"Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+    )
+    subprocess.run(
+        ["git", "commit", "-m", commit_msg],
+        cwd=PROJECT_DIR, check=True, capture_output=True, text=True,
+    )
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=PROJECT_DIR, check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    return sha
+
+
+def _append_regression_entry(entry: dict, category: str) -> None:
+    """Fills in expected_capability (left blank by propose_fix.py — see its
+    own comment) with the category the guard was added to, since by
+    definition a passing negative guard doesn't change what labels DO
+    resolve to `category`, only narrows what incorrectly did. Appends to
+    the real interpreter_regressions.json, not the scratch copy's."""
+    import json
+    path = PROJECT_DIR / "corpus_analysis" / "interpreter_regressions.json"
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    entry = dict(entry)
+    entry["expected_capability"] = category
+    entries.append(entry)
+    path.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+async def run_checkpoint(
+    run_id: int,
+    checkpoint_n: int,
+    failure_log_lines_at_last_checkpoint: int,
+    jobs_processed_this_batch: int,
+    cumulative_accepted_fixes: list[dict],
+) -> tuple[CheckpointResult, int]:
+    """The full checkpoint pass: cluster -> propose -> gate -> apply (capped,
+    guard-only, gate-clean) -> report. `failure_log_lines_at_last_checkpoint`
+    is the failure-log line count as of the previous checkpoint (0 for the
+    first) — used to cluster only failures accumulated SINCE then, not
+    re-cluster (and re-gate, at ~5 min/gate-run) already-resolved failures
+    every checkpoint. Caller (harness_runner.py) is responsible for having
+    paused all workers before calling this and relaunching them after
+    (picking up any applied fixes). Returns (result, new_line_count) — the
+    caller persists new_line_count as the boundary for the NEXT checkpoint."""
+    failures_path = failures_path_for_run(run_id)
+    attempts_path = attempts_path_for_run(run_id)
+
+    batch_failure_records = read_failures_since(failures_path, failure_log_lines_at_last_checkpoint)
+    new_line_count = count_lines(failures_path)
+    # Paired-success lookup still wants the run's FULL attempt history, not
+    # just this batch — per cluster.py's own docstring ("800 comboboxes
+    # succeed, 20 fail" needs the 800 from anywhere in the run).
+    all_attempt_records = list(read_attempt_records(attempts_path))
+
+    clusters = cluster_failures(batch_failure_records, all_attempt_records, jobs_processed_this_batch)
+
+    proposal_results, scratch_dir = propose_fixes_for_clusters(clusters, run_id, checkpoint_n)
+
+    proposed_fixes = [r for r in proposal_results if isinstance(r, ProposedFix)]
+    needs_human_decision = [r for r in proposal_results if isinstance(r, NeedsHumanDecision)]
+    no_generalized_fix = [r for r in proposal_results if isinstance(r, NoGeneralizedFix)]
+
+    gate_results: dict = {}
+    applied_fixes: list[AppliedFix] = []
+
+    try:
+        for fix in proposed_fixes:
+            if not fix.negative_guard_check_passed:
+                logger.info("Fix on %r skipped auto-apply: negative-guard conflict.", fix.category)
+                continue
+
+            gr = run_gate(scratch_dir)
+            gate_results[id(fix)] = gr
+
+            if not gr.passed:
+                logger.info("Fix on %r skipped auto-apply: gate failed.", fix.category)
+                continue
+
+            if len(applied_fixes) >= AUTO_APPLY_CAP_PER_CHECKPOINT:
+                logger.info(
+                    "Fix on %r gate-clean but auto-apply cap (%d) reached this checkpoint — leaving for human review.",
+                    fix.category, AUTO_APPLY_CAP_PER_CHECKPOINT,
+                )
+                continue
+
+            try:
+                sha = _apply_fix_to_real_repo(fix)
+                applied_fixes.append(AppliedFix(fix=fix, commit_sha=sha))
+                logger.info("Auto-applied fix on %r (guard=%r) as commit %s", fix.category, fix.guard_term, sha[:8])
+            except Exception:
+                logger.error("Failed to apply gate-clean fix on %r to the real repo — leaving for human review.",
+                             fix.category, exc_info=True)
+    finally:
+        if scratch_dir is not None:
+            cleanup_scratch_worktree(scratch_dir)
+
+    applied_ids = {id(af.fix) for af in applied_fixes}
+    unapplied_fixes = [f for f in proposed_fixes if id(f) not in applied_ids]
+
+    outcome_counts_by_phase = {
+        "A": await db_state.get_outcome_counts(run_id, sample_phase="A"),
+        "B": await db_state.get_outcome_counts(run_id, sample_phase="B"),
+    }
+    fingerprints = await db_state.get_distinct_page_fingerprints(run_id)
+
+    new_cumulative = cumulative_accepted_fixes + [
+        {"design_layer_tag": af.fix.design_layer_tag} for af in applied_fixes
+    ]
+
+    report_path = write_checkpoint_report(
+        run_id=run_id, checkpoint_n=checkpoint_n,
+        outcome_counts_by_phase=outcome_counts_by_phase,
+        circuit_breaker_status={
+            "block_streak": 0, "streak_threshold": 0, "page_block_tripped": False,
+            "page_block_reason": None, "should_halt": False, "should_force_early_checkpoint": False,
+        },
+        distinct_fingerprints_seen=len(fingerprints), new_fingerprints_this_batch=0,
+        clusters=clusters, occurrence_threshold_pct=0.02,
+        proposed_fixes=proposed_fixes, gate_results=gate_results,
+        needs_human_decision=needs_human_decision, no_generalized_fix=no_generalized_fix,
+        cumulative_accepted_fixes=new_cumulative,
+    )
+
+    # Halt for human review whenever there's something a human actually
+    # needs to look at: any needs_human_decision item, or any proposed fix
+    # that wasn't auto-applied (failed its gate/guardrail, or was gate-clean
+    # but over the cap). A checkpoint where every proposed fix got cleanly
+    # auto-applied and there are no open needs_human_decision items does
+    # NOT need to halt — that's the whole point of the capped auto-apply
+    # path.
+    halted_for_review = bool(needs_human_decision) or bool(unapplied_fixes)
+
+    result = CheckpointResult(
+        checkpoint_n=checkpoint_n, clusters=clusters, proposed_fixes=proposed_fixes,
+        needs_human_decision=needs_human_decision, no_generalized_fix=no_generalized_fix,
+        gate_results=gate_results, applied_fixes=applied_fixes,
+        report_path=report_path, halted_for_review=halted_for_review,
+    )
+    return result, new_line_count

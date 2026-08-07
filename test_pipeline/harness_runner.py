@@ -20,6 +20,7 @@ from playwright.async_api import async_playwright
 
 import test_pipeline.db_state as db_state
 from db import close_db, init_db
+from test_pipeline.checkpoint.orchestrate import run_checkpoint
 from test_pipeline.circuit_breaker import CircuitBreaker
 from test_pipeline.failure_log import (
     FieldAttempt, FieldFailure, JobAttemptRecord, JobFailureRecord,
@@ -172,6 +173,7 @@ class _SharedState:
         self.completed = 0
         self.write_lock = asyncio.Lock()
         self.stop_requested = False
+        self.checkpoint_due = False
         self.jobs_since_last_checkpoint = 0
         self.checkpoint_every = checkpoint_every
         self.known_fingerprints: set[str] = set()
@@ -245,7 +247,7 @@ async def _worker(
         context, sw = await _get_or_relaunch_context(p, profile_dir, jobs_since_launch)
 
         while True:
-            if state.stop_requested:
+            if state.stop_requested or state.checkpoint_due:
                 return
 
             job = await db_state.claim_next_pending(run_id, worker_id)
@@ -352,6 +354,18 @@ async def _worker(
                     )
                     state.stop_requested = True
 
+                # Checkpoint trigger: whichever comes first, per the plan —
+                # a full batch (jobs_since_last_checkpoint >= checkpoint_every)
+                # or an early trigger (circuit breaker's own early-checkpoint
+                # signal, mirroring its "don't wait out a fixed count once
+                # you already know" logic). Workers stop pulling NEW jobs
+                # once this flips (checked at the top of the loop) but any
+                # already-claimed job still finishes normally — a checkpoint
+                # never interrupts a job mid-flight.
+                if (state.jobs_since_last_checkpoint >= state.checkpoint_every
+                        or state.circuit_breaker.should_force_early_checkpoint):
+                    state.checkpoint_due = True
+
     finally:
         if context is not None:
             try:
@@ -423,24 +437,79 @@ async def run_harness(
 
         failures_path = failures_path_for_run(run_id)
         attempts_path = attempts_path_for_run(run_id)
-        state = _SharedState(checkpoint_every=checkpoint_every, streak_threshold=streak_threshold)
         start_time = time.monotonic()
 
-        async with async_playwright() as p:
-            worker_tasks = [
-                asyncio.create_task(
-                    _worker(w, p, state, run_id, user_ids[w - 1], api_base_url, failures_path, attempts_path)
-                )
-                for w in range(1, workers + 1)
-            ]
-            await asyncio.gather(*worker_tasks, return_exceptions=True)
+        # Checkpoint-cycle loop: run workers until either the queue drains,
+        # the circuit breaker halts, or a checkpoint triggers; if a
+        # checkpoint triggers, run it (workers are fully stopped first —
+        # checkpointing never runs concurrently with live job processing),
+        # then either halt for human review or relaunch a fresh round of
+        # workers (picking up any auto-applied fix) and keep going.
+        checkpoint_n = 0
+        failure_log_lines_at_last_checkpoint = 0
+        cumulative_accepted_fixes: list[dict] = []
+        run_halted_for_review = False
 
-        if state.circuit_breaker.page_block_tripped:
-            n_marked = await _drain_remaining_as_skipped_blocked(run_id)
-            logger.warning(
-                "Circuit breaker halted on a page-level block (%s) — %d remaining job(s) marked skipped_blocked.",
-                state.circuit_breaker.page_block_reason, n_marked,
-            )
+        while True:
+            pending = await db_state.get_pending_count(run_id)
+            if pending == 0:
+                break
+
+            state = _SharedState(checkpoint_every=checkpoint_every, streak_threshold=streak_threshold)
+
+            async with async_playwright() as p:
+                worker_tasks = [
+                    asyncio.create_task(
+                        _worker(w, p, state, run_id, user_ids[w - 1], api_base_url, failures_path, attempts_path)
+                    )
+                    for w in range(1, workers + 1)
+                ]
+                await asyncio.gather(*worker_tasks, return_exceptions=True)
+
+            if state.circuit_breaker.page_block_tripped:
+                n_marked = await _drain_remaining_as_skipped_blocked(run_id)
+                logger.warning(
+                    "Circuit breaker halted on a page-level block (%s) — %d remaining job(s) marked skipped_blocked.",
+                    state.circuit_breaker.page_block_reason, n_marked,
+                )
+                break
+
+            if state.stop_requested and not state.checkpoint_due:
+                # Circuit breaker tripped on an outcome streak (not a page
+                # block, handled above) — halt the whole run for human
+                # investigation, same as Phase 1's behavior before
+                # checkpointing existed.
+                logger.warning("Run halted: circuit breaker tripped on an outcome streak.")
+                break
+
+            if state.checkpoint_due:
+                checkpoint_n += 1
+                logger.info("Checkpoint %d triggered (%d jobs since last checkpoint) — running checkpoint pass...",
+                            checkpoint_n, state.jobs_since_last_checkpoint)
+                checkpoint_result, failure_log_lines_at_last_checkpoint = await run_checkpoint(
+                    run_id=run_id, checkpoint_n=checkpoint_n,
+                    failure_log_lines_at_last_checkpoint=failure_log_lines_at_last_checkpoint,
+                    jobs_processed_this_batch=state.jobs_since_last_checkpoint,
+                    cumulative_accepted_fixes=cumulative_accepted_fixes,
+                )
+                cumulative_accepted_fixes += [
+                    {"design_layer_tag": af.fix.design_layer_tag} for af in checkpoint_result.applied_fixes
+                ]
+                logger.info(
+                    "Checkpoint %d: %d fix(es) auto-applied, %d cluster(s) need human decision, "
+                    "%d proposed fix(es) left unapplied. Report: %s",
+                    checkpoint_n, len(checkpoint_result.applied_fixes),
+                    len(checkpoint_result.needs_human_decision),
+                    len(checkpoint_result.proposed_fixes) - len(checkpoint_result.applied_fixes),
+                    checkpoint_result.report_path,
+                )
+                if checkpoint_result.halted_for_review:
+                    run_halted_for_review = True
+                    break
+                # Clean checkpoint (everything auto-applied or no fixes
+                # needed) — continue with a fresh worker round, which
+                # re-launches contexts and so picks up any applied fix.
+                continue
 
         elapsed = time.monotonic() - start_time
         outcomes = await db_state.get_outcome_counts(run_id)
@@ -451,10 +520,11 @@ async def run_harness(
         print(f"  HARNESS RUN {run_id} — batch complete")
         for outcome, n in sorted(outcomes.items(), key=lambda kv: -kv[1]):
             print(f"  {outcome:28s} {n:4d}")
-        print(f"  distinct page fingerprints seen: {len(fingerprints)} ({state.new_fingerprints_this_batch} new this batch)")
+        print(f"  distinct page fingerprints seen: {len(fingerprints)}")
+        print(f"  checkpoints run: {checkpoint_n}, fixes auto-applied: {len(cumulative_accepted_fixes)}")
         print(f"  elapsed: {elapsed / 60:.1f} min")
-        if state.circuit_breaker.should_force_early_checkpoint or state.jobs_since_last_checkpoint >= checkpoint_every:
-            print(f"  -> checkpoint pass due (see test_pipeline/checkpoint/) — {state.jobs_since_last_checkpoint} jobs since last checkpoint")
+        if run_halted_for_review:
+            print(f"  -> HALTED FOR HUMAN REVIEW — see the latest checkpoint report, then --resume-run-id {run_id}")
         print(_hr, flush=True)
     finally:
         await close_db()
