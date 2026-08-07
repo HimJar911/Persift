@@ -37,6 +37,20 @@ _BLOCK_SIGNATURES = re.compile(
 # conservative"), this trips sooner.
 _BLOCK_STREAK_THRESHOLD = 10
 
+# Real bug found live (Aug 7): the original design halted on the FIRST
+# page-block sighting, no streak needed. Once looks_blocked() actually
+# worked correctly (a real fix -- see job_driver.py's status-check comment),
+# this meant one Cloudflare-fronted domain (jobs.bayada.com) blocking a
+# single job instantly killed a 99-job run with 98 jobs never attempted --
+# the SAME job had succeeded in an earlier run, confirming the block was
+# domain-specific/transient, not a broad "we're blocked everywhere" signal.
+# Page-blocks now need their own (lower, since a real block is a stronger
+# signal than a generic timeout/failure) streak before halting, same
+# streak-not-first-sighting principle _BLOCK_STREAK_THRESHOLD already uses
+# for outcome streaks -- distinguishes "one domain is Cloudflare-fronted"
+# from "we are actually broadly blocked."
+_PAGE_BLOCK_STREAK_THRESHOLD = 3
+
 _STREAK_OUTCOMES = {"failed", "timeout", "harness_error"}
 _RESET_OUTCOMES = {"mechanically_verified", "needs_review_non_submit"}
 
@@ -61,36 +75,51 @@ class CircuitBreaker:
     unremarkable on its own, but a longer streak regardless of which worker
     hit it is a real signal."""
 
-    def __init__(self, checkpoint_every: int = 50, streak_threshold: int = _BLOCK_STREAK_THRESHOLD) -> None:
+    def __init__(self, checkpoint_every: int = 50, streak_threshold: int = _BLOCK_STREAK_THRESHOLD,
+                 page_block_streak_threshold: int = _PAGE_BLOCK_STREAK_THRESHOLD) -> None:
         self.streak_threshold = streak_threshold
+        self.page_block_streak_threshold = page_block_streak_threshold
         self.checkpoint_every = checkpoint_every
         self.block_streak = 0
+        self.page_block_streak = 0
         self.page_block_tripped = False
         self.page_block_reason: str | None = None
 
     def record_page_block(self, reason: str) -> None:
         """A page-level block signature was seen directly (CAPTCHA/Cloudflare/
-        etc.) — halt immediately, distinct from an outcome streak."""
-        self.page_block_tripped = True
+        etc.). Requires page_block_streak_threshold CONSECUTIVE sightings
+        before tripping should_halt, not the first one -- see
+        _PAGE_BLOCK_STREAK_THRESHOLD's comment for why (one blocked domain
+        used to kill an entire run)."""
+        self.page_block_streak += 1
         self.page_block_reason = reason
+        if self.page_block_streak >= self.page_block_streak_threshold:
+            self.page_block_tripped = True
 
     def record_outcome(self, outcome: str) -> None:
         if outcome in _STREAK_OUTCOMES:
             self.block_streak += 1
         elif outcome in _RESET_OUTCOMES:
             self.block_streak = 0
+            self.page_block_streak = 0
         # skipped_blocked is neither — it's a consequence of an
-        # already-tripped breaker, not new evidence either way.
+        # already-tripped breaker, not new evidence either way. A
+        # non-page-block failure (timeout/failed/harness_error) does NOT
+        # reset page_block_streak -- only a real success does, since a
+        # timeout right after a block could still be the same underlying
+        # issue continuing.
 
     @property
     def should_halt(self) -> bool:
-        """Page-level block signature -> halt immediately. Outcome streak
-        crossing the threshold -> also halt (the plan's Circuit Breaker
-        section: an outcome streak with no page-block signature "flags
-        loudly but lets the run continue to its next scheduled checkpoint,
-        UNLESS the streak is most of a checkpoint batch" — that "most of a
-        batch" case is handled by should_force_early_checkpoint, not halt;
-        should_halt itself is reserved for a confirmed page-block or a
+        """page_block_tripped only becomes True once record_page_block has
+        seen page_block_streak_threshold CONSECUTIVE page-blocks (see that
+        method) -- not on the first sighting. Outcome streak crossing the
+        threshold also halts (the plan's Circuit Breaker section: an
+        outcome streak with no page-block signature "flags loudly but lets
+        the run continue to its next scheduled checkpoint, UNLESS the
+        streak is most of a checkpoint batch" — that "most of a batch" case
+        is handled by should_force_early_checkpoint, not halt; should_halt
+        itself is reserved for a confirmed page-block streak or an outcome
         streak that has fully crossed the hard threshold)."""
         return self.page_block_tripped or self.block_streak >= self.streak_threshold
 
@@ -107,6 +136,8 @@ class CircuitBreaker:
         return {
             "block_streak": self.block_streak,
             "streak_threshold": self.streak_threshold,
+            "page_block_streak": self.page_block_streak,
+            "page_block_streak_threshold": self.page_block_streak_threshold,
             "page_block_tripped": self.page_block_tripped,
             "page_block_reason": self.page_block_reason,
             "should_halt": self.should_halt,
