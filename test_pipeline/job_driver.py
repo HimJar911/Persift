@@ -600,11 +600,31 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
         # (closeTab() calls commented out at lines 89/363) — skipping this
         # leaks memory across ~1000 jobs, the single highest-risk mechanical
         # omission the plan calls out.
-        if page is not None:
-            try:
-                await page.close()
-            except Exception:
-                pass
+        #
+        # Real bug found live (Aug 7 2026): closing only `page` (the single
+        # most-recently-opened real tab, per the "recency is unambiguous"
+        # comment above) left OLDER real tabs open whenever a job didn't
+        # cleanly finish before the next one started (e.g. a harness-level
+        # timeout — the harness's 90s ceiling is bookkeeping only, it never
+        # touches the extension's tab or storage state, so a timed-out
+        # job's tab and its content script just keep running). That
+        # leftover tab's content script eventually fires its own delayed
+        # 'ready' handshake and reads whatever current_job happens to be in
+        # storage at that moment — which by then belongs to a LATER job.
+        # Confirmed live via debug_log job_id mismatches: a debug log saved
+        # under job N's job_id contained context data from job N-2,
+        # explaining a real ~16-18% of needs_review_non_submit outcomes
+        # (not_a_standard_greenhouse_form) that were actually the extension
+        # checking a stale, wrong tab's DOM, not a rendering-timing issue
+        # (a first fix attempt targeting timing had no effect — this is the
+        # real cause). Close EVERY real tab, not just the one selected as
+        # "the" job's tab, so nothing outlives this job.
+        for p in list(ctx.context.pages):
+            if _is_real_job_page(p.url):
+                try:
+                    await p.close()
+                except Exception:
+                    pass
 
     # A page-level block signature overrides whatever terminal outcome the
     # extension itself reported — if the tab we saw was a CAPTCHA/Cloudflare
