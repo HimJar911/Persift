@@ -70,15 +70,12 @@ console.log('greenhouse.js injected');
   const profile = context; // profile fields are spread directly onto context by background.js
 
   // ── Form detection ─────────────────────────────────────────────────────────
-  // waitFor() (filler_utils.js) instead of a single immediate
-  // querySelector() — a defensive improvement (give the DOM real time to
-  // finish rendering, not just check once) kept even though it turned out
-  // NOT to be the real cause of the not_a_standard_greenhouse_form spike
-  // investigated Aug 7 2026 (~16-18% of real attempts, before AND after
-  // this change — verified live, same rate both times). The actual root
-  // cause was job_driver.py leaking old tabs across jobs, so THIS tab was
-  // sometimes checking the wrong job's DOM entirely — see job_driver.py's
-  // run_job() finally block for the real fix.
+  // waitFor() (filler_utils.js) instead of a single immediate querySelector()
+  // — a defensive improvement kept even though it isn't the real cause of
+  // the not_a_standard_greenhouse_form rate (~12-17% of real attempts).
+  // Ruled out Aug 7 2026: a 4x longer wait (20000ms, tested live on the VM,
+  // run 61) did NOT move the rate (12.9% vs 12.5-17.1% at 5000ms) — this is
+  // not a slow-render-under-load issue. Cause still unknown; see STATE.md.
   const form = await waitFor(() =>
     document.querySelector('#application_form') ||
     document.querySelector('form[action*="greenhouse"]') ||
