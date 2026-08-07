@@ -21,7 +21,13 @@ _BLOCK_SIGNATURES = re.compile(
     r"complete the security check to continue|"
     r"access denied\s*<|"
     r"you have been blocked|request blocked by administrative rules|"
-    r"verify you are a human",
+    # "verify you are a human" was the older Cloudflare interstitial
+    # phrasing; live investigation of a real Bayada block (Aug 7) found
+    # the current Cloudflare Turnstile copy is "Verify you are human" (no
+    # "a") plus "Performing security verification" — added both without
+    # removing the original, since the older phrasing may still appear on
+    # non-Cloudflare or legacy-Cloudflare-config pages.
+    r"verify you are a? ?human|performing security verification",
     re.IGNORECASE,
 )
 

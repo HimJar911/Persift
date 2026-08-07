@@ -470,10 +470,32 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
             try:
                 await early_page.wait_for_load_state("domcontentloaded", timeout=15_000)
                 html = await early_page.content()
-                if looks_blocked(html, None):
+                # looks_blocked's status-based fast-path (403/429) needs the
+                # REAL HTTP status of the page — this was a live bug: the
+                # tab was discovered via _poll_until_tab_open (an
+                # already-navigated Page from context.pages, not our own
+                # goto()), so there was no Response object in scope and the
+                # call site passed status=None unconditionally, silently
+                # disabling the 403/429 fast-path entirely. A Cloudflare
+                # 403 block was misclassified as a plain 'timeout' instead
+                # of 'skipped_blocked' (confirmed live: the Bayada cluster
+                # that tripped Phase 2's circuit breaker on an outcome
+                # streak was actually 403-blocked, not organically slow).
+                # An independent httpx HEAD to the same URL recovers the
+                # real status without re-navigating the page Playwright is
+                # already tracking.
+                status = None
+                try:
+                    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+                        status_resp = await client.head(early_page.url)
+                        status = status_resp.status_code
+                except Exception:
+                    logger.warning("Status check failed for job %s — falling back to regex-only block detection",
+                                   job_id, exc_info=True)
+                if looks_blocked(html, status):
                     page_block_detected = True
                     page_block_reason = "block signature detected on initial tab load"
-                    logger.warning("Page block signature detected for job %s", job_id)
+                    logger.warning("Page block signature detected for job %s (status=%s)", job_id, status)
             except Exception:
                 logger.warning("Block-check failed to read page content for job %s", job_id, exc_info=True)
 
