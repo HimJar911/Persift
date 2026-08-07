@@ -36,7 +36,7 @@ import time
 from pathlib import Path
 
 import test_pipeline.db_state as db_state
-from test_pipeline.checkpoint.cluster import Cluster, StructuralFingerprint, cluster_failures
+from test_pipeline.checkpoint.cluster import Cluster, cluster_failures
 from test_pipeline.checkpoint.gate import GateResult, run_gate
 from test_pipeline.checkpoint.propose_fix import (
     NeedsHumanDecision, NoGeneralizedFix, ProposedFix,
@@ -265,27 +265,6 @@ async def run_checkpoint(
     # NOT need to halt — that's the whole point of the capped auto-apply
     # path.
     halted_for_review = bool(needs_human_decision) or bool(unapplied_fixes)
-
-    # TEMPORARY TEST HOOK — remove after verifying orchestrate.py's live
-    # blocking-poll-and-resume path (Aug 7 2026). Every prior test of the
-    # decision agent ran against an ALREADY-RESOLVED checkpoint, so the
-    # actual live pause of a running worker loop was never exercised. Gated
-    # behind an explicit env var so it can never accidentally fire in a
-    # real run.
-    import os
-    if os.environ.get("PERSIFT_TEST_FORCE_HALT") == str(checkpoint_n):
-        halted_for_review = True
-        needs_human_decision = needs_human_decision or [
-            NeedsHumanDecision(
-                cluster=clusters[0] if clusters else Cluster(
-                    fingerprint=StructuralFingerprint("TEST", "test_forced_halt_category", "", "", "", "text", ""),
-                    members=[], paired_successes=[], meets_threshold=True, occurrence_threshold=1,
-                ),
-                reason="TEST HOOK: forced halt via PERSIFT_TEST_FORCE_HALT to verify orchestrate.py's live "
-                       "blocking-poll-and-resume path against a REAL running worker loop, not an "
-                       "already-resolved checkpoint. Not a real finding.",
-            )
-        ]
 
     result = CheckpointResult(
         checkpoint_n=checkpoint_n, clusters=clusters, proposed_fixes=proposed_fixes,
