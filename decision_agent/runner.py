@@ -24,6 +24,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _REQUEST_GLOB = f"{config.VM_REPO_DIR}/checkpoints/*/checkpoint_*.decision_request.json"
+# Distinct filename pattern from checkpoint_*.decision_request.json (see
+# orchestrate.py's _streak_halt_request_path comment) so the two globs
+# never overlap.
+_STREAK_HALT_REQUEST_GLOB = f"{config.VM_REPO_DIR}/checkpoints/*/streak_halt_*.decision_request.json"
 _LOCAL_REPO_DIR = str(config.LOCAL_STATE_DIR.parent.parent)  # decision_agent/state -> decision_agent -> repo root
 
 
@@ -82,6 +86,57 @@ def _process_one_request(remote_request_path: str) -> None:
                 response_path, len(decisions_payload.get("decisions", [])), decisions_payload.get("resume_run"))
 
 
+def _process_one_streak_halt(remote_request_path: str) -> None:
+    """Handles an outcome-streak circuit-breaker halt (see orchestrate.py's
+    write_streak_halt_request docstring for why this is a separate, narrower
+    decision than a checkpoint review — no code fix to propose, just a
+    resume-or-not judgment). Deliberately does NOT run guard_forbidden_writes
+    — this decision type never touches the repo at all, nothing to guard."""
+    claimed_path = remote_request_path.replace(".decision_request.json", ".decision_request.claimed.json")
+    try:
+        ssh_bridge.rename_remote_file(remote_request_path, claimed_path)
+    except ssh_bridge.SSHError:
+        logger.warning("Failed to claim %s (already claimed by a prior run?) -- skipping.", remote_request_path)
+        return
+
+    request_json = ssh_bridge.read_remote_file(claimed_path)
+    halt_request = json.loads(request_json)
+
+    ats = halt_request["ats"]
+    run_id = halt_request["run_id"]
+    halt_n = halt_request["halt_n"]
+
+    logger.info("New streak-halt decision request: ats=%s run=%s halt=%s", ats, run_id, halt_n)
+
+    session_id, is_new = claude_session.get_or_create_session(ats)
+
+    if is_new:
+        logger.info("First decision for %s -- sending onboarding briefing.", ats)
+        briefing_result = claude_session.ask(
+            session_id, prompts.build_briefing_prompt(ats), is_new=True, cwd=_LOCAL_REPO_DIR,
+        )
+        logger.info("Briefing acknowledged: %s", briefing_result.get("result", "")[:200])
+        claude_session.confirm_session_onboarded(ats, session_id)
+
+    streak_prompt = prompts.build_streak_halt_prompt(halt_request)
+    result = claude_session.ask(session_id, streak_prompt, is_new=False, cwd=_LOCAL_REPO_DIR)
+
+    decision_payload = _extract_decisions_json(result.get("result", ""))
+    if decision_payload is None or "resume_run" not in decision_payload:
+        logger.error("Could not parse a resume_run decision from the agent's response -- leaving run halted.")
+        return
+
+    response_path = remote_request_path.replace(".decision_request.json", ".decision_response.json")
+    response_body = json.dumps(
+        {**decision_payload, "halt_n": halt_n,
+         "decided_at": datetime.datetime.now(datetime.timezone.utc).isoformat()},
+        indent=2,
+    )
+    ssh_bridge.write_remote_file(response_path, response_body)
+    logger.info("Streak-halt decision written to %s: resume_run=%s",
+                response_path, decision_payload.get("resume_run"))
+
+
 def _git_head(repo_dir: str) -> str:
     import subprocess
     proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, capture_output=True, text=True, check=True)
@@ -111,6 +166,7 @@ def main() -> None:
         while True:
             try:
                 pending = ssh_bridge.list_remote_files(_REQUEST_GLOB)
+                pending_streak_halts = ssh_bridge.list_remote_files(_STREAK_HALT_REQUEST_GLOB)
             except ssh_bridge.SSHError as e:
                 logger.warning("Poll failed (will retry): %s", e)
                 time.sleep(config.POLL_INTERVAL_SECONDS)
@@ -123,6 +179,15 @@ def main() -> None:
                     logger.warning("Processing %s failed (will retry next poll): %s", remote_path, e)
                 except claude_session.ClaudeSessionError as e:
                     logger.error("Claude session error on %s (leaving request claimed, needs manual look): %s",
+                                 remote_path, e)
+
+            for remote_path in pending_streak_halts:
+                try:
+                    _process_one_streak_halt(remote_path)
+                except ssh_bridge.SSHError as e:
+                    logger.warning("Processing %s failed (will retry next poll): %s", remote_path, e)
+                except claude_session.ClaudeSessionError as e:
+                    logger.error("Claude session error on %s (leaving run halted, needs manual look): %s",
                                  remote_path, e)
 
             time.sleep(config.POLL_INTERVAL_SECONDS)

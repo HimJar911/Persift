@@ -68,6 +68,18 @@ def _decision_request_path(run_id: int, checkpoint_n: int) -> Path:
     return report_dir_for(run_id) / f"checkpoint_{checkpoint_n:04d}.decision_request.json"
 
 
+def _streak_halt_request_path(run_id: int, halt_n: int) -> Path:
+    # Deliberately a distinct filename pattern from checkpoint_NNNN.* so
+    # decision_agent/runner.py's glob for checkpoint requests never
+    # accidentally picks up a streak-halt request meant for a different
+    # handler, and vice versa.
+    return report_dir_for(run_id) / f"streak_halt_{halt_n:04d}.decision_request.json"
+
+
+def _streak_halt_response_path(run_id: int, halt_n: int) -> Path:
+    return report_dir_for(run_id) / f"streak_halt_{halt_n:04d}.decision_response.json"
+
+
 def _decision_response_path(run_id: int, checkpoint_n: int) -> Path:
     return report_dir_for(run_id) / f"checkpoint_{checkpoint_n:04d}.decision_response.json"
 
@@ -341,4 +353,58 @@ def poll_for_decision_response(
                                response_path)
         time.sleep(poll_interval_seconds)
     logger.warning("Timed out waiting %ds for decision agent response — falling back to hard halt.", timeout_seconds)
+    return None
+
+
+def write_streak_halt_request(run_id: int, halt_n: int, recent_outcomes: list[dict], ats: str = "greenhouse") -> Path:
+    """Real gap found live (Aug 7 2026): the outcome-streak circuit breaker
+    (distinct from a checkpoint's halted_for_review — see
+    circuit_breaker.py) was a hard, unconditional stop with no decision-
+    agent involvement at all, even when --use-decision-agent was passed.
+    Confirmed live: a genuine 10-in-a-row timeout streak across diverse,
+    unrelated companies (not a single blocked domain) tripped it during a
+    real overnight-bound run, and the run just sat there — nothing would
+    have resumed it until a human noticed. There's no code-fixable bug to
+    cluster here (unlike a checkpoint halt), so the question handed to the
+    agent is narrower: is this recent stretch ordinary noise safe to
+    resume past, or does it look like a genuine systemic problem worth a
+    human's attention? recent_outcomes is the raw shape of what tripped
+    it (from db_state.get_recent_run_wide_outcomes) — company/ats
+    diversity and worker spread are exactly what distinguishes "one
+    blocked domain" from "something is actually broken.\""""
+    path = _streak_halt_request_path(run_id, halt_n)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "run_id": run_id,
+        "halt_n": halt_n,
+        "ats": ats,
+        "halt_type": "outcome_streak",
+        "recent_outcomes": recent_outcomes,
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+    return path
+
+
+def poll_for_streak_halt_response(
+    run_id: int, halt_n: int,
+    timeout_seconds: int = DECISION_AGENT_POLL_TIMEOUT_SECONDS,
+    poll_interval_seconds: int = DECISION_AGENT_POLL_INTERVAL_SECONDS,
+) -> dict | None:
+    """Same blocking-poll shape as poll_for_decision_response, against the
+    streak-halt response path instead. Returns the parsed response, or
+    None on timeout (caller falls back to the original hard-halt)."""
+    response_path = _streak_halt_response_path(run_id, halt_n)
+    deadline = time.monotonic() + timeout_seconds
+    logger.info("Waiting for decision agent response on streak halt at %s (timeout %ds)...",
+                response_path, timeout_seconds)
+    while time.monotonic() < deadline:
+        if response_path.exists():
+            try:
+                return json.loads(response_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                logger.warning("Streak-halt response at %s is not valid JSON yet — retrying.", response_path)
+        time.sleep(poll_interval_seconds)
+    logger.warning("Timed out waiting %ds for decision agent streak-halt response — falling back to hard halt.",
+                    timeout_seconds)
     return None

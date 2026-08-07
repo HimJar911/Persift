@@ -221,6 +221,32 @@ async def get_outcome_counts(run_id: int, sample_phase: str | None = None) -> di
     return {r["outcome"]: r["n"] for r in rows}
 
 
+async def get_recent_run_wide_outcomes(run_id: int, limit: int) -> list[dict]:
+    """Most recent `limit` outcomes across BOTH phases and all workers,
+    newest first, joined with jobs for company/ats context -- feeds the
+    decision agent's outcome-streak-halt resume-or-not judgment (Aug 7
+    2026), which needs to see the raw shape of what tripped the streak
+    (company diversity, ats diversity, worker spread) to distinguish a
+    real systemic problem from ordinary noise. Deliberately run-wide, not
+    phase-scoped, since the circuit breaker's own block_streak is a
+    shared-across-everything counter (see circuit_breaker.py)."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT hjs.job_id, hjs.ats, hjs.outcome, hjs.worker_id, hjs.ended_at,
+                   j.company_name
+            FROM harness_job_state hjs
+            LEFT JOIN jobs j ON j.job_id = hjs.job_id AND j.ats = hjs.ats
+            WHERE hjs.run_id = $1 AND hjs.ended_at IS NOT NULL
+            ORDER BY hjs.ended_at DESC
+            LIMIT $2
+            """,
+            run_id, limit,
+        )
+    return [dict(r) for r in rows]
+
+
 async def get_recent_outcomes_in_order(run_id: int, sample_phase: str, limit: int) -> list[str]:
     """Most recent `limit` outcomes for one phase, newest first, ordered by
     ended_at — feeds completion.py's '150 consecutive clean' streak check."""

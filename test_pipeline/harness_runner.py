@@ -447,6 +447,7 @@ async def run_harness(
         # then either halt for human review or relaunch a fresh round of
         # workers (picking up any auto-applied fix) and keep going.
         checkpoint_n = 0
+        streak_halt_n = 0
         failure_log_lines_at_last_checkpoint = 0
         cumulative_accepted_fixes: list[dict] = []
         run_halted_for_review = False
@@ -477,9 +478,35 @@ async def run_harness(
 
             if state.stop_requested and not state.checkpoint_due:
                 # Circuit breaker tripped on an outcome streak (not a page
-                # block, handled above) — halt the whole run for human
-                # investigation, same as Phase 1's behavior before
-                # checkpointing existed.
+                # block, handled above). Real gap found live (Aug 7 2026):
+                # this used to be an unconditional hard halt even with
+                # --use-decision-agent — confirmed live, a genuine 10-in-a-
+                # row timeout streak across diverse companies (not a single
+                # blocked domain) tripped it during an overnight-bound run
+                # and nothing would have resumed it. Route through the same
+                # decision agent as a checkpoint halt, but with the
+                # narrower resume-or-not question this halt type actually
+                # supports (no code-fixable cluster to propose a fix for).
+                if use_decision_agent:
+                    from test_pipeline.checkpoint.orchestrate import (
+                        poll_for_streak_halt_response, write_streak_halt_request,
+                    )
+                    streak_halt_n += 1
+                    recent_outcomes = await db_state.get_recent_run_wide_outcomes(run_id, limit=20)
+                    request_path = write_streak_halt_request(run_id, streak_halt_n, recent_outcomes, ats="greenhouse")
+                    logger.info("Streak-halt decision request written to %s — waiting for decision_agent/ to respond.",
+                                request_path)
+                    response = await asyncio.to_thread(poll_for_streak_halt_response, run_id, streak_halt_n)
+                    if response is not None and response.get("resume_run", False):
+                        logger.info(
+                            "Decision agent judged the outcome streak safe to resume past: %s",
+                            response.get("rationale", "")[:300],
+                        )
+                        continue
+                    logger.warning(
+                        "Decision agent did not resume the run (timed out, or judged it a real problem) — "
+                        "halting for human review. %s", (response or {}).get("rationale", "")[:300],
+                    )
                 logger.warning("Run halted: circuit breaker tripped on an outcome streak.")
                 break
 
@@ -514,7 +541,16 @@ async def run_harness(
                         request_path = write_decision_request(run_id, checkpoint_n, checkpoint_result, ats="greenhouse")
                         logger.info("Decision request written to %s — waiting for decision_agent/ to respond.",
                                     request_path)
-                        response = poll_for_decision_response(run_id, checkpoint_n)
+                        # asyncio.to_thread: poll_for_decision_response is a
+                        # blocking time.sleep loop that can run for up to
+                        # DECISION_AGENT_POLL_TIMEOUT_SECONDS (4h) — calling
+                        # it directly would block this entire event loop
+                        # for that whole window. Real latent bug found
+                        # alongside the streak-halt work (Aug 7 2026) —
+                        # harmless so far only because nothing else needed
+                        # the loop during the wait in every test run to
+                        # date, not because it was actually correct.
+                        response = await asyncio.to_thread(poll_for_decision_response, run_id, checkpoint_n)
                         if response is not None and response.get("resume_run", False):
                             logger.info(
                                 "Decision agent responded: %d decision(s), resuming run.",

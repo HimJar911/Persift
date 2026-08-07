@@ -153,3 +153,76 @@ orchestrate.py's capped auto-apply already uses.
 
 {_RESPONSE_FORMAT}
 """
+
+
+_STREAK_HALT_RESPONSE_FORMAT = """\
+## Required response format
+
+End your response with a fenced ```json block containing EXACTLY this
+shape:
+
+```json
+{
+  "resume_run": true,
+  "rationale": "<2-4 sentences explaining your judgment -- what you looked at and why you concluded noise vs. real problem>"
+}
+```
+
+resume_run: true means you judge this a safe, ordinary stretch of failures
+to resume past. resume_run: false means you judge this worth a human's
+attention -- state specifically what pattern concerned you.
+"""
+
+
+def build_streak_halt_prompt(halt_request: dict) -> str:
+    run_id = halt_request["run_id"]
+    halt_n = halt_request["halt_n"]
+    recent = halt_request.get("recent_outcomes", [])
+
+    return f"""\
+## Outcome-streak circuit breaker halt, run {run_id} (halt #{halt_n})
+
+The harness's outcome-streak circuit breaker just tripped and halted the
+run -- this is a DIFFERENT halt type from a checkpoint review. There is no
+cluster/proposed-fix data here, because a generic outcome streak (too many
+timeout/failed/harness_error results in a row) isn't a code-fixable
+pattern the way a structural field-classification cluster is. Your job
+here is narrower than a checkpoint decision: look at the recent outcome
+shape below and judge whether this is ordinary noise safe to resume past,
+or a genuine systemic problem worth stopping the run for a human.
+
+### Recent outcomes (newest first, run-wide across all workers/phases)
+
+{recent}
+
+### What to actually check
+
+- **Company/domain diversity**: many DIFFERENT companies failing (as
+  opposed to one company/domain repeating) points toward ordinary noise
+  (slow pages, transient network issues) rather than a systemic bug or a
+  single site's bot-detection blocking the harness.
+- **Worker spread**: failures spread evenly across worker_id values is
+  consistent with shared infrastructure pressure (e.g. more concurrent
+  Chrome instances competing for CPU under a higher --workers count,
+  pushing some jobs past the ~90s timeout) rather than a single broken
+  worker/profile -- see STATE.md's Aug 7 2026 entry on the resume-PDF bug
+  for what a genuinely worker-specific problem actually looks like in this
+  same log shape, for contrast.
+- **Outcome type mix**: if outcomes are exclusively 'failed' with 0/0
+  fields (not 'timeout'), that pattern historically indicated a real setup
+  bug (missing resume file, broken profile) rather than noise -- check
+  STATE.md before concluding "safe to resume" if you see this shape.
+- **harness_error entries specifically** are Playwright/infra exceptions,
+  not signal from the extension itself -- several of these might indicate
+  a VM-level problem (resource exhaustion, browser crash) worth flagging
+  rather than resuming past.
+
+You do not have authority to fix anything here (there's nothing to fix --
+this isn't a code-change decision), only to judge whether it's safe to
+keep going. When genuinely uncertain, prefer resume_run: false -- a human
+losing a few hours of overnight progress to a false stop is a much smaller
+cost than the pipeline grinding through a real, undiagnosed problem
+unattended for hours.
+
+{_STREAK_HALT_RESPONSE_FORMAT}
+"""
