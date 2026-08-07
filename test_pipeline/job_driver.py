@@ -70,20 +70,56 @@ class JobResult:
 async def _seed_user_job(user_id: str, job_id: str, ats: str) -> None:
     """INSERT (not UPDATE) — per the plan, this job was never in user_jobs
     for this test user. retry_count is reset to 0 every time so harness-level
-    retries never trip the real _RETRY_CAP (api/server.py)."""
+    retries never trip the real _RETRY_CAP (api/server.py).
+
+    Real bug found live (Aug 7 2026): a diagnostic script proved the
+    extension's own claimNextJob() (POST /jobs/claim) is a COMPLETELY
+    INDEPENDENT claim path from the harness's own job tracking — the
+    extension polls the real, shared user_jobs queue for this test user,
+    not "whatever job the harness just told it to do." /jobs/claim orders
+    by created_at ASC (api/server.py), but this INSERT...ON CONFLICT DO
+    UPDATE only ever refreshed updated_at, never created_at -- so a stale
+    'ready' row left over from an EARLIER job this same test user was
+    seeded for (e.g. one the harness force-released as a timeout before
+    the extension got to it) sat at the front of the FIFO queue and got
+    claimed first, ahead of the job the harness actually just seeded and
+    was tracking. Confirmed live: 4 stale 'ready' rows had accumulated for
+    one test user; this explained essentially the entire
+    not_a_standard_greenhouse_form / needs_review_non_submit rate (~16-26%
+    across several runs) -- the extension was checking a DIFFERENT job's
+    page than what the harness thought it was checking, on every
+    occurrence. Two earlier fix attempts (a form-render-timing wait, then
+    closing all leaked tabs) both missed this because the tab/DOM they
+    were looking at genuinely belonged to a different, real job -- there
+    was nothing wrong with the DOM-detection logic itself.
+
+    Fixed by clearing every other 'ready' row for this user before
+    seeding the new one, so at any moment there is at most ONE row
+    eligible for this user's claim, and it is unambiguously the one the
+    harness is tracking."""
     pool = db_state.get_pool()
     async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO user_jobs (user_id, job_id, job_ats, status, retry_count,
-                                    current_stage, failure_reason, lease_expires_at, updated_at)
-            VALUES ($1::uuid, $2, $3, 'ready', 0, NULL, NULL, NULL, NOW())
-            ON CONFLICT (user_id, job_id, job_ats) DO UPDATE
-                SET status = 'ready', retry_count = 0, current_stage = NULL,
-                    failure_reason = NULL, lease_expires_at = NULL, updated_at = NOW()
-            """,
-            user_id, job_id, ats,
-        )
+        async with conn.transaction():
+            await conn.execute(
+                """
+                UPDATE user_jobs
+                SET status = 'abandoned', updated_at = NOW()
+                WHERE user_id = $1::uuid AND status = 'ready'
+                  AND NOT (job_id = $2 AND job_ats = $3)
+                """,
+                user_id, job_id, ats,
+            )
+            await conn.execute(
+                """
+                INSERT INTO user_jobs (user_id, job_id, job_ats, status, retry_count,
+                                        current_stage, failure_reason, lease_expires_at, updated_at)
+                VALUES ($1::uuid, $2, $3, 'ready', 0, NULL, NULL, NULL, NOW())
+                ON CONFLICT (user_id, job_id, job_ats) DO UPDATE
+                    SET status = 'ready', retry_count = 0, current_stage = NULL,
+                        failure_reason = NULL, lease_expires_at = NULL, updated_at = NOW()
+                """,
+                user_id, job_id, ats,
+            )
 
 
 # ---------------------------------------------------------------------------
