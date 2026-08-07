@@ -402,6 +402,7 @@ async def run_harness(
     resume_run_id: int | None,
     api_base_url: str,
     streak_threshold: int | None = None,
+    use_decision_agent: bool = False,
 ) -> None:
     await init_db()
     try:
@@ -506,6 +507,23 @@ async def run_harness(
                     checkpoint_result.report_path,
                 )
                 if checkpoint_result.halted_for_review:
+                    if use_decision_agent:
+                        from test_pipeline.checkpoint.orchestrate import (
+                            poll_for_decision_response, write_decision_request,
+                        )
+                        request_path = write_decision_request(run_id, checkpoint_n, checkpoint_result, ats="greenhouse")
+                        logger.info("Decision request written to %s — waiting for decision_agent/ to respond.",
+                                    request_path)
+                        response = poll_for_decision_response(run_id, checkpoint_n)
+                        if response is not None and response.get("resume_run", False):
+                            logger.info(
+                                "Decision agent responded: %d decision(s), resuming run.",
+                                len(response.get("decisions", [])),
+                            )
+                            continue
+                        logger.warning(
+                            "Decision agent did not resume the run (timed out or said stop) — halting for human review."
+                        )
                     run_halted_for_review = True
                     break
                 # Clean checkpoint (everything auto-applied or no fixes
@@ -545,12 +563,18 @@ def main() -> None:
         help="Circuit-breaker block_streak threshold (default: circuit_breaker.py's own default, 10). "
              "Phase 1 smoke test per the plan lowers this to 3.",
     )
+    parser.add_argument(
+        "--use-decision-agent", action="store_true",
+        help="On a checkpoint halt, write a decision request and block waiting for the laptop-side "
+             "decision_agent/runner.py to respond instead of halting immediately. See decision_agent/README.md.",
+    )
     args = parser.parse_args()
 
     asyncio.run(run_harness(
         ats=args.ats, count=args.count, workers=args.workers,
         checkpoint_every=args.checkpoint_every, resume_run_id=args.resume_run_id,
         api_base_url=args.api_base_url, streak_threshold=args.streak_threshold,
+        use_decision_agent=args.use_decision_agent,
     ))
 
 

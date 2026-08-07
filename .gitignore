@@ -54,3 +54,4 @@ test_pipeline_scratch/
 test_pipeline_profiles/
 failures/
 checkpoints/
+decision_agent/state/

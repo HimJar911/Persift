@@ -28,8 +28,11 @@ Public API:
 """
 
 import dataclasses
+import datetime
+import json
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 import test_pipeline.db_state as db_state
@@ -50,6 +53,28 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 
 AUTO_APPLY_CAP_PER_CHECKPOINT = 3
+
+# How long to poll for the laptop-side decision agent (decision_agent/) to
+# pick up a decision request before giving up and falling back to the
+# original "halt the run, human reads the report" behavior. 4 hours covers
+# a laptop that's asleep/unreachable for a while but still leaves room for
+# a human to notice via the run just... not finishing overnight. See
+# decision_agent/README.md for the full protocol this writes/reads.
+DECISION_AGENT_POLL_TIMEOUT_SECONDS = 4 * 60 * 60
+DECISION_AGENT_POLL_INTERVAL_SECONDS = 15
+
+
+def _decision_request_path(run_id: int, checkpoint_n: int) -> Path:
+    return report_dir_for(run_id) / f"checkpoint_{checkpoint_n:04d}.decision_request.json"
+
+
+def _decision_response_path(run_id: int, checkpoint_n: int) -> Path:
+    return report_dir_for(run_id) / f"checkpoint_{checkpoint_n:04d}.decision_response.json"
+
+
+def report_dir_for(run_id: int) -> Path:
+    from test_pipeline.checkpoint.report import CHECKPOINTS_DIR
+    return CHECKPOINTS_DIR / f"greenhouse_run_{run_id}"
 
 
 @dataclasses.dataclass
@@ -248,3 +273,72 @@ async def run_checkpoint(
         report_path=report_path, halted_for_review=halted_for_review,
     )
     return result, new_line_count
+
+
+def _serialize_needs_human_decision(items: list[NeedsHumanDecision]) -> list[dict]:
+    return [{"category": item.cluster.fingerprint.category_attempted, "reason": item.reason} for item in items]
+
+
+def _serialize_unapplied_fixes(proposed_fixes: list[ProposedFix], applied_fixes: list[AppliedFix],
+                                 gate_results: dict) -> list[dict]:
+    applied_ids = {id(af.fix) for af in applied_fixes}
+    out = []
+    for fix in proposed_fixes:
+        if id(fix) in applied_ids:
+            continue
+        if not fix.negative_guard_check_passed:
+            reason = "guard_conflict"
+        elif id(fix) in gate_results and not gate_results[id(fix)].passed:
+            reason = "gate_failed"
+        else:
+            reason = "over_auto_apply_cap"
+        out.append({"category": fix.category, "reason": reason, "guard_term": fix.guard_term})
+    return out
+
+
+def write_decision_request(run_id: int, checkpoint_n: int, result: CheckpointResult, ats: str = "greenhouse") -> Path:
+    """Writes the request file the laptop-side decision_agent/ package
+    polls for (see decision_agent/README.md for the full protocol). Called
+    by harness_runner.py's loop only when result.halted_for_review is True
+    and it wants automated review instead of a hard stop."""
+    path = _decision_request_path(run_id, checkpoint_n)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "run_id": run_id,
+        "checkpoint_n": checkpoint_n,
+        "ats": ats,
+        "report_path": str(result.report_path.relative_to(PROJECT_DIR)),
+        "needs_human_decision": _serialize_needs_human_decision(result.needs_human_decision),
+        "unapplied_fixes": _serialize_unapplied_fixes(result.proposed_fixes, result.applied_fixes, result.gate_results),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return path
+
+
+def poll_for_decision_response(
+    run_id: int, checkpoint_n: int,
+    timeout_seconds: int = DECISION_AGENT_POLL_TIMEOUT_SECONDS,
+    poll_interval_seconds: int = DECISION_AGENT_POLL_INTERVAL_SECONDS,
+) -> dict | None:
+    """Blocks the run loop until decision_agent/runner.py writes the
+    matching .decision_response.json, or timeout_seconds elapses (laptop
+    unreachable/asleep for too long — caller falls back to the original
+    hard-halt behavior). Returns the parsed response dict, or None on
+    timeout. Deliberately synchronous (not async) — matches the design
+    discussion's explicit choice of blocking/synchronous-per-checkpoint
+    invocation, same as gate.py/propose_fix.py already work, no new
+    concurrency model needed."""
+    response_path = _decision_response_path(run_id, checkpoint_n)
+    deadline = time.monotonic() + timeout_seconds
+    logger.info("Waiting for decision agent response at %s (timeout %ds)...", response_path, timeout_seconds)
+    while time.monotonic() < deadline:
+        if response_path.exists():
+            try:
+                return json.loads(response_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                logger.warning("Decision response at %s is not valid JSON yet — retrying (write may be in progress).",
+                               response_path)
+        time.sleep(poll_interval_seconds)
+    logger.warning("Timed out waiting %ds for decision agent response — falling back to hard halt.", timeout_seconds)
+    return None
