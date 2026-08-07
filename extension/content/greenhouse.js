@@ -70,10 +70,21 @@ console.log('greenhouse.js injected');
   const profile = context; // profile fields are spread directly onto context by background.js
 
   // ── Form detection ─────────────────────────────────────────────────────────
-  const form =
+  // Real bug found via a 1000-job harness run (Aug 7 2026): 96 real, live,
+  // reachable postings (16% of all real attempts that run) hit
+  // not_a_standard_greenhouse_form even though the form WAS present on the
+  // page moments later — confirmed by re-visiting the same URLs live. Debug
+  // logs showed the check running just 6-7ms after 'sending ready message'
+  // on every single failure, meaning it ran before the page had necessarily
+  // finished rendering the form, not because the selectors were wrong.
+  // waitFor() (filler_utils.js) gives the DOM real time to catch up instead
+  // of checking exactly once, immediately.
+  const form = await waitFor(() =>
     document.querySelector('#application_form') ||
     document.querySelector('form[action*="greenhouse"]') ||
-    document.querySelector('form[id*="application"]');
+    document.querySelector('form[id*="application"]'),
+    5000
+  );
 
   console.log('greenhouse: form —', form ? (form.id || form.action || 'found') : 'not found');
 
