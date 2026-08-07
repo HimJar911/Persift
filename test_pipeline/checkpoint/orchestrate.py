@@ -141,6 +141,8 @@ async def run_checkpoint(
     failure_log_lines_at_last_checkpoint: int,
     jobs_processed_this_batch: int,
     cumulative_accepted_fixes: list[dict],
+    circuit_breaker_status: dict | None = None,
+    new_fingerprints_this_batch: int = 0,
 ) -> tuple[CheckpointResult, int]:
     """The full checkpoint pass: cluster -> propose -> gate -> apply (capped,
     guard-only, gate-clean) -> report. `failure_log_lines_at_last_checkpoint`
@@ -219,11 +221,11 @@ async def run_checkpoint(
     report_path = write_checkpoint_report(
         run_id=run_id, checkpoint_n=checkpoint_n,
         outcome_counts_by_phase=outcome_counts_by_phase,
-        circuit_breaker_status={
+        circuit_breaker_status=circuit_breaker_status or {
             "block_streak": 0, "streak_threshold": 0, "page_block_tripped": False,
             "page_block_reason": None, "should_halt": False, "should_force_early_checkpoint": False,
         },
-        distinct_fingerprints_seen=len(fingerprints), new_fingerprints_this_batch=0,
+        distinct_fingerprints_seen=len(fingerprints), new_fingerprints_this_batch=new_fingerprints_this_batch,
         clusters=clusters, occurrence_threshold_pct=0.02,
         proposed_fixes=proposed_fixes, gate_results=gate_results,
         needs_human_decision=needs_human_decision, no_generalized_fix=no_generalized_fix,

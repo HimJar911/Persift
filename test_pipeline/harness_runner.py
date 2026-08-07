@@ -491,6 +491,8 @@ async def run_harness(
                     failure_log_lines_at_last_checkpoint=failure_log_lines_at_last_checkpoint,
                     jobs_processed_this_batch=state.jobs_since_last_checkpoint,
                     cumulative_accepted_fixes=cumulative_accepted_fixes,
+                    circuit_breaker_status=state.circuit_breaker.status_summary(),
+                    new_fingerprints_this_batch=state.new_fingerprints_this_batch,
                 )
                 cumulative_accepted_fixes += [
                     {"design_layer_tag": af.fix.design_layer_tag} for af in checkpoint_result.applied_fixes
