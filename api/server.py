@@ -230,24 +230,43 @@ async def _is_greenhouse_job_dead(apply_url: str) -> bool:
     """True only when we're confident the listing is gone — never blocks a
     claim on a network hiccup (timeout/connection error => assume alive, the
     extension's own form-detection is the final real check either way, this
-    is just meant to catch the common, confirmed-live failure mode early)."""
+    is just meant to catch the common, confirmed-live failure mode early).
+
+    MUST follow the full redirect chain, not just the first hop. Real bug
+    found live (Aug 8 2026, STATE.md's timeout investigation): a job whose
+    apply_url is the legacy `boards.greenhouse.io` domain (not the current
+    `job-boards.greenhouse.io`) 301s to the SAME job's job-boards.greenhouse.io
+    URL first — a same-domain-family redirect that still has /jobs/<id> in
+    the Location header, so a single-hop check (the original
+    follow_redirects=False version) correctly judged that first hop "looks
+    alive" and stopped there. But that's not the final destination: the
+    SECOND hop is the real one, and for a dead listing it 302s to
+    /<company>?error=true, then a THIRD hop redirects again to the company's
+    own generic careers page (e.g. anduril.com/open-roles) with zero job
+    context — confirmed live via curl on a real job (Anduril 5065409007)
+    that was timing out with an empty debug log even though the FIRST-hop
+    check (pre-fix) said it looked fine. Following the whole chain and
+    checking the FINAL response/URL closes this gap structurally instead of
+    trying to enumerate every possible number of hops."""
     if "greenhouse.io" not in apply_url:
         return False
     try:
-        async with httpx.AsyncClient(follow_redirects=False, timeout=_GREENHOUSE_LIVENESS_TIMEOUT_S) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=_GREENHOUSE_LIVENESS_TIMEOUT_S) as client:
             resp = await client.head(apply_url)
     except Exception:
         logger.warning("Greenhouse liveness check failed for %s — assuming alive", apply_url, exc_info=True)
         return False
     if resp.status_code == 404:
         return True
-    if resp.status_code in (301, 302, 303, 307, 308):
-        location = resp.headers.get("location", "")
-        # A live job's own redirects (e.g. adding a tracking query param)
-        # stay on a /jobs/<id>-shaped path; a dead listing redirects to the
-        # company's bare landing page with an error flag.
-        if "error=true" in location or "/jobs/" not in location:
-            return True
+    final_url = str(resp.url)
+    # A live job's final landing URL stays on a greenhouse.io domain with
+    # /jobs/<id> in the path; a dead listing's chain ends either on
+    # greenhouse's own error page (?error=true) or gets handed off entirely
+    # to the company's own site with no job-specific path left at all.
+    if "error=true" in final_url:
+        return True
+    if "greenhouse.io" not in final_url or "/jobs/" not in final_url:
+        return True
     return False
 
 
