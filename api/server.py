@@ -262,6 +262,26 @@ async def _is_greenhouse_job_dead(ats: str, apply_url: str) -> bool:
     data-residency domain) is deliberately still checked here — confirmed
     live it can be either genuinely alive (Imc) or dead (Valtech,
     Marvelfusion), same as the US domain."""
+    # Real regression found live (Aug 8 2026, right after the branded-domain
+    # iframe fix + this session's 1000-job Phase 3 run): this check's
+    # URL-shape heuristic assumed a LIVE job's final URL always contains
+    # greenhouse.io/"/jobs/" — true for standalone Greenhouse pages and
+    # branded pages that redirect through a job-boards.greenhouse.io embed,
+    # but FALSE BY DESIGN for a domain like jobs.bayada.com, which hosts the
+    # whole apply flow on its own domain and never redirects through
+    # greenhouse.io at all (that's exactly what "branded domain" means).
+    # Confirmed live: a Cloudflare 403 on such a domain returns its
+    # challenge page at the SAME URL (no redirect happens at all), which
+    # still has no greenhouse.io/"/jobs/" substring — so this check was
+    # silently marking every currently-BLOCKED branded-domain job as
+    # permanently DEAD (146/404 "dead" jobs in one 1000-job run were Bayada
+    # alone, almost certainly still-live jobs just caught mid-block).
+    # A 403/429 is evidence of a BLOCK, not evidence the listing is gone —
+    # treated the same as a network error below: inconclusive, assume alive,
+    # let the extension's own real form-detection be the final word. Only a
+    # 404 (server explicitly says "not found") or a same-domain-family
+    # redirect landing on Greenhouse's own /<company>?error=true page is a
+    # real, unambiguous dead signal.
     if ats != "greenhouse":
         return False
     try:
@@ -270,15 +290,24 @@ async def _is_greenhouse_job_dead(ats: str, apply_url: str) -> bool:
     except Exception:
         logger.warning("Greenhouse liveness check failed for %s — assuming alive", apply_url, exc_info=True)
         return False
+    if resp.status_code in (403, 429):
+        logger.info("Greenhouse liveness check got %s for %s — likely a block, not a dead listing; assuming alive",
+                    resp.status_code, apply_url)
+        return False
     if resp.status_code == 404:
         return True
     final_url = str(resp.url)
-    # A live job's final landing URL stays on a greenhouse.io domain with
-    # /jobs/<id> in the path; a dead listing's chain ends either on
-    # greenhouse's own error page (?error=true) or gets handed off entirely
-    # to the company's own site with no job-specific path left at all.
     if "error=true" in final_url:
         return True
+    # The URL-shape check below is only meaningful when the request actually
+    # redirected somewhere — a real dead-listing chain always ends on
+    # Greenhouse's own error page or a bare company landing page, neither of
+    # which is where the request STARTED. If no redirect happened at all
+    # (final_url == the original apply_url), the URL naturally lacking a
+    # greenhouse.io/"/jobs/" shape tells us nothing — that's just what a
+    # branded domain's real, live apply page looks like too.
+    if final_url == apply_url:
+        return False
     if "greenhouse.io" not in final_url or "/jobs/" not in final_url:
         return True
     return False
