@@ -16,19 +16,38 @@ const DEFAULT_STATE = {
   needs_sponsorship: false,
   pending_review: null,    // { job_id, job_ats, apply_url, company_name, title, reason } | null
   pending_submission: null, // { tab_id, job_id, job_ats, url_at_submit, started_at } | null
-  // Durable marker for "the last poll cycle correctly found no job to do,"
-  // written unconditionally so nothing that only WATCHES phase transitions
-  // (like the test harness's own polling loop, or a future debugging tool)
-  // can miss it. Real gap found live (Aug 8 2026): runPollCycle()'s
-  // idle -> fetching -> idle round-trip on an empty claim can complete
-  // faster than an external poller's own interval, so a live-only phase
-  // watch can observe "idle" the entire time and have no way to tell
-  // "correctly found nothing" from "never ran at all." No production
-  // logic reads this field — background.js's own state machine only ever
-  // cares about the live `phase` value, same as before. This exists purely
-  // so external observers have a durable signal to check.
-  last_poll_result: null,  // { result: 'no_job', at: <ms epoch> } | null
+  // Durable marker mirroring the outcome of the LAST poll cycle, for manual
+  // production/diagnostic inspection only (e.g. popup debugging, a support
+  // session) — additive, never read by any production logic here.
+  //
+  // NOT what the test harness relies on for correctness anymore. Real gap
+  // found + fixed live (Aug 8 2026, STATE.md "THE OPEN MYSTERY"): a first
+  // attempt at this field was meant to be the harness's source of truth,
+  // discovered via storage polling — but a single shared, last-write-wins
+  // slot can be overwritten by a LATER poll-cycle invocation (e.g. the
+  // recurring 5-min poll_alarm interleaving with the harness's own trigger)
+  // before the harness's own polling loop ever reads the value it was
+  // waiting for. Confirmed live: it never fired once across 40+ real
+  // dead-job catches in real multi-worker harness runs, despite working in
+  // every isolated single-worker test. Fixed structurally instead:
+  // runPollCycleForHarness() (below) returns its result DIRECTLY to its
+  // caller via sw.evaluate()'s own return value, so there is no storage
+  // round-trip — and therefore no window for another invocation to
+  // overwrite — between the harness's trigger and its receipt of the
+  // exact result that trigger produced. This field's only remaining job is
+  // production visibility, not correctness.
+  last_poll_result: null,  // { result: '...', at: <ms epoch> } | null
 };
+
+// Re-entrancy guard: runPollCycle()/runPollCycleForHarness() share
+// _runPollCycleCore(), which can be invoked from multiple independent
+// trigger sources with no coordination between them (the recurring
+// poll_alarm, next_job_alarm, and — in the test harness — a direct call per
+// job). A service worker is single-threaded JS (interleaved awaits, no true
+// parallelism), so a plain in-memory flag is sufficient to stop two
+// invocations from both acting on stale state read before either had
+// written anything — no chrome.storage round-trip, no atomic/CAS needed.
+let _pollCycleRunning = false;
 
 // awaiting_review is not lease-tracked server-side (the human decides when to
 // submit), but an abandoned tab shouldn't hold a phantom claim forever.
@@ -142,32 +161,73 @@ async function checkStale(state) {
   return false;
 }
 
-async function runPollCycle() {
-  const state = await getState();
-  if (await checkStale(state)) return;
-
-  const fresh = await getState();
-  if (fresh.paused || fresh.phase !== 'idle') return;
-
-  await chrome.storage.local.set({ phase: 'fetching' });
-
-  const job = await claimNextJob();
-  if (!job) {
-    await chrome.storage.local.set({
-      phase: 'idle',
-      last_poll_result: { result: 'no_job', at: Date.now() },
-    });
-    return;
+// The one real implementation, shared by both entry points below.
+// `source` is 'alarm' or 'harness' (unused internally now that the
+// temporary diagnostic logging that consumed it has been removed post-
+// verification — kept as a parameter since it costs nothing and documents
+// intent at each call site; see git history for the Aug 8 2026 instrumented
+// version if this needs re-instrumenting for a future investigation).
+// Always returns a result object describing what this invocation did —
+// callers decide what (if anything) to do with it.
+async function _runPollCycleCore(source) {
+  if (_pollCycleRunning) {
+    return { result: 'skipped_busy', at: Date.now() };
   }
+  _pollCycleRunning = true;
 
-  await chrome.storage.local.set({
-    phase: 'tab_open',
-    current_job: job,
-    phase_started_at: Date.now(),
-  });
+  try {
+    const state = await getState();
 
-  const tab = await chrome.tabs.create({ url: job.apply_url, active: false });
-  await chrome.storage.local.set({ current_tab_id: tab.id });
+    if (await checkStale(state)) {
+      return { result: 'skipped_stale_reset', at: Date.now() };
+    }
+
+    const fresh = await getState();
+    if (fresh.paused || fresh.phase !== 'idle') {
+      return { result: 'skipped_not_idle', at: Date.now() };
+    }
+
+    await chrome.storage.local.set({ phase: 'fetching' });
+
+    const job = await claimNextJob();
+
+    if (!job) {
+      const result = { result: 'no_job', at: Date.now() };
+      await chrome.storage.local.set({ phase: 'idle', last_poll_result: result });
+      return result;
+    }
+
+    await chrome.storage.local.set({
+      phase: 'tab_open',
+      current_job: job,
+      phase_started_at: Date.now(),
+    });
+
+    const tab = await chrome.tabs.create({ url: job.apply_url, active: false });
+    await chrome.storage.local.set({ current_tab_id: tab.id });
+
+    const result = { result: 'job_found', job_id: job.job_id, at: Date.now() };
+    await chrome.storage.local.set({ last_poll_result: result });
+    return result;
+  } finally {
+    _pollCycleRunning = false;
+  }
+}
+
+// Alarm-driven entry point (poll_alarm every 5 min, next_job_alarm after a
+// submit) — fire-and-forget, as before. No caller waits on a return value.
+async function runPollCycle() {
+  await _runPollCycleCore('alarm');
+}
+
+// Harness-facing entry point — returns its result DIRECTLY to the caller via
+// sw.evaluate()'s own return value (a real Playwright mechanism: the Python
+// `await sw.evaluate(...)` only resolves once this async function itself
+// returns). This is what makes the result immune to the storage-polling
+// race last_poll_result alone couldn't close — see DEFAULT_STATE's comment
+// on last_poll_result for the full story.
+async function runPollCycleForHarness() {
+  return await _runPollCycleCore('harness');
 }
 
 // Initialize defaults on install and startup

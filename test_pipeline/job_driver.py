@@ -142,8 +142,31 @@ async def _reset_extension_state(sw, user_id: str) -> None:
     )
 
 
-async def _trigger_poll(sw) -> None:
-    await sw.evaluate("() => runPollCycle()")
+async def _trigger_poll(sw) -> dict:
+    """Calls the harness-facing entry point and returns its result DIRECTLY —
+    sw.evaluate() only resolves once the JS function itself returns, so this
+    result is provably the outcome of THIS exact invocation, not something
+    discovered later via a storage field another invocation (the recurring
+    poll_alarm, in particular) could have overwritten first. See
+    extension/background.js's DEFAULT_STATE.last_poll_result comment and
+    STATE.md's "THE OPEN MYSTERY" for the full story of why a
+    storage-polling approach (an earlier version of this fix) never worked
+    under real multi-worker load despite working in every isolated test.
+
+    Returns one of:
+      {'result': 'no_job', 'at': ...}
+      {'result': 'job_found', 'job_id': ..., 'at': ...}
+      {'result': 'skipped_busy', 'at': ...}
+      {'result': 'skipped_stale_reset', 'at': ...}
+      {'result': 'skipped_not_idle', 'at': ...}
+    The skipped_* results are only realistically reachable on the harness's
+    OWN triggered call via 'skipped_busy' (an alarm-driven call caught
+    mid-flight) — _reset_extension_state() always sets phase='idle'
+    immediately before this call, so 'skipped_stale_reset'/'skipped_not_idle'
+    should be unreachable here in practice; handled defensively anyway since
+    "should be unreachable" is not the same guarantee as "is unreachable."
+    """
+    return await sw.evaluate("() => runPollCycleForHarness()")
 
 
 # ---------------------------------------------------------------------------
@@ -189,29 +212,23 @@ async def _poll_until_tab_open(sw, context, timeout_s: float = 20.0):
     return None
 
 
-async def _poll_for_terminal(sw, poll_triggered_at_ms: float, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[str, dict]:
+async def _poll_for_terminal(sw, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[str, dict]:
     """Returns (outcome, final_storage_snapshot). outcome is one of
     'mechanically_verified' (provisional — field verification confirms),
-    'needs_review_non_submit', 'failed', 'no_job_available', 'timeout'.
+    'needs_review_non_submit', 'failed', 'timeout'.
 
-    Real bug found live (Aug 8 2026, STATE.md's timeout investigation):
-    watching `phase` alone is a live-transition race. background.js's
-    runPollCycle() can complete a full idle -> fetching -> idle round-trip
-    (a claim that correctly found nothing to do — e.g. the only queued row
-    was a dead listing the freshness check just abandoned) in well under a
-    second, faster than this loop's own _POLL_INTERVAL_S — so `phase` can
-    read 'idle' on every single tick and `started_idle_departure_seen` never
-    flips, even though the extension did real, correct work. Confirmed
-    live: every re-tested dead-listing job showed this exact pattern even
-    in complete isolation (single worker, zero concurrency), burning the
-    full 90s timeout on an outcome that was actually correct and fast
-    (~200ms via a direct API call). `last_poll_result` (extension/
-    background.js) is DURABLE state, not a live transition, so it can't be
-    missed by this race the way `phase` can — checked here as a second,
-    independent signal alongside the phase watch, not a replacement for it
-    (a job that finds a real job to fill still relies on the phase watch,
-    which has no equivalent race since 'filling'/'awaiting_review' are
-    held states, not a fast round-trip)."""
+    Only called when _trigger_poll's direct result was 'job_found' — the
+    no-job/skipped cases are resolved immediately at the trigger call site
+    (run_job(), below) and never reach this loop at all, closing the
+    original race this function used to work around by checking
+    last_poll_result (a storage field, discovered via polling — see
+    STATE.md's "THE OPEN MYSTERY" for why that approach didn't hold up under
+    real multi-worker load: a shared, last-write-wins slot can be
+    overwritten by a LATER poll-cycle invocation before this loop's own
+    1.5s-interval read ever catches the value it was waiting for). A real
+    job's fill has no equivalent race — 'filling'/'awaiting_review' are held
+    states a real form-fill genuinely takes time to pass through, not a
+    fast round-trip a slow poll interval could blink past."""
     deadline = time.monotonic() + timeout_s
     started_idle_departure_seen = False
 
@@ -233,15 +250,6 @@ async def _poll_for_terminal(sw, poll_triggered_at_ms: float, timeout_s: float =
             # extension/background.js:356-367) — this is the only way idle
             # is re-observed after having left it.
             return "failed", storage
-
-        if phase == "idle":
-            last_poll = storage.get("last_poll_result")
-            if (
-                last_poll
-                and last_poll.get("result") == "no_job"
-                and last_poll.get("at", 0) >= poll_triggered_at_ms
-            ):
-                return "no_job_available", storage
 
         await asyncio.sleep(_POLL_INTERVAL_S)
 
@@ -548,51 +556,89 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
     try:
         await _seed_user_job(ctx.user_id, job_id, ats)
         await _reset_extension_state(ctx.service_worker, ctx.user_id)
-        poll_triggered_at_ms = time.time() * 1000
-        await _trigger_poll(ctx.service_worker)
+        trigger_result = await _trigger_poll(ctx.service_worker)
+        result_kind = trigger_result.get("result")
 
-        # Block-signature check "right after each tab opens, before the
-        # extension starts filling" (per the plan's Circuit Breaker section)
-        # — this is the earliest point a Page object exists to check at all,
-        # so it has to happen here in job_driver.py, not in the outer runner
-        # loop which only sees the job after it's already finished.
-        early_page = await _poll_until_tab_open(ctx.service_worker, ctx.context)
-        if early_page is not None:
-            try:
-                await early_page.wait_for_load_state("domcontentloaded", timeout=15_000)
-                html = await early_page.content()
-                # looks_blocked's status-based fast-path (403/429) needs the
-                # REAL HTTP status of the page — this was a live bug: the
-                # tab was discovered via _poll_until_tab_open (an
-                # already-navigated Page from context.pages, not our own
-                # goto()), so there was no Response object in scope and the
-                # call site passed status=None unconditionally, silently
-                # disabling the 403/429 fast-path entirely. A Cloudflare
-                # 403 block was misclassified as a plain 'timeout' instead
-                # of 'skipped_blocked' (confirmed live: the Bayada cluster
-                # that tripped Phase 2's circuit breaker on an outcome
-                # streak was actually 403-blocked, not organically slow).
-                # An independent httpx HEAD to the same URL recovers the
-                # real status without re-navigating the page Playwright is
-                # already tracking.
-                status = None
+        # Resolved immediately at trigger time — no polling loop involved,
+        # so none of these can ever be misreported as a 'timeout' the way
+        # the old storage-polling approach could. See _trigger_poll's
+        # docstring / STATE.md "THE OPEN MYSTERY" for the full history.
+        if result_kind == "no_job":
+            outcome = "no_job_available"
+            storage = {}
+            phase_reached = "idle"
+            failure_reason = None
+        elif result_kind == "skipped_busy":
+            # An alarm-driven poll cycle was already in flight when the
+            # harness's own trigger arrived — a real, if rare, timing
+            # condition, not a claim that ever happened. Named honestly
+            # rather than absorbed into no_job_available (nothing was
+            # actually claimed or checked here) or left to fall through to
+            # a generic timeout.
+            outcome = "poll_skipped"
+            storage = {}
+            phase_reached = "idle"
+            failure_reason = "skipped_busy"
+        elif result_kind in ("skipped_stale_reset", "skipped_not_idle"):
+            # Should be unreachable in practice — _reset_extension_state()
+            # always sets phase='idle' immediately before this call, so
+            # checkStale()/the not-idle guard shouldn't have anything to
+            # act on. Handled defensively anyway (see _trigger_poll's
+            # docstring) rather than assumed impossible.
+            outcome = "poll_skipped"
+            storage = {}
+            phase_reached = "idle"
+            failure_reason = result_kind
+        else:
+            # result_kind == "job_found" — a real job was claimed and a tab
+            # opened; fall through to the existing phase-watching loop,
+            # which has no equivalent fast-round-trip race (a real fill
+            # genuinely takes time to pass through 'filling'/
+            # 'awaiting_review', unlike the near-instant idle->fetching->
+            # idle round-trip the no-job case used to race against).
+
+            # Block-signature check "right after each tab opens, before the
+            # extension starts filling" (per the plan's Circuit Breaker section)
+            # — this is the earliest point a Page object exists to check at all,
+            # so it has to happen here in job_driver.py, not in the outer runner
+            # loop which only sees the job after it's already finished.
+            early_page = await _poll_until_tab_open(ctx.service_worker, ctx.context)
+            if early_page is not None:
                 try:
-                    async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
-                        status_resp = await client.head(early_page.url)
-                        status = status_resp.status_code
+                    await early_page.wait_for_load_state("domcontentloaded", timeout=15_000)
+                    html = await early_page.content()
+                    # looks_blocked's status-based fast-path (403/429) needs the
+                    # REAL HTTP status of the page — this was a live bug: the
+                    # tab was discovered via _poll_until_tab_open (an
+                    # already-navigated Page from context.pages, not our own
+                    # goto()), so there was no Response object in scope and the
+                    # call site passed status=None unconditionally, silently
+                    # disabling the 403/429 fast-path entirely. A Cloudflare
+                    # 403 block was misclassified as a plain 'timeout' instead
+                    # of 'skipped_blocked' (confirmed live: the Bayada cluster
+                    # that tripped Phase 2's circuit breaker on an outcome
+                    # streak was actually 403-blocked, not organically slow).
+                    # An independent httpx HEAD to the same URL recovers the
+                    # real status without re-navigating the page Playwright is
+                    # already tracking.
+                    status = None
+                    try:
+                        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+                            status_resp = await client.head(early_page.url)
+                            status = status_resp.status_code
+                    except Exception:
+                        logger.warning("Status check failed for job %s — falling back to regex-only block detection",
+                                       job_id, exc_info=True)
+                    if looks_blocked(html, status):
+                        page_block_detected = True
+                        page_block_reason = "block signature detected on initial tab load"
+                        logger.warning("Page block signature detected for job %s (status=%s)", job_id, status)
                 except Exception:
-                    logger.warning("Status check failed for job %s — falling back to regex-only block detection",
-                                   job_id, exc_info=True)
-                if looks_blocked(html, status):
-                    page_block_detected = True
-                    page_block_reason = "block signature detected on initial tab load"
-                    logger.warning("Page block signature detected for job %s (status=%s)", job_id, status)
-            except Exception:
-                logger.warning("Block-check failed to read page content for job %s", job_id, exc_info=True)
+                    logger.warning("Block-check failed to read page content for job %s", job_id, exc_info=True)
 
-        outcome, storage = await _poll_for_terminal(ctx.service_worker, poll_triggered_at_ms)
-        phase_reached = storage.get("phase")
-        failure_reason = None
+            outcome, storage = await _poll_for_terminal(ctx.service_worker)
+            phase_reached = storage.get("phase")
+            failure_reason = None
         if outcome == "failed":
             # background.js's 'failed' handler resets current_job/pending_review
             # to null before this poll observes idle (see resetToIdle() at

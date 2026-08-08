@@ -56,7 +56,11 @@ _STREAK_OUTCOMES = {"failed", "timeout", "harness_error"}
 # a streak one — it means the freshness check correctly found nothing to do
 # for a dead listing, not that anything is broken. Treating a run of dead
 # jobs as failure-streak noise would risk halting a perfectly healthy run.
-_RESET_OUTCOMES = {"mechanically_verified", "needs_review_non_submit", "no_job_available"}
+# poll_skipped (added Aug 8 2026, migration 030) is the same shape — the
+# harness's trigger landed on a legitimate, rare timing condition (an
+# alarm-driven poll cycle already in flight), not a claim that ever
+# happened or a sign anything is broken.
+_RESET_OUTCOMES = {"mechanically_verified", "needs_review_non_submit", "no_job_available", "poll_skipped"}
 
 # If an outcome streak (no page-block signature seen) eats most of a
 # checkpoint batch, force an early out-of-band checkpoint rather than waiting
