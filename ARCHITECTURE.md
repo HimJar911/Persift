@@ -77,6 +77,17 @@ grep -rn "'matched'\|'preparing'\|'ready'\|'submitting'\|'awaiting_review'\|'sub
 
 ---
 
+## Contract: Branded-domain / iframe injection (Aug 8 2026)
+
+Real gap found in the same timeout investigation that led to `jobs.is_active` below. ~32% of the entire Greenhouse corpus (6,605/20,837 jobs, confirmed by DB query) is hosted on a company's own branded career page (e.g. `www.databricks.com/company/careers/...?gh_jid=...`) that embeds the real Greenhouse form via `<iframe src="https://job-boards.greenhouse.io/embed/job_app?...">`, not on `job-boards.greenhouse.io` directly. Chrome's `content_scripts` only inject into the **top-level frame** by default — on a branded page, `content/greenhouse.js` never ran at all before this fix, confirmed via empty debug logs (zero content-script activity, not a stuck fill) across every real timeout job checked.
+
+- **Fix**: `manifest.json`'s Greenhouse `content_scripts` entry sets `"all_frames": true`. The iframe's own URL (`job-boards.greenhouse.io/embed/...`) already matched the existing `matches` patterns and `host_permissions` — no permission changes needed. `location.href` inside the iframe correctly resolves to that embed URL, which is what `content/greenhouse.js` already expects everywhere it reads `location.href`.
+- **A standalone `job-boards.greenhouse.io` job is unaffected**: the top-level frame IS the matching frame there, so `all_frames: true` doesn't create a double-injection risk — exactly one frame matches in either case (the iframe on a branded page, or the top level on a standalone page), never both.
+- **Second-order fix, same investigation**: `test_pipeline/job_driver.py`'s `_verify_fields` independently re-checks the DOM for landed values via `page.evaluate(...)`, which targets the main frame only by default — this silently misreported every real branded-domain fill as `VERIFICATION_LANDED_EMPTY` until `_pick_verification_frame()` was added (prefers a `job-boards.greenhouse.io`-hosted frame if one exists, else falls back to the main frame). Harness-only; doesn't affect real users, but would have made the 1000-job baseline test's numbers wrong for ~32% of jobs.
+- **Not yet extended**: Ashby/Lever/SmartRecruiters branded-domain embedding patterns are unconfirmed — each needs its own investigation, same scope decision as `jobs.is_active` below.
+
+---
+
 ## Contract: `jobs.is_active` — listing freshness (migration 028, Aug 7 2026)
 
 A job can go stale (expire/get pulled on the real ATS site) any time between being harvested and a real user's extension actually claiming it — `matcher.py` only checks a job once (`matcher_checked_at` watermark), and a job can sit in `user_jobs.status='ready'` for minutes to hours before claim. Confirmed live: this was the real cause of a ~12-17% `not_a_standard_greenhouse_form` rate in the test harness (STATE.md), and a real user hitting the same stale job sees the identical failure — not an autofill bug, a queueing gap.

@@ -2,6 +2,20 @@ console.log('greenhouse.js injected');
 
 // Greenhouse application form filler.
 // api.js and filler_utils.js are injected before this script — all utilities are globals.
+//
+// Runs inside IFRAMES too (manifest.json's content_scripts entry for this
+// file sets "all_frames": true), not just top-level pages. Real gap found
+// live (Aug 7 2026, STATE.md's timeout investigation): ~32% of the entire
+// Greenhouse corpus (6,605/20,837 jobs) is hosted on a company's own branded
+// career page (e.g. www.databricks.com/company/careers/...?gh_jid=...) that
+// embeds the real Greenhouse form via <iframe src="https://job-boards.
+// greenhouse.io/embed/job_app?...">, not on job-boards.greenhouse.io
+// directly. Content scripts only inject into the top-level frame by default
+// — on a branded page, this script never ran at all before "all_frames" was
+// added, confirmed via empty debug logs across every real timeout job
+// checked. `location.href` inside the iframe is the iframe's own
+// job-boards.greenhouse.io/embed/... URL, which is what everything in this
+// file already expects — no other change needed.
 
 (async function () {
   'use strict';

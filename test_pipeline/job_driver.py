@@ -382,6 +382,27 @@ def _parse_attempt_lines(debug_log: list) -> list[dict]:
     return attempts
 
 
+def _pick_verification_frame(page):
+    """Real gap found live (Aug 8 2026, after the manifest.json all_frames
+    fix landed — STATE.md's timeout investigation): ~32% of the Greenhouse
+    corpus is a company's own branded career page embedding the real
+    Greenhouse form in an <iframe src="https://job-boards.greenhouse.io/
+    embed/job_app?...">, not the top-level document. greenhouse.js now
+    correctly runs inside that iframe (content_scripts' "all_frames": true),
+    fills real fields, and self-reports success — but page.evaluate() on a
+    bare Playwright Page always targets the MAIN frame only, so this
+    independent verification was silently checking the wrong document and
+    misreporting every real branded-domain success as
+    VERIFICATION_LANDED_EMPTY. Prefer a job-boards.greenhouse.io frame if one
+    exists (the iframe case); otherwise fall back to the main frame
+    (the ordinary standalone-Greenhouse-page case, where page itself IS
+    that frame)."""
+    for frame in page.frames:
+        if "job-boards.greenhouse.io" in frame.url:
+            return frame
+    return page.main_frame
+
+
 async def _verify_fields(page, debug_log: list) -> tuple[int, int, list[dict], list[dict]]:
     """Returns (fields_filled, fields_total, landed_empty_gaps, all_attempts).
 
@@ -399,12 +420,13 @@ async def _verify_fields(page, debug_log: list) -> tuple[int, int, list[dict], l
     if not attempts:
         return 0, 0, [], []
 
+    frame = _pick_verification_frame(page)
     landed_empty = []
     all_attempts = []
     filled_count = 0
     for a in attempts:
         try:
-            result = await page.evaluate(_FIND_BY_LABEL_JS, a["label"])
+            result = await frame.evaluate(_FIND_BY_LABEL_JS, a["label"])
         except Exception:
             result = {"found": False, "landed": False}
 
