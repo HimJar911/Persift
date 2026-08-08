@@ -226,7 +226,7 @@ _LEASE_MINUTES = 10
 _GREENHOUSE_LIVENESS_TIMEOUT_S = 5.0
 
 
-async def _is_greenhouse_job_dead(apply_url: str) -> bool:
+async def _is_greenhouse_job_dead(ats: str, apply_url: str) -> bool:
     """True only when we're confident the listing is gone — never blocks a
     claim on a network hiccup (timeout/connection error => assume alive, the
     extension's own form-detection is the final real check either way, this
@@ -247,8 +247,22 @@ async def _is_greenhouse_job_dead(apply_url: str) -> bool:
     that was timing out with an empty debug log even though the FIRST-hop
     check (pre-fix) said it looked fine. Following the whole chain and
     checking the FINAL response/URL closes this gap structurally instead of
-    trying to enumerate every possible number of hops."""
-    if "greenhouse.io" not in apply_url:
+    trying to enumerate every possible number of hops.
+
+    Gated on `ats == 'greenhouse'`, NOT on the URL containing "greenhouse.io"
+    — a second real bug found live (Aug 8 2026, same investigation): after
+    the manifest.json all_frames fix made branded-domain jobs (e.g.
+    www.asm.com/open-vacancies/?gh_jid=...) actually reachable, this
+    function's original URL-sniffing guard silently exempted every one of
+    them from the liveness check, because a branded apply_url routinely has
+    NO "greenhouse.io" substring anywhere in it at all — confirmed live,
+    this exempted ~12 of 27 real timeouts in a 100-job validation run,
+    several of which (Monks, legacy Anduril, Valtech) were independently
+    confirmed dead via direct curl. `job-boards.eu.greenhouse.io` (the EU
+    data-residency domain) is deliberately still checked here — confirmed
+    live it can be either genuinely alive (Imc) or dead (Valtech,
+    Marvelfusion), same as the US domain."""
+    if ats != "greenhouse":
         return False
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=_GREENHOUSE_LIVENESS_TIMEOUT_S) as client:
@@ -360,7 +374,7 @@ async def claim_job(body: _ClaimReq):
             if detail is None:
                 return {"job": None}
 
-            if await _is_greenhouse_job_dead(detail["apply_url"]):
+            if await _is_greenhouse_job_dead(row["job_ats"], detail["apply_url"]):
                 await _mark_job_dead_and_abandon(conn, row["id"], row["job_id"], row["job_ats"])
                 continue
 
