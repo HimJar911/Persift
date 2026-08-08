@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import timezone
 from pathlib import Path
 
+import httpx
 import pdfplumber
 from asyncpg import UniqueViolationError
 from docx import Document
@@ -208,6 +209,70 @@ class _ClaimReq(BaseModel):
 # row whose lease_expires_at is in the past is dead and gets reaped by cleanup.
 _LEASE_MINUTES = 10
 
+# A claimed job can be stale even though it passed the matcher: matcher.py
+# only ever checks a job once (matcher_checked_at watermark), and a job can
+# sit in 'ready' for anywhere from minutes to hours before a real user's
+# extension gets around to claiming it — long enough for the listing to
+# expire on the ATS's own site. Confirmed live (Aug 7 2026 test-harness
+# investigation, STATE.md): ~12-17% of real Greenhouse application attempts
+# were failing with not_a_standard_greenhouse_form for exactly this reason —
+# not an extension bug, a real dead job — and a real user hitting the same
+# stale job would see the identical failure. Greenhouse-only for now
+# (confirmed live via curl: a dead Greenhouse listing 302-redirects
+# apply_url to /<company>?error=true — a company-level landing page, not a
+# job-specific path). Other ATSes need their own investigation before this
+# generalizes (Ashby's SPA returns 200 OK even for a nonexistent job id —
+# a bare status check won't catch it there; Lever cleanly 404s).
+_GREENHOUSE_LIVENESS_TIMEOUT_S = 5.0
+
+
+async def _is_greenhouse_job_dead(apply_url: str) -> bool:
+    """True only when we're confident the listing is gone — never blocks a
+    claim on a network hiccup (timeout/connection error => assume alive, the
+    extension's own form-detection is the final real check either way, this
+    is just meant to catch the common, confirmed-live failure mode early)."""
+    if "greenhouse.io" not in apply_url:
+        return False
+    try:
+        async with httpx.AsyncClient(follow_redirects=False, timeout=_GREENHOUSE_LIVENESS_TIMEOUT_S) as client:
+            resp = await client.head(apply_url)
+    except Exception:
+        logger.warning("Greenhouse liveness check failed for %s — assuming alive", apply_url, exc_info=True)
+        return False
+    if resp.status_code == 404:
+        return True
+    if resp.status_code in (301, 302, 303, 307, 308):
+        location = resp.headers.get("location", "")
+        # A live job's own redirects (e.g. adding a tracking query param)
+        # stay on a /jobs/<id>-shaped path; a dead listing redirects to the
+        # company's bare landing page with an error flag.
+        if "error=true" in location or "/jobs/" not in location:
+            return True
+    return False
+
+
+async def _mark_job_dead_and_abandon(conn, user_job_id: str, job_id: str, ats: str) -> None:
+    """Called OUTSIDE the claim transaction (the liveness check that decided
+    this already did a network round-trip, which must never happen while
+    holding user_jobs' FOR UPDATE SKIP LOCKED row lock — see claim_job's
+    comment). jobs.is_active = FALSE stops matcher.py from ever re-queuing
+    this job to a different user again (migration 028)."""
+    async with conn.transaction():
+        await conn.execute(
+            "UPDATE jobs SET is_active = FALSE WHERE job_id = $1 AND ats = $2",
+            job_id, ats,
+        )
+        await conn.execute(
+            """
+            UPDATE user_jobs
+            SET status = 'abandoned', failure_reason = 'job_no_longer_active',
+                lease_expires_at = NULL, updated_at = NOW()
+            WHERE id = $1
+            """,
+            user_job_id,
+        )
+    logger.info("Job %s/%s is no longer live — marked inactive, user_job %s abandoned", job_id, ats, user_job_id)
+
 
 @app.post("/jobs/claim")
 async def claim_job(body: _ClaimReq):
@@ -217,54 +282,73 @@ async def claim_job(body: _ClaimReq):
     LOCKED) so only one caller can ever win a given row — closes the
     read-then-act gap that let two pollers double-apply. Moves ready ->
     submitting and stamps the lease. Replaces the old GET /jobs/queue.
-    """
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            # Claim + detail fetch share ONE transaction: if the process dies
-            # between them, the whole claim rolls back and the row stays
-            # `ready` for the next caller — no dangling `submitting` row that
-            # nobody was ever told about (previously a two-transaction gap,
-            # only caught late by the lease-expiry sweep).
-            row = await conn.fetchrow(
-                """
-                UPDATE user_jobs uj
-                SET status = 'submitting',
-                    lease_expires_at = NOW() + ($2 || ' minutes')::interval,
-                    updated_at = NOW()
-                WHERE uj.id = (
-                    SELECT id FROM user_jobs
-                    WHERE user_id = $1::uuid AND status = 'ready'
-                    ORDER BY created_at ASC
-                    FOR UPDATE SKIP LOCKED
-                    LIMIT 1
-                )
-                RETURNING uj.id, uj.job_id, uj.job_ats
-                """,
-                body.user_id, str(_LEASE_MINUTES),
-            )
 
-            if row is None:
+    Loops past dead jobs (see _is_greenhouse_job_dead) rather than handing
+    one back to the extension — a bounded loop, not recursion, so a run of
+    consecutive dead rows for one user can't stack call frames."""
+    pool = get_pool()
+    for _ in range(10):
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # Claim + detail fetch share ONE transaction: if the process
+                # dies between them, the whole claim rolls back and the row
+                # stays `ready` for the next caller — no dangling
+                # `submitting` row that nobody was ever told about
+                # (previously a two-transaction gap, only caught late by the
+                # lease-expiry sweep). The liveness check below deliberately
+                # happens OUTSIDE this transaction — it's a network call, and
+                # holding FOR UPDATE SKIP LOCKED's row lock across one would
+                # serialize every other claim for this user behind it.
+                row = await conn.fetchrow(
+                    """
+                    UPDATE user_jobs uj
+                    SET status = 'submitting',
+                        lease_expires_at = NOW() + ($2 || ' minutes')::interval,
+                        updated_at = NOW()
+                    WHERE uj.id = (
+                        SELECT id FROM user_jobs
+                        WHERE user_id = $1::uuid AND status = 'ready'
+                        ORDER BY created_at ASC
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                    )
+                    RETURNING uj.id, uj.job_id, uj.job_ats
+                    """,
+                    body.user_id, str(_LEASE_MINUTES),
+                )
+
+                if row is None:
+                    return {"job": None}
+
+                # Joins job + profile carry-along for the extension to fill with.
+                detail = await conn.fetchrow(
+                    """
+                    SELECT
+                        j.job_id, j.ats AS job_ats, j.apply_url, j.company_name, j.title,
+                        u.email,
+                        COALESCE(u.application_settings->>'first_name', '') AS first_name,
+                        COALESCE(u.application_settings->>'last_name',  '') AS last_name,
+                        COALESCE(u.application_settings->>'phone',       '') AS phone,
+                        COALESCE(u.application_settings->>'linkedin_url','') AS linkedin_url,
+                        u.location_city
+                    FROM jobs  j
+                    JOIN users u ON u.id = $1::uuid
+                    WHERE j.job_id = $2 AND j.ats = $3
+                    """,
+                    body.user_id, row["job_id"], row["job_ats"],
+                )
+
+            if detail is None:
                 return {"job": None}
 
-            # Joins job + profile carry-along for the extension to fill with.
-            detail = await conn.fetchrow(
-                """
-                SELECT
-                    j.job_id, j.ats AS job_ats, j.apply_url, j.company_name, j.title,
-                    u.email,
-                    COALESCE(u.application_settings->>'first_name', '') AS first_name,
-                    COALESCE(u.application_settings->>'last_name',  '') AS last_name,
-                    COALESCE(u.application_settings->>'phone',       '') AS phone,
-                    COALESCE(u.application_settings->>'linkedin_url','') AS linkedin_url,
-                    u.location_city
-                FROM jobs  j
-                JOIN users u ON u.id = $1::uuid
-                WHERE j.job_id = $2 AND j.ats = $3
-                """,
-                body.user_id, row["job_id"], row["job_ats"],
-            )
-    return {"job": dict(detail) if detail else None}
+            if await _is_greenhouse_job_dead(detail["apply_url"]):
+                await _mark_job_dead_and_abandon(conn, row["id"], row["job_id"], row["job_ats"])
+                continue
+
+        return {"job": dict(detail)}
+
+    logger.warning("claim_job: hit the dead-job retry cap for user %s — returning no job this cycle", body.user_id)
+    return {"job": None}
 
 
 class _HeartbeatReq(BaseModel):

@@ -15,6 +15,9 @@ tailor_worker.py   →  'matched' → 'preparing'   (atomic claim, FOR UPDATE SK
                       'preparing' → 'ready'      (artifact on disk)
                       'preparing' → 'abandoned'  (tailor crashed; self-reported + failure_reason)
 api/server.py      →  POST /jobs/claim: 'ready' → 'submitting'  (atomic, stamps lease)
+                      POST /jobs/claim: 'submitting' → 'abandoned'  (claimed row is a dead listing —
+                          see jobs.is_active below; loops to claim the next 'ready' row instead of
+                          handing the extension a job with no form to find, migration 028)
                       POST /jobs/{id}/submitted:    'submitting'|'awaiting_review' → 'submitted'
                       POST /jobs/{id}/awaiting_review: 'submitting' → 'awaiting_review'
                       POST /jobs/{id}/released:     'submitting' → 'ready' (retry) | 'abandoned' (cap)
@@ -71,6 +74,17 @@ grep -rn "'matched'\|'preparing'\|'ready'\|'submitting'\|'awaiting_review'\|'sub
 - **FIXED Jul 4-5 (Chrome-tested, live):** extension review→submit. The content script now stays alive after `needs_review` (reason `awaiting_user_submit`) instead of exiting — it attaches a `click` listener to the submit button and only starts polling `detectSuccess()` once that real click fires (not from the moment the form is parked; an earlier version polled blindly from parking and false-positived on Greenhouse URLs that never contain `/application`). `background.js`'s `awaiting_review` phase retains `current_job` (no longer wiped by `resetToIdle()`). Popup has a manual fallback (`manual_submit_confirm`) for when the tab/content-script is gone.
 - **FIXED Jul 5:** `ready`'s sender-tab check (added when `awaiting_review` started retaining `current_job`) was incomplete — a Fable audit pass found `success`/`failed`/`needs_review`/`heartbeat` were still ungated, so a stale tab from a given-up/reassigned job could still act on whatever job is *currently* current (misattributing a real submit to the wrong job, or renewing the wrong job's lease). All four now require `sender.tab.id === current_tab_id` (see `TAB_SCOPED_MESSAGES` in `background.js`). Every content-script message now also carries its own `job_id`/`job_ats` so a rejected stale `success` can still be logged (console) for manual reconciliation instead of vanishing silently.
 - **KNOWN GAP:** `snapshot_filled`/`snapshot_submitted` (two-snapshot field-correction capture) is unbuilt — `message.snapshots` is never populated by any content script, so `/submitted` is always called without snapshots today, on both the auto-submit and review paths. Not a regression from the Jul 4 fix; needs its own design pass.
+
+---
+
+## Contract: `jobs.is_active` — listing freshness (migration 028, Aug 7 2026)
+
+A job can go stale (expire/get pulled on the real ATS site) any time between being harvested and a real user's extension actually claiming it — `matcher.py` only checks a job once (`matcher_checked_at` watermark), and a job can sit in `user_jobs.status='ready'` for minutes to hours before claim. Confirmed live: this was the real cause of a ~12-17% `not_a_standard_greenhouse_form` rate in the test harness (STATE.md), and a real user hitting the same stale job sees the identical failure — not an autofill bug, a queueing gap.
+
+- **Writer**: `api/server.py`'s `POST /jobs/claim` — a liveness check (`_is_greenhouse_job_dead`, Greenhouse only for now) runs right after a row is atomically claimed, OUTSIDE the claim transaction (it's a network call; never hold `user_jobs`' `FOR UPDATE SKIP LOCKED` row lock across one). If the listing is dead, sets `jobs.is_active = FALSE` and the `user_jobs` row straight to `abandoned` (`failure_reason='job_no_longer_active'`), then loops to claim the next `ready` row — transparent to the extension, no wasted tab-open.
+- **Reader**: `pipeline/matcher.py`'s `_fetch_recent_jobs` — `WHERE is_active = TRUE` alongside the existing `matcher_checked_at IS NULL` watermark, so a dead job is never re-matched to a different user.
+- **Not yet covered**: Ashby (SPA returns 200 OK even for a nonexistent job id — needs real content/DOM inspection, not a status check), Lever, SmartRecruiters. Each needs its own live investigation before extending `_is_greenhouse_job_dead`'s pattern to them, same as the corpus-harvester's per-ATS scope gap (`decisions/0008`).
+- `pipeline.matcher`'s CLI-only `--all`/`--window` debug paths (bottom of the file) deliberately bypass this filter — local test tooling, not a real user-facing matching path.
 
 ---
 

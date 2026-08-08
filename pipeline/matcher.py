@@ -41,7 +41,7 @@ async def _fetch_recent_jobs(conn) -> list[dict]:
                experience_level, location, apply_url, posted_at,
                years_of_experience_min, years_of_experience_max
         FROM jobs
-        WHERE matcher_checked_at IS NULL
+        WHERE matcher_checked_at IS NULL AND is_active = TRUE
         """
     )
     return [dict(r) for r in rows]
