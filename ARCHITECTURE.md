@@ -99,6 +99,19 @@ A job can go stale (expire/get pulled on the real ATS site) any time between bei
 
 ---
 
+## Contract: `last_poll_result` / `no_job_available` — harness-only observability fix (migration 029, Aug 8 2026, **PARTIALLY BROKEN — see below**)
+
+Harness-only, does not affect production. `test_pipeline/job_driver.py`'s `_poll_for_terminal` infers what happened by watching `chrome.storage.local.phase` on a 1.5s poll interval — but `background.js`'s `runPollCycle()` can complete a full `idle → fetching → idle` round-trip (a claim that correctly finds nothing to do, e.g. every `ready` row was just abandoned by the `jobs.is_active` freshness check above) in well under a second, faster than the poll interval, so the harness can miss the transition entirely and burn the full 90s timeout on an outcome that was actually correct and fast.
+
+- **Writer**: `extension/background.js`'s `runPollCycle()` — writes `last_poll_result: {result: 'no_job', at: Date.now()}` to `chrome.storage.local` (a NEW `DEFAULT_STATE` field, additive only) whenever `claimNextJob()` resolves to null. No production code reads this field — `background.js`'s own state machine only ever reads live `phase`, unchanged.
+- **Reader**: `test_pipeline/job_driver.py`'s `_poll_for_terminal` — checks this durable field (timestamped after the poll was triggered, via a new `poll_triggered_at_ms` parameter, so a stale marker from a PRIOR job can't leak forward) alongside the existing phase watch. Returns a new outcome, `no_job_available` (migration 029's CHECK-constraint addition).
+- **`test_pipeline/circuit_breaker.py`**: `no_job_available` classified as a `_RESET_OUTCOMES` member, not `_STREAK_OUTCOMES` — a run of correctly-caught dead jobs isn't a sign anything is broken and shouldn't be able to trip the circuit breaker.
+- **`test_pipeline/db_state.py`**: added to `_TERMINAL_OUTCOMES` so it's recognized as terminal, not left `pending`.
+
+**⚠ STATUS AS OF THIS WRITING: confirmed working in every isolated test (single job, sequential multi-job on one reused service worker, even a genuinely isolated worker running concurrently alongside a real 4-worker harness run) — but has fired ZERO times in an actual `harness_runner.py --workers N` invocation, across 40+ real dead-job catches confirmed via direct DB query (`user_jobs.failure_reason='job_no_longer_active'`, correctly abandoned in under a second, yet still reported as `timeout` by the harness).** The mechanism is proven sound in isolation; something specific to the real multi-worker harness process defeats it, not yet found. Full investigation notes, ruled-out hypotheses, and untried next steps: STATE.md's "THE OPEN MYSTERY" section — read it before touching this again, don't re-run the same isolated reproduction, it has already been tried multiple times and always succeeds.
+
+---
+
 ## Contract: profile data location — ONE home per fact (migration 016, Jul 1, 2026)
 
 The dual-home bug class is STRUCTURALLY FIXED. The governing rule: a fact is a **COLUMN** if anything but the form-filler reasons about it (matcher/metrics/ML); **JSONB** if only stored and handed back whole. **No field in both.**
