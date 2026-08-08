@@ -34,6 +34,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 _TERMINAL_OUTCOMES = {
     "mechanically_verified", "needs_review_non_submit",
     "failed", "timeout", "harness_error", "skipped_blocked",
+    "no_job_available",
 }
 
 

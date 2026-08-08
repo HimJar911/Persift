@@ -52,7 +52,11 @@ _BLOCK_STREAK_THRESHOLD = 10
 _PAGE_BLOCK_STREAK_THRESHOLD = 3
 
 _STREAK_OUTCOMES = {"failed", "timeout", "harness_error"}
-_RESET_OUTCOMES = {"mechanically_verified", "needs_review_non_submit"}
+# no_job_available (added Aug 8 2026, migration 029) is a RESET outcome, not
+# a streak one — it means the freshness check correctly found nothing to do
+# for a dead listing, not that anything is broken. Treating a run of dead
+# jobs as failure-streak noise would risk halting a perfectly healthy run.
+_RESET_OUTCOMES = {"mechanically_verified", "needs_review_non_submit", "no_job_available"}
 
 # If an outcome streak (no page-block signature seen) eats most of a
 # checkpoint batch, force an early out-of-band checkpoint rather than waiting

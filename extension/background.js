@@ -16,6 +16,18 @@ const DEFAULT_STATE = {
   needs_sponsorship: false,
   pending_review: null,    // { job_id, job_ats, apply_url, company_name, title, reason } | null
   pending_submission: null, // { tab_id, job_id, job_ats, url_at_submit, started_at } | null
+  // Durable marker for "the last poll cycle correctly found no job to do,"
+  // written unconditionally so nothing that only WATCHES phase transitions
+  // (like the test harness's own polling loop, or a future debugging tool)
+  // can miss it. Real gap found live (Aug 8 2026): runPollCycle()'s
+  // idle -> fetching -> idle round-trip on an empty claim can complete
+  // faster than an external poller's own interval, so a live-only phase
+  // watch can observe "idle" the entire time and have no way to tell
+  // "correctly found nothing" from "never ran at all." No production
+  // logic reads this field — background.js's own state machine only ever
+  // cares about the live `phase` value, same as before. This exists purely
+  // so external observers have a durable signal to check.
+  last_poll_result: null,  // { result: 'no_job', at: <ms epoch> } | null
 };
 
 // awaiting_review is not lease-tracked server-side (the human decides when to
@@ -141,7 +153,10 @@ async function runPollCycle() {
 
   const job = await claimNextJob();
   if (!job) {
-    await chrome.storage.local.set({ phase: 'idle' });
+    await chrome.storage.local.set({
+      phase: 'idle',
+      last_poll_result: { result: 'no_job', at: Date.now() },
+    });
     return;
   }
 

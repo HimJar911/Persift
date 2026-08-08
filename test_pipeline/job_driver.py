@@ -127,11 +127,15 @@ async def _seed_user_job(user_id: str, job_id: str, ats: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def _reset_extension_state(sw, user_id: str) -> None:
+    # last_poll_result cleared here too — otherwise a stale marker from a
+    # PREVIOUS job's no-op poll would leak forward and make _poll_for_terminal
+    # think THIS job's poll already resolved before it even started.
     await sw.evaluate(
         """(userId) => new Promise(resolve => {
             chrome.storage.local.set({
                 phase: 'idle', current_job: null, current_tab_id: null,
                 phase_started_at: null, user_id: userId, debug_log: [],
+                last_poll_result: null,
             }, resolve);
         })""",
         user_id,
@@ -185,10 +189,29 @@ async def _poll_until_tab_open(sw, context, timeout_s: float = 20.0):
     return None
 
 
-async def _poll_for_terminal(sw, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[str, dict]:
+async def _poll_for_terminal(sw, poll_triggered_at_ms: float, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[str, dict]:
     """Returns (outcome, final_storage_snapshot). outcome is one of
     'mechanically_verified' (provisional — field verification confirms),
-    'needs_review_non_submit', 'failed', 'timeout'."""
+    'needs_review_non_submit', 'failed', 'no_job_available', 'timeout'.
+
+    Real bug found live (Aug 8 2026, STATE.md's timeout investigation):
+    watching `phase` alone is a live-transition race. background.js's
+    runPollCycle() can complete a full idle -> fetching -> idle round-trip
+    (a claim that correctly found nothing to do — e.g. the only queued row
+    was a dead listing the freshness check just abandoned) in well under a
+    second, faster than this loop's own _POLL_INTERVAL_S — so `phase` can
+    read 'idle' on every single tick and `started_idle_departure_seen` never
+    flips, even though the extension did real, correct work. Confirmed
+    live: every re-tested dead-listing job showed this exact pattern even
+    in complete isolation (single worker, zero concurrency), burning the
+    full 90s timeout on an outcome that was actually correct and fast
+    (~200ms via a direct API call). `last_poll_result` (extension/
+    background.js) is DURABLE state, not a live transition, so it can't be
+    missed by this race the way `phase` can — checked here as a second,
+    independent signal alongside the phase watch, not a replacement for it
+    (a job that finds a real job to fill still relies on the phase watch,
+    which has no equivalent race since 'filling'/'awaiting_review' are
+    held states, not a fast round-trip)."""
     deadline = time.monotonic() + timeout_s
     started_idle_departure_seen = False
 
@@ -210,6 +233,15 @@ async def _poll_for_terminal(sw, timeout_s: float = _POLL_TIMEOUT_S) -> tuple[st
             # extension/background.js:356-367) — this is the only way idle
             # is re-observed after having left it.
             return "failed", storage
+
+        if phase == "idle":
+            last_poll = storage.get("last_poll_result")
+            if (
+                last_poll
+                and last_poll.get("result") == "no_job"
+                and last_poll.get("at", 0) >= poll_triggered_at_ms
+            ):
+                return "no_job_available", storage
 
         await asyncio.sleep(_POLL_INTERVAL_S)
 
@@ -516,6 +548,7 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
     try:
         await _seed_user_job(ctx.user_id, job_id, ats)
         await _reset_extension_state(ctx.service_worker, ctx.user_id)
+        poll_triggered_at_ms = time.time() * 1000
         await _trigger_poll(ctx.service_worker)
 
         # Block-signature check "right after each tab opens, before the
@@ -557,7 +590,7 @@ async def run_job(ctx: WorkerContext, job: dict) -> JobResult:
             except Exception:
                 logger.warning("Block-check failed to read page content for job %s", job_id, exc_info=True)
 
-        outcome, storage = await _poll_for_terminal(ctx.service_worker)
+        outcome, storage = await _poll_for_terminal(ctx.service_worker, poll_triggered_at_ms)
         phase_reached = storage.get("phase")
         failure_reason = None
         if outcome == "failed":
