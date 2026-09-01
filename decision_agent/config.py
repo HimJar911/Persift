@@ -5,9 +5,9 @@ deploy target)."""
 
 from pathlib import Path
 
-VM_HOST = "vmuser@REDACTED-HOST"
-VM_SSH_KEY = r"C:\Users\himan\.ssh\harness-vm_key.pem"
-VM_REPO_DIR = "/home/vmuser/persift"
+VM_HOST = "<user>@<harness-vm-host>"
+VM_SSH_KEY = r"<path\to\harness-vm-key.pem>"
+VM_REPO_DIR = "/home/<user>/persift"
 
 POLL_INTERVAL_SECONDS = 30
 
